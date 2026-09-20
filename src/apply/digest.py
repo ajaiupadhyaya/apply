@@ -123,6 +123,7 @@ def build(conn: sqlite3.Connection, horizon: int = HORIZON_DAYS) -> Digest:
 
 
 def render(conn: sqlite3.Connection, console, horizon: int = HORIZON_DAYS) -> None:
+    from rich.markup import escape as esc
     from rich.table import Table
 
     counts = headline(conn)
@@ -144,30 +145,40 @@ def render(conn: sqlite3.Connection, console, horizon: int = HORIZON_DAYS) -> No
         console.print()
 
     section("Past due, not submitted", d.overdue,
-            lambda r: f"[bold red]{r.posting.deadline}[/]  {r.posting.company} — "
-                      f"{r.posting.role}  [dim]({-r.days_left}d ago, {r.application.status})[/]")
+            lambda r: f"[bold red]{r.posting.deadline}[/]  {esc(r.posting.company)} — "
+                      f"{esc(r.posting.role)}  [dim]({-r.days_left}d ago, {esc(r.application.status)})[/]")
 
-    section(f"Deadlines in the next {horizon} days", d.deadlines,
-            lambda r: f"[{'bold red' if r.days_left <= 3 else 'yellow' if r.days_left <= 7 else ''}]"
-                      f"{r.posting.deadline}[/]  {r.posting.company} — {r.posting.role}  "
-                      f"[dim]({r.days_left}d, {r.application.status})[/]")
+    def urgency(row) -> str:
+        """A style name, or the empty string. Never an empty [] tag: Rich reads
+        that as a closing tag with nothing to close and raises."""
+        if row.days_left <= 3:
+            return "bold red"
+        return "yellow" if row.days_left <= 7 else ""
+
+    def deadline_line(row) -> str:
+        style = urgency(row)
+        when = f"[{style}]{row.posting.deadline}[/]" if style else str(row.posting.deadline)
+        return (f"{when}  {esc(row.posting.company)} — {esc(row.posting.role)}  "
+                f"[dim]({row.days_left}d, {esc(row.application.status)})[/]")
+
+    section(f"Deadlines in the next {horizon} days", d.deadlines, deadline_line)
 
     section("Follow-ups due", d.followups,
-            lambda pair: f"[dim]{pair[0].due_on}[/]  {pair[1].posting.company}: {pair[0].action}")
+            lambda pair: f"[dim]{pair[0].due_on}[/]  {esc(pair[1].posting.company)}: {esc(pair[0].action)}")
 
     section(f"Drafts untouched for {STALE_DAYS}+ days", d.stale,
-            lambda r: f"{r.posting.company} — {r.posting.role}  [dim]({r.application.status})[/]")
+            lambda r: f"{esc(r.posting.company)} — {esc(r.posting.role)}  [dim]({esc(r.application.status)})[/]")
 
     section(f"Submitted {SILENT_DAYS}+ days ago, no reply", d.silent,
-            lambda r: f"{r.posting.company} — {r.posting.role}  "
+            lambda r: f"{esc(r.posting.company)} — {esc(r.posting.role)}  "
                       f"[dim]sent {(r.application.submitted_at or '')[:10]}[/]")
 
     section("Further out, not yet submitted", d.beyond,
-            lambda r: f"[dim]{r.posting.deadline}[/]  {r.posting.company} — "
-                      f"{r.posting.role}  [dim]({r.days_left}d, {r.application.status})[/]")
+            lambda r: f"[dim]{r.posting.deadline}[/]  {esc(r.posting.company)} — "
+                      f"{esc(r.posting.role)}  [dim]({r.days_left}d, {esc(r.application.status)})[/]")
 
     section("No deadline on file — verify manually", d.unverified,
-            lambda r: f"[yellow]⚠[/]  {r.posting.company} — {r.posting.role}")
+            lambda r: f"[yellow]⚠[/]  {esc(r.posting.company)} — {esc(r.posting.role)}")
 
     if d.tracks:
         console.print("[bold]Open pipeline by track[/]")

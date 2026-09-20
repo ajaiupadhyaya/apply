@@ -79,3 +79,31 @@ def test_rows_sort_deadline_first_with_nulls_last(conn):
     _add(conn, "late", days_out=30)
     _add(conn, "early", days_out=1)
     assert [r.posting.slug for r in db.rows(conn)] == ["early", "late", "undated"]
+
+
+# --------------------------------------------------- rendering robustness
+
+def test_the_digest_renders_at_every_urgency(conn):
+    """A deadline 8-14 days out takes no urgency style.
+
+    The style expression used to yield an empty string there, which produced an
+    empty `[]` tag, which Rich reads as a closing tag with nothing to close.
+    Every band has to render.
+    """
+    from rich.console import Console
+
+    for days in (-2, 1, 3, 5, 7, 9, 13, 40, None):
+        _add(conn, f"row{days}", days_out=days)
+    Console(file=open("/dev/null", "w"), width=100).print  # noqa: B018
+    digest_mod.render(conn, Console(file=open("/dev/null", "w"), width=100))
+
+
+def test_brackets_in_a_job_title_do_not_break_rendering(conn):
+    """Employers put all sorts of things in a title. None of it is markup."""
+    from rich.console import Console
+
+    db.create_posting(conn, Posting(
+        slug="acme-analyst-2027", company="Acme [US]", role="Analyst [Summer 2027] (NY)",
+        track="corporate", jd_raw="x",
+        deadline=_dt.date.today() + _dt.timedelta(days=9)))
+    digest_mod.render(conn, Console(file=open("/dev/null", "w"), width=100))

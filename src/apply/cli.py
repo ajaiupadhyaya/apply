@@ -24,7 +24,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from . import budget as budget_mod, db, digest as digest_mod, discover as discover_mod, generate
+from . import budget as budget_mod, db, digest as digest_mod, discover as discover_mod, generate, resolve as resolve_mod
 from .models import Posting, Status, Track, TransitionError, slugify
 from .parse import parse as parse_jd
 from .profile import ASK, Profile, ProfileError, data_dir
@@ -809,6 +809,54 @@ def spend(ledger: bool = typer.Option(False, "--ledger", help="Show individual c
         f"${budget.caps['monthly_usd']:.2f}/month — edit `budget:` in "
         f"profile.private.yaml[/]"
     )
+
+
+@app.command()
+def resolve(
+    url: str = typer.Argument(..., help="A firm's careers page."),
+    name: str = typer.Option("New Employer", "--name", help="What to call it in the registry."),
+    priority: int = typer.Option(3, "--priority", min=1, max=5),
+    check: bool = typer.Option(True, "--check/--no-check", help="Call the board to confirm."),
+) -> None:
+    """Work out which job board a firm uses, and print the registry entry for it.
+
+    Paste the careers page URL; this reads the page, finds the ATS fingerprint,
+    calls the board to confirm it answers, and prints a block to paste into
+    data/employers.yaml. No devtools required.
+    """
+    try:
+        found = resolve_mod.resolve(url, check=check, name=name)
+    except Exception as exc:                            # noqa: BLE001
+        _fail(f"could not read {url}: {exc}")
+
+    if not found:
+        _fail(
+            f"no job-board fingerprint in {url}.\n"
+            f"  That usually means the careers page renders its listings in\n"
+            f"  JavaScript. Open the page, click through to an individual job,\n"
+            f"  and run `apply resolve` against THAT url instead — the posting\n"
+            f"  page almost always carries the board's address."
+        )
+
+    for candidate, count in found:
+        if not candidate.supported:
+            console.print(
+                f"  [yellow]•[/] found [bold]{candidate.ats}[/] "
+                f"([dim]{candidate.evidence}[/]) — not supported yet, so this firm "
+                f"stays a manual paste."
+            )
+            continue
+        if count is None and check:
+            console.print(f"  [yellow]•[/] {candidate.ats} [dim]{candidate.evidence}[/] "
+                          f"— found, but the board did not answer.")
+            continue
+        head = f"[green]✓[/] {candidate.ats}"
+        if count is not None:
+            head += f" — [bold]{count}[/] postings for 'analyst'"
+        console.print(f"\n  {head}   [dim]{candidate.evidence}[/]\n")
+        console.print("[dim]Paste into data/employers.yaml under `employers:`[/]\n")
+        console.print(candidate.as_yaml(name, priority))
+        console.print()
 
 
 @app.command()

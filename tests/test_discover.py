@@ -123,6 +123,20 @@ def test_only_survivors_are_hydrated(conn, stubbed):
     assert stub.hydrated == 1
 
 
+def test_the_hydration_budget_is_spent_only_on_postings_that_need_it(conn, stubbed):
+    """A pre-hydrated posting must not consume an allowance slot.
+
+    Greenhouse returns descriptions inline and Workday does not, so a naive
+    top-N loop spends its whole budget skipping Greenhouse rows and never
+    reaches the Workday ones — whose deadlines only appear on hydration.
+    """
+    already = [posting(title=f"Investment Analyst {i}") for i in range(6)]
+    empty = [posting(title=f"Research Analyst {i}", body="") for i in range(3)]
+    stub = stubbed(already + empty)
+    discover.run(conn, employers=EMPLOYERS, hydrate_limit=3)
+    assert stub.hydrated == 3
+
+
 def test_hydration_respects_its_limit(conn, stubbed):
     stub = stubbed([posting(title=f"Investment Analyst {i}", body="") for i in range(8)])
     discover.run(conn, employers=EMPLOYERS, hydrate_limit=3)

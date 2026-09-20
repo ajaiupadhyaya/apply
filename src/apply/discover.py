@@ -136,10 +136,15 @@ def run(
             survivors.append((posting, verdict))
 
     # Paid-in-requests pass, on the ones still standing, best first.
+    #
+    # The budget is spent only on postings that actually need a request, not on
+    # the top N overall: Greenhouse arrives hydrated, so a naive top-N loop
+    # burns its whole allowance skipping Greenhouse rows and never reaches the
+    # Workday ones — which are exactly the rows whose deadline is only visible
+    # after hydration.
     survivors.sort(key=lambda pair: -pair[1].value)
-    for posting, _ in survivors[:hydrate_limit]:
-        if posting.hydrated:
-            continue
+    needs_body = [pair for pair in survivors if not pair[0].hydrated]
+    for posting, _ in needs_body[:hydrate_limit]:
         adapter = ADAPTERS.get(posting.source)
         config = by_name.get(posting.employer)
         if adapter is None or config is None:
