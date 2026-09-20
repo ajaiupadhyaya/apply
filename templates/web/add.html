@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+{% block title %}Add a posting — apply{% endblock %}
+{% block content %}
+
+<h1 class="page-title">Paste the posting</h1>
+<p class="page-sub">The whole page, including the boilerplate. apply keeps the text
+verbatim and reads the deadline, the company, and the track out of it. Handshake
+postings go here too — paste them rather than linking.</p>
+
+{% if error %}<p class="notice">{{ error }}</p>{% endif %}
+
+<form class="intake" method="post" action="/add">
+  <textarea name="jd" autofocus placeholder="Paste the job description…">{{ jd or '' }}</textarea>
+  <div class="controls">
+    <button class="primary" type="submit">Read it</button>
+    <span style="color:var(--ink-3);font-size:var(--t-s)">
+      You&rsquo;ll get a chance to correct what it found.</span>
+  </div>
+</form>
+{% endblock %}

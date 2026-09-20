@@ -1,0 +1,238 @@
+# APPLY — public profile. Single source of truth for every generated document.
+#
+# Rules:
+#   - Anything typed into an application form comes from here.
+#   - Private facts (phone, street address, GPA) live in profile.private.yaml,
+#     which is gitignored and deep-merged over this file at load time.
+#   - The literal string ASK marks a value the owner still has to supply.
+#     `apply doctor` lists them; generation refuses to render one into a document.
+
+identity:
+  legal_first: Ajai
+  legal_last: Upadhyaya
+  preferred_name: AJ
+  email: upadhyayaak2@vcu.edu
+  location:
+    city: Richmond
+    state: VA
+    country: US
+
+links:
+  linkedin: https://linkedin.com/in/ajai_u
+  github: https://github.com/ajaiupadhyaya
+  portfolio: https://ajaiupadhyaya.com
+
+education:
+  - institution: Virginia Commonwealth University
+    degree: Bachelor of Science
+    major: Finance
+    start: 2025-08
+    grad_expected: 2027-05      # AUTHORITATIVE. Never restate from memory.
+    current: true
+  - institution: University of Virginia
+    note: prior coursework in Computer Science and Economics
+    current: false
+
+authorization:
+  # Confirmed by the owner, 2026-09-20.
+  us_work_authorized: true
+  requires_sponsorship_now: false
+  requires_sponsorship_future: false
+  felony: false
+  veteran: false
+
+experience:
+  - org: University of Virginia
+    title: Student Consultant
+    start: ASK                  # month the role began, YYYY-MM
+    end: present
+    location: Charlottesville, VA
+    bullets:
+      - "Advise faculty and graduate researchers on Bloomberg Terminal, WRDS,
+         and Morningstar Direct; resolve cross-vendor data discrepancies."
+      - "Build and document reproducible data pulls so a researcher can rerun a
+         query months later and get the same series back."
+      - "Translate a research question into the right instrument, universe, and
+         date convention before any data leaves the terminal."
+    tags: [data, finance, research]
+    # Resume bullets are written in resume voice. A letter needs sentences.
+    # These are the same facts in first person; letters draw from here.
+    letter_prose:
+      - "I advise faculty and graduate researchers on Bloomberg Terminal, WRDS,
+         and Morningstar Direct, which in practice means being handed a research
+         question stated loosely and turning it into the right instrument,
+         universe, and date convention before any data leaves the terminal."
+      - "When two vendors disagree about the same series, I am the one who has to
+         work out which convention each of them is using and write it down."
+      - "I document the pulls so that a researcher can rerun a query months later
+         and get the same series back."
+
+
+projects:
+  ohcamel:
+    name: OhCamel
+    url: https://github.com/ajaiupadhyaya/OhCamel
+    tracks: [quant]
+    # one_line is a whole sentence: paragraph 3 of a letter prints it verbatim.
+    one_line: "OhCamel is a reactive risk and limits engine written in OCaml."
+    # resume_line is a clause, not a sentence: the resume prints the name in bold
+    # and this immediately after it.
+    resume_line: >-
+      Reactive risk and limits engine on an incremental computation framework;
+      recomputes exposure and limit breaches only along the dependency paths a
+      tick touches, rather than re-running the full book.
+    stack: [OCaml, Incremental]
+    three_line: |
+      OhCamel is a reactive risk and limits engine written in OCaml on an incremental
+      computation framework. It recomputes exposure and limit breaches only along
+      the dependency paths a tick actually touches, rather than re-running the
+      full book on every update.
+    technical: |
+      The engine models a book as a dependency graph of incremental nodes:
+      positions feed exposures, exposures feed limit checks, limit checks feed a
+      breach set. A price or position update invalidates only the nodes
+      downstream of it, so the cost of a tick scales with what changed rather
+      than with the size of the book. The design problems that mattered were
+      deciding where to cut the graph so recomputation stays cheap without
+      making the model dishonest, keeping the breach set consistent when several
+      inputs move in the same tick, and writing the whole thing so that the
+      stated risk number and the computed one cannot drift apart silently.
+  compute_index:
+    name: GPU Compute Price Index
+    tracks: [quant, allocator]
+    one_line: "The GPU Compute Price Index is an independent price index for
+      GPU compute rental markets, built because quoted rates are not comparable
+      across providers."
+    resume_line: >-
+      Independent price index for GPU compute rental markets; normalises listings
+      that differ in hardware, commitment term, interconnect, and egress onto one
+      reference unit.
+    three_line: |
+      The index is an independent price on GPU compute rental markets, built because
+      quoted rates are fragmented across providers and not directly comparable.
+      It normalises heterogeneous listings into a series you can actually take a
+      basis against.
+    technical: |
+      The hard part is not collection, it is comparability: providers quote
+      different hardware, commitment terms, interconnect, and egress, so a
+      headline hourly rate is not a price of the same thing. The index defines a
+      reference unit, maps listings onto it, and keeps each adjustment explicit,
+      so a reader can disagree with a specific assumption rather than with the
+      whole series.
+  basis:
+    name: BASIS
+    tracks: [quant, banking, allocator, corporate]
+    one_line: "BASIS is the biweekly research report I write on finance,
+      economics, and technology."
+    resume_line: >-
+      Biweekly research report on finance, economics, and technology, written to
+      a standing deadline; every claim sourced before the issue ships.
+    three_line: |
+      BASIS is a biweekly research report on finance, economics, and technology,
+      written to a standing deadline. Each issue takes a question, works it out against
+      primary sources, and states what the evidence does and does not support.
+    technical: |
+      Writing to a fixed cadence enforces a discipline that ad hoc research does
+      not: every claim has to be sourced before the issue ships, and a thesis
+      that does not survive the fortnight has to be said out loud rather than
+      quietly dropped.
+
+skills:
+  # Only what is evidenced elsewhere in this file. Add freely — the resume
+  # renders whatever is here and omits an empty group. Review before first use.
+  Languages: [OCaml, Python, SQL]
+  Platforms: [Bloomberg Terminal, WRDS, Morningstar Direct]
+  Tools: [Git, LaTeX]
+
+essays:
+  # Canonical answers to the prompts every portal asks. Write once, adapt per app.
+  # why_this_firm is deliberately null: it is never reused verbatim.
+  why_this_firm_150w: null
+  why_finance_200w: null
+  greatest_challenge_300w: null
+  leadership_example_250w: null
+  strength_weakness_150w: null
+
+# targets: lives in profile.private.yaml — the firm list is strategy, not a fact
+# about me, and this file is public.
+
+# ---------------------------------------------------------------------------
+# Letter content. This is the voice of every generated letter, and it lives
+# here rather than in code so it can be rewritten without a commit to src/.
+#
+# Structure is fixed at four paragraphs:
+#   1. position + timing + one clause of why this firm
+#   2. the proof paragraph — ONE asset, in operational detail
+#   3. two supporting items, one sentence each
+#   4. why this firm, citing something specific from the posting
+#
+# {anchor} is the only substitution filled from the job description. Everything
+# else on this page is a fact or a sentence the owner has already approved.
+# ---------------------------------------------------------------------------
+letters:
+  proof:
+    quant:
+      source: project:ohcamel
+      lead: "The clearest thing I can point you to is a system I built myself."
+      close: >-
+        It is a small system. What it taught me is not OCaml, it is that a risk
+        number is only as good as the argument for where it gets recomputed, and
+        that argument is most of the work.
+    allocator:
+      source: experience:0
+      lines: [0, 1, 2]
+      lead: >-
+        For the past stretch I have been the person faculty and graduate
+        researchers come to when their data does not agree with itself.
+      close: >-
+        Manager research runs on the same instinct. A return series is worth what
+        its conventions are worth, and someone has to be willing to go find out
+        what they are before the number gets used.
+    banking:
+      source: experience:0
+      lines: [0, 1]
+      lead: >-
+        Most of what I do now is take a question that is stated loosely and turn
+        it into something a terminal can actually answer.
+      close: >-
+        I write BASIS on the same principle: a claim goes into the issue only
+        once it is sourced, and a thesis that does not survive the fortnight gets
+        said out loud rather than quietly dropped.
+    corporate:
+      source: experience:0
+      lines: [0, 2]
+      lead: >-
+        The useful half of my job is not pulling the data. It is making sure the
+        person who receives it can rerun it next quarter and trust what comes back.
+      close: >-
+        That is the whole of good reporting as far as I can tell: a number, the
+        convention behind it, and a way for the reader to check both.
+
+  # Paragraph 4. {anchor} is the specific platform, mandate, or structure the
+  # posting names. Each sentence takes the anchor as a complement rather than a
+  # subject, so it stays grammatical whether the anchor is "Aladdin Engineering",
+  # "the long-term pool", or "Investment Committee".
+  why_firm:
+    quant: >-
+      What I keep returning to in the posting is {anchor}. That is where the
+      modelling decisions are load-bearing rather than decorative, and I would
+      rather spend early years somewhere they are visible.
+    allocator: >-
+      The specific draw is {anchor}. An office that has to hold a view across
+      managers and asset classes cannot outsource its judgement to a screen, and
+      that is the kind of research I want to be doing.
+    banking: >-
+      The specific draw is {anchor}. Deal work rewards people who can hold a
+      position long enough to defend it, and that is the habit I have been
+      building.
+    corporate: >-
+      What made this posting stand out is {anchor}. Reporting work gets
+      interesting exactly where someone has to decide what a number means before
+      it goes out, and that decision sits inside this role.
+  no_anchor: >-
+    [[ NAME THE SPECIFIC PLATFORM, MANDATE, OR TEAM HERE -- the posting text did
+    not give the generator anything concrete enough to quote ]]
+
+  close: >-
+    I would welcome the chance to talk. Thank you for your time and consideration.
+  signoff: Sincerely,

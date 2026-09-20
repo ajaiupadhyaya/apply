@@ -1,0 +1,103 @@
+{% extends "web/base.html" %}
+{% block title %}Pipeline — apply{% endblock %}
+{% block content %}
+
+<div class="figures">
+  <div class="figure {{ 'is-zero' if not counts.due_7 }}">
+    <b>{{ counts.due_7 }}</b><span>due within 7 days</span>
+  </div>
+  <div class="figure {{ 'is-zero' if not counts.awaiting_review }}">
+    <b>{{ counts.awaiting_review }}</b><span>awaiting review</span>
+  </div>
+  <div class="figure {{ 'is-live' if counts.ready else 'is-zero' }}">
+    <b>{{ counts.ready }}</b><span>ready to send</span>
+  </div>
+  <div class="figure {{ 'is-zero' if not counts.submitted_week }}">
+    <b>{{ counts.submitted_week }}</b><span>submitted this week</span>
+  </div>
+</div>
+
+{% if not rows %}
+  <div class="empty">
+    <p>Nothing in the pipeline yet.</p>
+    <p>Paste a job description and this will hold the letter, the resume variant,
+       the field pack, and the deadline.</p>
+    <a class="button" href="/add">Paste a posting</a>
+  </div>
+{% else %}
+<table class="pipeline">
+  <thead>
+    <tr>
+      <th></th>
+      <th class="num">Pri</th>
+      <th>Company</th>
+      <th>Track</th>
+      <th>Deadline</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    {% set left = row.days_left %}
+    <tr class="{% if left is none %}undated{% elif left <= 7 %}soon{% endif %}">
+      <td class="axis"></td>
+      <td class="priority">{{ row.posting.priority }}</td>
+      <td>
+        <a class="company" href="/posting/{{ row.posting.slug }}">{{ row.posting.company }}</a>
+        <span class="role">{{ row.posting.role }}</span>
+      </td>
+      <td class="track">{{ row.posting.track }}</td>
+      <td class="deadline {% if left is none %}none{% elif left < 0 %}past{% elif left <= 7 %}soon{% endif %}">
+        {% if row.posting.deadline %}
+          {{ row.posting.deadline.strftime('%-d %b %Y') }}
+          <span class="left">{% if left < 0 %}{{ -left }}d ago{% else %}{{ left }}d{% endif %}</span>
+        {% else %}
+          no deadline — verify
+        {% endif %}
+      </td>
+      <td class="status {{ row.application.status }}">{{ row.application.status }}</td>
+      <td class="actions">
+        {% if row.application.status in ('draft', 'generated', 'ready') %}
+          <form method="post" action="/app/{{ row.application.id }}/generate" style="display:inline">
+            <button type="submit">{{ 'Generate' if row.application.status == 'draft' else 'Regenerate' }}</button>
+          </form>
+        {% endif %}
+        {% if row.application.status == 'generated' and row.application.letter_path %}
+          <a class="read" href="/posting/{{ row.posting.slug }}">Review</a>
+        {% endif %}
+        {% if row.application.status == 'ready' %}
+          <a class="go" href="#" data-confirm="confirm-{{ row.application.id }}">Submit</a>
+        {% endif %}
+        <a href="/posting/{{ row.posting.slug }}">Open</a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% for row in rows if row.application.status == 'ready' %}
+<dialog id="confirm-{{ row.application.id }}">
+  <h2>Record this as submitted?</h2>
+  <p>You are telling apply that you submitted this yourself, in
+     {{ row.posting.company }}&rsquo;s portal. Nothing is sent from here.</p>
+  <ul>
+    <li>{{ row.application.letter_path.split('/')[-1] if row.application.letter_path else 'no letter' }}</li>
+    <li>{{ row.application.resume_path.split('/')[-1] if row.application.resume_path else 'no resume' }}</li>
+  </ul>
+  <div class="controls">
+    <form method="post" action="/app/{{ row.application.id }}/submit">
+      <button class="primary" type="submit">Yes, I submitted it</button>
+    </form>
+    <button class="quiet" type="button" data-close>Not yet</button>
+  </div>
+</dialog>
+{% endfor %}
+{% endif %}
+
+{% if counts.no_deadline %}
+  <p class="notice quiet">{{ counts.no_deadline }}
+    {{ 'posting has' if counts.no_deadline == 1 else 'postings have' }} no deadline on
+    file. apply will not guess one — check the listing and set it yourself.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "web/base.html" %}
+{% block title %}{{ row.posting.company }} — apply{% endblock %}
+{% block content %}
+
+<h1 class="page-title">{{ row.posting.company }}</h1>
+<p class="page-sub">{{ row.posting.role }}</p>
+
+{% if message %}<p class="notice {{ 'quiet' if message_ok else '' }}">{{ message }}</p>{% endif %}
+
+{% if row.application.status == 'generated' %}
+  <div class="notice">
+    <strong>This has not been read yet.</strong>
+    Open the letter below. When you have read it and it is right, mark it ready —
+    that is the only way an application reaches <em>ready</em>.
+    <div class="controls">
+      <form method="post" action="/app/{{ row.application.id }}/review">
+        <button class="primary" type="submit">I&rsquo;ve read it — mark ready</button>
+      </form>
+    </div>
+  </div>
+{% elif row.application.status == 'ready' %}
+  <div class="notice">
+    <strong>Ready.</strong> Submit it in {{ row.posting.company }}&rsquo;s portal, then record it here.
+    <div class="controls">
+      <a class="button" href="#" data-confirm="confirm-detail">Record as submitted</a>
+    </div>
+  </div>
+{% endif %}
+
+<div class="columns">
+  <section>
+    <div class="panel">
+      <h2>Documents</h2>
+      {% if row.application.letter_path %}
+        <embed src="/file/{{ row.posting.slug }}/{{ letter_name }}" type="application/pdf"
+               style="width:100%;height:38rem;border:1px solid var(--rule-2)">
+        <p style="font-size:var(--t-s);margin-top:.6rem">
+          <a href="/file/{{ row.posting.slug }}/{{ letter_name }}">{{ letter_name }}</a>
+          {% if resume_name %} &nbsp;
+            <a href="/file/{{ row.posting.slug }}/{{ resume_name }}">{{ resume_name }}</a>
+            <span style="color:var(--ink-3)">{{ row.application.resume_variant }}</span>
+          {% endif %}
+        </p>
+      {% else %}
+        <p style="color:var(--ink-2);font-size:var(--t-s)">Nothing generated yet.</p>
+      {% endif %}
+      <div class="controls">
+        <form method="post" action="/app/{{ row.application.id }}/generate">
+          <button class="quiet" type="submit">
+            {{ 'Generate' if not row.application.letter_path else 'Regenerate' }}
+          </button>
+        </form>
+        <form method="post" action="/app/{{ row.application.id }}/folder">
+          <button class="quiet" type="submit">Open folder</button>
+        </form>
+      </div>
+      {% if row.application.letter_path %}
+        <p style="font-size:var(--t-s);color:var(--ink-3);margin-top:.75rem">
+          Regenerating rewrites these files and returns the application to
+          <em>generated</em>, so it has to be read again.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Job description</h2>
+      <div class="jd">{{ row.posting.jd_raw }}</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <h2>Facts</h2>
+      <dl class="facts">
+        <dt>Status</dt><dd><span class="status {{ row.application.status }}">{{ row.application.status }}</span></dd>
+        <dt>Track</dt><dd>{{ row.posting.track }}</dd>
+        <dt>Deadline</dt>
+        <dd>{% if row.posting.deadline %}{{ row.posting.deadline.strftime('%-d %B %Y') }}
+              <span style="color:var(--ink-3)">({{ row.days_left }}d)</span>
+            {% else %}<span style="color:var(--signal)">not stated — verify</span>{% endif %}</dd>
+        <dt>Location</dt><dd>{{ row.posting.location or '—' }}</dd>
+        <dt>Comp</dt><dd>{{ row.posting.comp or '—' }}</dd>
+        <dt>Priority</dt><dd>{{ row.posting.priority }}</dd>
+        <dt>Reviewed</dt><dd>{{ row.application.reviewed_at or '—' }}</dd>
+        <dt>Submitted</dt><dd>{{ row.application.submitted_at or '—' }}</dd>
+        {% if row.posting.source_url %}
+        <dt>Posting</dt><dd><a href="{{ row.posting.source_url }}">{{ row.posting.source_url[:48] }}</a></dd>
+        {% endif %}
+      </dl>
+      {% if anchors %}
+        <h3>Anchors in the posting</h3>
+        <ul style="margin:0;padding-left:1.1rem;font-size:var(--t-s);color:var(--ink-2)">
+          {% for a in anchors[:5] %}<li>{{ a }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+
+    {% if fieldpack %}
+    <div class="panel">
+      <h2>Field pack</h2>
+      <ul class="fields">
+        {% for f in fieldpack.fields %}
+        <li>
+          <span class="label">{{ f.labels[0] }}</span>
+          <span class="value">{{ f.value }}</span>
+          <button class="copy" type="button">copy</button>
+        </li>
+        {% endfor %}
+      </ul>
+      <p style="font-size:var(--t-s);color:var(--ink-3);margin-top:.9rem">
+        Never stored, never offered: {{ fieldpack.omitted_by_design | join(', ') }}.
+        Type those into the portal yourself.</p>
+    </div>
+    {% endif %}
+
+    {% if row.followups %}
+    <div class="panel">
+      <h2>Follow-ups</h2>
+      <ul class="log">
+        {% for f in row.followups %}
+        <li><time>{{ f.due_on }}</time><span>{{ f.action }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <h2>Log</h2>
+      <ul class="log">
+        {% for e in events %}
+        <li><time>{{ e.occurred_at }}</time><span class="kind">{{ e.kind }}</span>
+            <span style="color:var(--ink-2)">{{ e.detail or '' }}</span></li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="/app/{{ row.application.id }}/mark" class="controls">
+        <select name="status" aria-label="Record an outcome">
+          {% for s in markable %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        </select>
+        <button class="quiet" type="submit">Record</button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<dialog id="confirm-detail">
+  <h2>Record this as submitted?</h2>
+  <p>You are telling apply that you submitted this yourself, in
+     {{ row.posting.company }}&rsquo;s portal. Nothing is sent from here.</p>
+  <ul>
+    <li>{{ letter_name or 'no letter' }}</li>
+    <li>{{ resume_name or 'no resume' }}</li>
+  </ul>
+  <div class="controls">
+    <form method="post" action="/app/{{ row.application.id }}/submit">
+      <button class="primary" type="submit">Yes, I submitted it</button>
+    </form>
+    <button class="quiet" type="button" data-close>Not yet</button>
+  </div>
+</dialog>
+{% endblock %}

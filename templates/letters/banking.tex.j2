@@ -1,0 +1,8 @@
+<# IB, PE, corporate development. Analysis and communication. #>
+<% extends "letters/base.tex.j2" %>
+<% block body %>
+<% for paragraph in paragraphs %>
+<<paragraph>>
+
+<% endfor %>
+<% endblock %>

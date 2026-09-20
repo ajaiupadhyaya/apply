@@ -1,0 +1,64 @@
+{% extends "web/base.html" %}
+{% block title %}Digest — apply{% endblock %}
+{% block content %}
+
+<h1 class="page-title">This week</h1>
+<p class="page-sub">Everything below is something you can do today.</p>
+
+<div class="figures">
+  <div class="figure {{ 'is-zero' if not counts.due_7 }}"><b>{{ counts.due_7 }}</b><span>due within 7 days</span></div>
+  <div class="figure {{ 'is-zero' if not counts.awaiting_review }}"><b>{{ counts.awaiting_review }}</b><span>awaiting review</span></div>
+  <div class="figure {{ 'is-live' if counts.ready else 'is-zero' }}"><b>{{ counts.ready }}</b><span>ready to send</span></div>
+  <div class="figure {{ 'is-zero' if not counts.submitted_week }}"><b>{{ counts.submitted_week }}</b><span>submitted this week</span></div>
+</div>
+
+{# Sections arrive from the route as (title, [(row, note), ...]) so the template
+   stays a layout and the "what does this number mean" logic stays in Python. #}
+{% for title, items in sections %}
+  {% if items %}
+  <div class="panel">
+    <h2>{{ title }}</h2>
+    <ul class="log">
+      {% for row, note in items %}
+      <li>
+        <time>{{ row.posting.deadline or '—' }}</time>
+        <span style="flex:1"><a href="/posting/{{ row.posting.slug }}">{{ row.posting.company }}</a>
+          <span style="color:var(--ink-2)">{{ row.posting.role }}</span></span>
+        <span class="kind">{{ note }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% if d.followups %}
+<div class="panel">
+  <h2>Follow-ups due</h2>
+  <ul class="log">
+    {% for f, row in d.followups %}
+    <li><time>{{ f.due_on }}</time>
+      <span style="flex:1"><a href="/posting/{{ row.posting.slug }}">{{ row.posting.company }}</a>
+        <span style="color:var(--ink-2)">{{ f.action }}</span></span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if tracks %}
+<div class="panel">
+  <h2>Open pipeline by track</h2>
+  <div class="bars">
+    {% for track, n in tracks %}
+      <span>{{ track }}</span>
+      <span class="bar" style="width:{{ (n / track_max * 100) | round }}%"></span>
+      <span class="n">{{ n }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if d.empty %}
+  <div class="empty"><p>Nothing needs your hands this week.</p></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+# Copy to data/profile.private.yaml and fill in. That file is gitignored.
+#
+# It holds the facts that should not be public and the strategy that should not
+# be either: where you are applying, what you are looking for, and what you are
+# willing to spend. Never add SSN, DOB, government ID, or bank details here or
+# anywhere else in this repo.
+
+identity:
+  phone: ASK                    # e.g. "+1 804 555 0123"
+  street_address: ASK           # e.g. "123 Main St, Richmond, VA 23220"
+
+education_private:
+  gpa: ASK                      # e.g. "3.87"
+
+# Where you would take a job. New York is weighted heaviest by the scorer
+# because it is the stated goal; everything else is relative to that.
+search:
+  thresholds:
+    pursue: 70                  # write the letter automatically
+    maybe: 45                   # file it and show it to me
+  max_auto_per_day: 5           # ceiling on unattended submissions
+
+# What the model spending is allowed to be. The scorer and the discovery pass
+# are free; these ceilings govern letter writing and verification only.
+budget:
+  monthly_usd: 15.00            # under the $20 of credits, on purpose
+  per_run_usd: 2.00
+  per_call_usd: 0.50
+
+# Strategy. Public repo, private list.
+targets:
+  firms:
+    - Jane Street
+    - Citadel
+    - JPMorgan
+    - BlackRock
+    - Harris Williams
+    - Federal Reserve Bank of Richmond
+    - Markel
+    - Capital One
+    - Spider Management
+    - Davenport
+  grad_programs:
+    - MIT Sloan MFin
+    - MIT MBAn
+    - CMU MSCF
+    - Baruch MFE

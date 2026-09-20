@@ -1,0 +1,48 @@
+<#
+  Shared resume preamble and section machinery.
+
+  Same package set as the letters, for the same reason: this has to compile in
+  five years on a machine nobody has maintained. One page, always.
+#>
+\documentclass[10.5pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage[top=0.55in,bottom=0.55in,left=0.7in,right=0.7in]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\definecolor{hairline}{gray}{0.74}
+\definecolor{quiet}{gray}{0.38}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\linespread{1.02}
+\raggedbottom
+
+\titleformat{\section}{\normalsize\scshape}{}{0pt}{}[{\color{hairline}\titlerule[0.4pt]}]
+\titlespacing*{\section}{0pt}{11pt}{5pt}
+
+\setlist[itemize]{leftmargin=1.1em, topsep=2pt, itemsep=1.5pt, parsep=0pt, label=\textcolor{quiet}{\textbullet}}
+
+<# An entry line: bold left, quiet right, on one baseline. #>
+\newcommand{\entry}[2]{\textbf{#1}\hfill{\small\color{quiet}#2}\par}
+\newcommand{\subentry}[2]{{\small #1}\hfill{\small\color{quiet}#2}\par}
+
+\begin{document}
+
+\begin{center}
+{\LARGE <<name>>}\\[4pt]
+{\footnotesize\color{quiet}<% for bit in contact_bits %><<bit>><% if not loop.last %> \textperiodcentered{} <% endif %><% endfor %>}\\[1pt]
+{\footnotesize\color{quiet}<% for label, url in links.items() %><<url|replace("https://","")>><% if not loop.last %> \textperiodcentered{} <% endif %><% endfor %>}
+\end{center}
+
+\vspace{2pt}
+
+<% block sections %><% endblock %>
+
+\end{document}

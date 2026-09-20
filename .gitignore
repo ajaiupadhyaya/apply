@@ -1,0 +1,32 @@
+# Private facts. Never commit.
+data/profile.private.yaml
+
+# Local state and generated artifacts.
+data/apply.db
+data/apply.db-journal
+data/apply.db-wal
+data/apply.db-shm
+out/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# LaTeX build residue
+*.aux
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# macOS
+.DS_Store
+
+# The employer registry is strategy, not code.
+data/employers.yaml

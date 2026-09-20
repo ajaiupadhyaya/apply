@@ -1,0 +1,61 @@
+# The employer registry: which firms to poll, and how to reach their job board.
+#
+# Copy this to data/employers.yaml (gitignored) and put your real targets in it.
+# Each entry is set up once, by hand, and then polls forever.
+#
+#   ats: greenhouse | lever | ashby   -> needs `board` (the slug in their careers URL)
+#   ats: workday                      -> needs `host`, `tenant`, `site`
+#
+# Finding a slug, once per firm:
+#   Greenhouse  the careers page is boards.greenhouse.io/<board>, or the page
+#               fetches boards-api.greenhouse.io/v1/boards/<board>/jobs
+#   Lever       jobs.lever.co/<board>
+#   Ashby       jobs.ashbyhq.com/<board>
+#   Workday     the URL looks like
+#               https://<host>/en-US/<site>/...  where host is <tenant>.wdN.myworkdayjobs.com
+#               Open the careers page with devtools on the Network tab and look
+#               for the POST to /wday/cxs/<tenant>/<site>/jobs — those are the values.
+#
+# `search` applies to Workday only: it has no "list everything" mode worth using,
+# so give it the terms you actually care about.
+
+employers:
+  - name: Jane Street
+    ats: greenhouse
+    board: janestreet
+    tracks: [quant]
+    priority: 1
+
+  - name: Optiver
+    ats: greenhouse
+    board: optiver
+    tracks: [quant]
+    priority: 2
+
+  - name: IMC Trading
+    ats: greenhouse
+    board: imc
+    tracks: [quant]
+    priority: 2
+
+  - name: BlackRock
+    ats: workday
+    host: blackrock.wd1.myworkdayjobs.com
+    tenant: blackrock
+    site: BlackRock_Professional
+    search: ["analyst", "intern", "2027"]
+    max_results: 120
+    tracks: [quant, allocator]
+    priority: 1
+
+  # Not yet configured — each of these needs its tenant/site or board slug looked
+  # up once. Set enabled: true when you have filled in the details.
+  # - name: Capital One
+  #   ats: workday
+  #   host: capitalone.wd12.myworkdayjobs.com
+  #   tenant: capitalone
+  #   site: Capital_One
+  #   search: ["analyst", "rotational"]
+  #   tracks: [corporate]
+  #   priority: 2
+  #   enabled: false

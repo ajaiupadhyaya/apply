@@ -1,0 +1,69 @@
+<#
+  Shared letterhead and preamble for every track.
+
+  Jinja delimiters are << >> for values and <% %> for logic, because {{ }} and
+  {% %} fight with LaTeX's own grammar. Every << >> value is LaTeX-escaped
+  automatically, so a company called "Smith & Co." cannot break the build.
+
+  Packages here are deliberately boring: this must compile on a stock TeX Live,
+  on MacTeX, and on Overleaf, in five years, with no maintenance.
+#>
+\documentclass[11pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage[top=0.75in,bottom=0.75in,left=1.05in,right=1.05in]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+\definecolor{hairline}{gray}{0.74}
+\definecolor{quiet}{gray}{0.38}
+
+\pagestyle{empty}
+\setlength{\parskip}{0.68\baselineskip}
+\setlength{\parindent}{0pt}
+\linespread{1.04}
+\hyphenpenalty=400
+\raggedbottom
+
+\begin{document}
+
+<# --- letterhead ------------------------------------------------------ #>
+{\Large <<name>>}
+
+\vspace{3pt}
+{\footnotesize\color{quiet}<<contact_line>>}
+
+\vspace{5pt}
+{\color{hairline}\hrule height 0.4pt}
+
+\vspace{\baselineskip}
+
+<<date_line>>
+
+<% block recipient %>
+<% if recipient %><<recipient>>\\<% endif %>
+<<company>><% if company_location %>\\
+<<company_location>><% endif %>
+
+<% endblock %>
+
+<<salutation>>
+
+<% block body %>
+<% for paragraph in paragraphs %>
+<<paragraph>>
+
+<% endfor %>
+<% endblock %>
+
+<<closing>>
+
+\vspace{0.4\baselineskip}
+<<signoff>>
+
+\vspace{30pt}
+<<name>>
+
+\end{document}

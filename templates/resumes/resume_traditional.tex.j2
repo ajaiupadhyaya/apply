@@ -1,0 +1,42 @@
+<#
+  Banking, allocator, corporate. The Bloomberg/WRDS consulting work is above the
+  fold; projects are compressed to a short section underneath.
+#>
+<% extends "resumes/_base.tex.j2" %>
+<% block sections %>
+\section{Education}
+<% for e in education %>
+\entry{<<e.institution>>}{<% if e.right %><<e.right>><% endif %>}
+<% if e.detail %>
+{\small\color{quiet}<<e.detail>>}\par
+<% endif %>
+\vspace{3pt}
+<% endfor %>
+
+\section{Experience}
+<% for x in experience %>
+\entry{<<x.title>>, <<x.org>>}{<% if x.dates %><<x.dates>><% endif %>}
+<% if x.location %>
+{\small\color{quiet}<<x.location>>}\par
+<% endif %>
+\begin{itemize}
+<% for b in x.bullets %>
+  \item <<b>>
+<% endfor %>
+\end{itemize}
+\vspace{3pt}
+<% endfor %>
+
+\section{Projects}
+<% for p in projects %>
+\textbf{<<p.name>>}\quad{\small <<p.resume_line>>}\par
+\vspace{2pt}
+<% endfor %>
+
+<% if skills %>
+\section{Skills}
+<% for group, items in skills.items() %>
+{\small\textbf{<<group>>}\quad <% for i in items %><<i>><% if not loop.last %>, <% endif %><% endfor %>}\par
+<% endfor %>
+<% endif %>
+<% endblock %>

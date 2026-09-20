@@ -1,0 +1,47 @@
+<#
+  Trading, risk, research. Projects sit above experience — for a quant desk the
+  engine is the evidence — and the skills block is a named section, not a
+  footnote at the bottom of the page.
+#>
+<% extends "resumes/_base.tex.j2" %>
+<% block sections %>
+\section{Education}
+<% for e in education %>
+\entry{<<e.institution>>}{<% if e.right %><<e.right>><% endif %>}
+<% if e.detail %>
+{\small\color{quiet}<<e.detail>>}\par
+<% endif %>
+\vspace{3pt}
+<% endfor %>
+
+<% if skills %>
+\section{Technical}
+<% for group, items in skills.items() %>
+{\small\textbf{<<group>>}\quad <% for i in items %><<i>><% if not loop.last %>, <% endif %><% endfor %>}\par
+<% endfor %>
+<% endif %>
+
+\section{Projects}
+<% for p in projects %>
+\entry{<<p.name>>}{<% if p.stack %><% for t in p.stack %><<t>><% if not loop.last %> / <% endif %><% endfor %><% endif %>}
+{\small <<p.resume_line>>}\par
+<% if p.url %>
+{\footnotesize\color{quiet}<<p.url|replace("https://","")>>}\par
+<% endif %>
+\vspace{4pt}
+<% endfor %>
+
+\section{Experience}
+<% for x in experience %>
+\entry{<<x.title>>, <<x.org>>}{<% if x.dates %><<x.dates>><% endif %>}
+<% if x.location %>
+{\small\color{quiet}<<x.location>>}\par
+<% endif %>
+\begin{itemize}
+<% for b in x.bullets %>
+  \item <<b>>
+<% endfor %>
+\end{itemize}
+\vspace{3pt}
+<% endfor %>
+<% endblock %>

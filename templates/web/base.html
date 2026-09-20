@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}apply{% endblock %}</title>
+<link rel="stylesheet" href="/static/apply.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <a class="wordmark" href="/">apply<span>{{ owner }}</span></a>
+    <nav>
+      <a href="/" {% if page == 'pipeline' %}aria-current="page"{% endif %}>Pipeline</a>
+      <a href="/add" {% if page == 'add' %}aria-current="page"{% endif %}>Add</a>
+      <a href="/digest" {% if page == 'digest' %}aria-current="page"{% endif %}>Digest</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+{% block content %}{% endblock %}
+</main>
+
+<script>
+// Copy a field pack value. The whole point of the field pack is one click per
+// field, so this is the only interaction on the page worth scripting.
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest('.copy');
+  if (!button) return;
+  const value = button.closest('li').querySelector('.value').textContent.trim();
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const scratch = document.createElement('textarea');
+    scratch.value = value;
+    document.body.appendChild(scratch);
+    scratch.select();
+    document.execCommand('copy');
+    scratch.remove();
+  }
+  const original = button.textContent;
+  button.textContent = 'copied';
+  button.classList.add('done');
+  setTimeout(() => { button.textContent = original; button.classList.remove('done'); }, 1100);
+});
+
+// Submit asks first, and says exactly which files it is recording.
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest('[data-confirm]');
+  if (!trigger) return;
+  event.preventDefault();
+  document.getElementById(trigger.dataset.confirm).showModal();
+});
+document.addEventListener('click', (event) => {
+  if (event.target.matches('[data-close]')) event.target.closest('dialog').close();
+});
+</script>
+</body>
+</html>

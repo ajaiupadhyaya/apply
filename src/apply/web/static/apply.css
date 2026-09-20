@@ -1,0 +1,406 @@
+/* APPLY — pipeline dashboard.
+ *
+ * One accent, and it means one thing: this needs your hands now. `ready` and a
+ * deadline inside a week are the only coloured things on the page. Everything
+ * else is greyscale, so the colour never has to compete with itself.
+ *
+ * Type is the machine's own: New York and SF. A local-first tool that has to
+ * work in five years should not go to the network for its typography.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --paper:    #f1f3ef;   /* ledger stock */
+  --paper-2:  #e7eae4;   /* masthead, table head, inset panels */
+  --paper-3:  #dfe3da;
+  --ink:      #191c19;
+  --ink-2:    #4a4f49;
+  --ink-3:    #7c827a;
+  --rule:     #d2d7ce;
+  --rule-2:   #bfc6ba;
+  --signal:   #9b2226;
+  --signal-bg: rgba(155, 34, 38, 0.09);
+
+  --serif: ui-serif, "New York", Iowan Old Style, Palatino, Georgia, serif;
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --t-xs: 0.72rem;
+  --t-s:  0.8125rem;
+  --t-b:  0.9375rem;
+  --t-m:  1.0625rem;
+  --t-l:  1.3125rem;
+  --t-xl: 1.875rem;
+  --t-fig: 2.5rem;
+
+  --gutter: 2rem;        /* the time axis lives here */
+  --pad: 1.5rem;
+  --max: 68rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:    #171a16;
+    --paper-2:  #1f231e;
+    --paper-3:  #262b25;
+    --ink:      #e8ebe5;
+    --ink-2:    #a8aea4;
+    --ink-3:    #757b72;
+    --rule:     #2e332c;
+    --rule-2:   #3d443b;
+    --signal:   #de5a5e;
+    --signal-bg: rgba(222, 90, 94, 0.13);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #171a16; --paper-2: #1f231e; --paper-3: #262b25;
+  --ink: #e8ebe5; --ink-2: #a8aea4; --ink-3: #757b72;
+  --rule: #2e332c; --rule-2: #3d443b;
+  --signal: #de5a5e; --signal-bg: rgba(222, 90, 94, 0.13);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: var(--t-b)/1.5 var(--sans);
+  font-variant-numeric: tabular-nums;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* ---------------------------------------------------------- masthead */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-2);
+}
+
+.masthead-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0.85rem var(--pad);
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+}
+
+.wordmark {
+  font: 500 var(--t-m)/1 var(--serif);
+  letter-spacing: 0.01em;
+}
+.wordmark span { color: var(--ink-3); font-size: var(--t-s); margin-left: 0.5rem; }
+
+.masthead nav { margin-left: auto; display: flex; gap: 1.25rem; font-size: var(--t-s); }
+.masthead nav a { color: var(--ink-2); }
+.masthead nav a[aria-current="page"] { color: var(--ink); }
+
+/* ------------------------------------------------------------ layout */
+
+main { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad) 5rem; }
+
+.page-title {
+  font: 400 var(--t-xl)/1.15 var(--serif);
+  margin: 2.25rem 0 0.35rem;
+}
+.page-sub { color: var(--ink-2); font-size: var(--t-s); margin: 0 0 1.75rem; max-width: 46ch; }
+
+/* --------------------------------------------------- headline figures */
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.25rem 3rem;
+  padding: 1.75rem 0 1.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.figure { display: flex; align-items: baseline; gap: 0.6rem; }
+.figure b {
+  font: 400 var(--t-fig)/0.8 var(--serif);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.figure span { font-size: var(--t-s); color: var(--ink-2); max-width: 10ch; line-height: 1.25; }
+.figure.is-live b, .figure.is-live span { color: var(--signal); }
+.figure.is-zero b { color: var(--ink-3); }
+
+/* ------------------------------------------------- the pipeline table */
+
+.pipeline { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+
+.pipeline thead th {
+  font-size: var(--t-xs);
+  font-weight: 400;
+  color: var(--ink-3);
+  text-align: left;
+  padding: 1rem 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--rule-2);
+}
+.pipeline thead th:first-child { padding-left: 0; width: var(--gutter); }
+.pipeline thead th.num { text-align: right; }
+
+.pipeline tbody tr { border-bottom: 1px solid var(--rule); }
+.pipeline tbody tr:hover td:not(.axis) { background: var(--paper-2); }
+.pipeline td { padding: 0.8rem 0.75rem; vertical-align: top; }
+
+/* The time axis. The table is sorted by deadline, so the left gutter is a
+   calendar: one continuous hairline, one tick per posting. */
+.axis {
+  position: relative;
+  width: var(--gutter);
+  padding: 0 !important;
+}
+/* The line is a background on the gutter cell rather than a positioned
+   pseudo-element: in a collapsed table the cell box is exactly the row's height,
+   so consecutive segments butt together and read as one continuous rule. A
+   pseudo-element resolves against a box that does not stretch, and breaks. */
+.axis {
+  background: linear-gradient(var(--rule-2), var(--rule-2))
+              no-repeat 0.5rem 0 / 1px 100%;
+}
+.axis::after {                  /* this row's tick */
+  content: "";
+  position: absolute;
+  left: 0.125rem; top: 1.35rem;
+  width: 0.8rem; height: 1px;
+  background: var(--ink-3);
+}
+tr.soon .axis::after { background: var(--signal); height: 2px; }
+tr.undated .axis::after {
+  left: 0.3rem; top: 1.15rem;
+  width: 0.45rem; height: 0.45rem;
+  background: transparent;
+  border: 1px solid var(--ink-3);
+  border-radius: 50%;
+}
+/* The axis is a measure, not a border. It begins at the first tick and ends at
+   the last, and a posting with no deadline has no place on it at all — it sits
+   below the measure with a hollow tick. Rows are sorted deadline-first with
+   nulls last, so the undated ones are always the tail. */
+tbody tr:first-child .axis {
+  background-position-y: 1.35rem;
+  background-size: 1px calc(100% - 1.35rem);
+}
+tr.undated .axis { background-image: none; }
+tbody tr:last-child:not(:first-child) .axis,
+tbody tr:has(+ tr.undated):not(:first-child) .axis { background-size: 1px 1.35rem; }
+tbody tr:first-child:last-child .axis,
+tbody tr:first-child:has(+ tr.undated) .axis { background-image: none; }
+
+.company { font-size: var(--t-b); }
+.role { color: var(--ink-2); font-size: var(--t-s); display: block; margin-top: 0.1rem; }
+.track { color: var(--ink-2); font-size: var(--t-s); }
+.priority { color: var(--ink-3); font-size: var(--t-s); text-align: right; }
+
+.deadline { white-space: nowrap; font-size: var(--t-s); }
+.deadline .left { color: var(--ink-3); margin-left: 0.5rem; }
+.deadline.soon, .deadline.soon .left { color: var(--signal); }
+.deadline.past, .deadline.past .left { color: var(--signal); }
+.deadline.none { color: var(--ink-3); }
+
+/* `ready` is the only state that needs the owner's hands, so it is the only
+   state that gets the accent. */
+.status { font-size: var(--t-s); color: var(--ink-2); white-space: nowrap; }
+.status.ready {
+  display: inline-block;          /* so the rule hugs the word, not the cell */
+  color: var(--signal);
+  border-bottom: 1.5px solid var(--signal);
+  padding-bottom: 1px;
+}
+.status.draft, .status.rejected, .status.withdrawn { color: var(--ink-3); }
+
+.actions { text-align: right; white-space: nowrap; font-size: var(--t-s); }
+.actions a, .actions button {
+  color: var(--ink-2);
+  margin-left: 0.9rem;
+  background: none; border: 0; padding: 0;
+  font: inherit; cursor: pointer;
+}
+.actions a:hover, .actions button:hover { color: var(--ink); text-decoration: underline; }
+.actions .go { color: var(--signal); }
+/* Reading a letter needs the owner too, but `ready` is the loudest state on the
+   page and stays that way: this gets full-strength ink, not the accent. */
+.actions .read { color: var(--ink); }
+
+/* ------------------------------------------------------------ detail */
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.panel { border-top: 1px solid var(--rule-2); padding-top: 0.9rem; margin-bottom: 2.25rem; }
+.panel h2 { font: 400 var(--t-l)/1.2 var(--serif); margin: 0 0 0.75rem; }
+.panel h3 { font: 500 var(--t-s)/1.3 var(--sans); color: var(--ink-3); margin: 1.5rem 0 0.5rem; }
+
+.jd {
+  font-size: var(--t-s);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 32rem;
+  overflow-y: auto;
+  padding-right: 1rem;
+  color: var(--ink-2);
+}
+
+.facts { display: grid; grid-template-columns: 7rem 1fr; gap: 0.35rem 1rem; font-size: var(--t-s); }
+.facts dt { color: var(--ink-3); }
+.facts dd { margin: 0; }
+
+/* -------------------------------------------------------- field pack */
+
+.fields { list-style: none; margin: 0; padding: 0; }
+.fields li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.fields .label { color: var(--ink-3); font-size: var(--t-s); flex: 0 0 11rem; }
+.fields .value { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+.copy {
+  flex: 0 0 auto;
+  font: inherit; font-size: var(--t-s);
+  color: var(--ink-2);
+  background: none; border: 1px solid var(--rule-2);
+  padding: 0.1rem 0.5rem; cursor: pointer;
+}
+.copy:hover { border-color: var(--ink-3); color: var(--ink); }
+.copy.done { color: var(--signal); border-color: var(--signal); }
+
+/* --------------------------------------------------------- the intake */
+
+.intake textarea {
+  width: 100%;
+  min-height: 26rem;
+  padding: 1.25rem;
+  background: var(--paper-2);
+  color: var(--ink);
+  border: 1px solid var(--rule-2);
+  font: var(--t-s)/1.6 var(--sans);
+  resize: vertical;
+}
+.intake textarea:focus { border-color: var(--ink-3); outline: none; }
+
+.controls { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+
+button.primary, .button {
+  font: 500 var(--t-b)/1 var(--sans);
+  padding: 0.7rem 1.4rem;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+button.primary:hover, .button:hover { background: var(--ink-2); border-color: var(--ink-2); text-decoration: none; }
+button.quiet {
+  font: var(--t-b)/1 var(--sans);
+  padding: 0.7rem 1.1rem;
+  background: none; color: var(--ink-2);
+  border: 1px solid var(--rule-2); cursor: pointer;
+}
+
+.field-row { display: grid; grid-template-columns: 9rem 1fr; gap: 0.6rem 1rem; align-items: center; margin-bottom: 0.6rem; }
+.field-row label { color: var(--ink-3); font-size: var(--t-s); }
+.field-row input, .field-row select {
+  font: var(--t-b)/1.3 var(--sans);
+  padding: 0.45rem 0.6rem;
+  background: var(--paper-2); color: var(--ink);
+  border: 1px solid var(--rule-2); width: 100%;
+}
+
+/* ------------------------------------------------------------ notices */
+
+.notice {
+  border-left: 2px solid var(--signal);
+  background: var(--signal-bg);
+  padding: 0.7rem 1rem;
+  font-size: var(--t-s);
+  margin: 1rem 0;
+}
+.notice.quiet { border-left-color: var(--rule-2); background: var(--paper-2); }
+
+.empty { padding: 4rem 0; color: var(--ink-2); max-width: 40ch; }
+.empty p { margin: 0 0 1.25rem; }
+
+.log { list-style: none; margin: 0; padding: 0; font-size: var(--t-s); }
+.log li { display: flex; gap: 1rem; padding: 0.35rem 0; border-bottom: 1px solid var(--rule); }
+.log time { color: var(--ink-3); flex: 0 0 9rem; }
+.log .kind { flex: 0 0 6rem; color: var(--ink-2); }
+
+.bars { display: grid; grid-template-columns: 6rem 1fr 2rem; gap: 0.4rem 0.75rem; align-items: center; font-size: var(--t-s); }
+.bars .bar { height: 0.5rem; background: var(--ink-3); }
+.bars .n { text-align: right; color: var(--ink-2); }
+
+/* -------------------------------------------------------- the modal */
+
+dialog {
+  border: 1px solid var(--rule-2);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 1.75rem;
+  max-width: 30rem;
+  width: calc(100vw - 2rem);
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+dialog h2 { font: 400 var(--t-l)/1.2 var(--serif); margin: 0 0 0.75rem; }
+dialog ul { font-size: var(--t-s); color: var(--ink-2); padding-left: 1.1rem; margin: 0.75rem 0; }
+
+/* -------------------------------------------------------- narrow */
+
+@media (max-width: 62rem) {
+  .columns { grid-template-columns: 1fr; gap: 1.5rem; }
+}
+
+@media (max-width: 46rem) {
+  :root { --pad: 1rem; --gutter: 1.25rem; --t-fig: 2rem; }
+
+  .figures { gap: 1.5rem 2rem; }
+  .figure { flex: 0 0 calc(50% - 1rem); }
+
+  /* The table becomes a list of blocks. The time axis survives the change —
+     it is the one thing on this page worth keeping at phone width. */
+  .pipeline thead { display: none; }
+  .pipeline, .pipeline tbody, .pipeline tr, .pipeline td { display: block; width: 100%; }
+  .pipeline tbody tr { position: relative; padding: 0.85rem 0 0.85rem var(--gutter); }
+  .pipeline td { padding: 0 0 0.15rem; }
+  .pipeline td.axis {
+    position: absolute; left: 0; top: 0; bottom: 0; width: var(--gutter);
+  }
+  .axis { background-position-x: 0.3rem; }
+  .axis::after { left: 0; width: 0.62rem; top: 1.25rem; }
+  tr.undated .axis::after { left: 0.1rem; top: 1.05rem; }
+  tbody tr:last-child .axis::before { height: 1.35rem; }
+
+  .pipeline td.priority { display: none; }
+  .pipeline td.track { display: inline-block; width: auto; margin-right: 0.75rem; }
+  .pipeline td.deadline { display: inline-block; width: auto; margin-right: 0.75rem; }
+  .pipeline td.status { display: inline-block; width: auto; }
+  .actions { text-align: left; padding-top: 0.5rem !important; }
+  .actions a:first-child, .actions button:first-child { margin-left: 0; }
+
+  .fields li { flex-wrap: wrap; }
+  .fields .label { flex: 1 1 100%; }
+  .facts { grid-template-columns: 6rem 1fr; }
+  .field-row { grid-template-columns: 1fr; gap: 0.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

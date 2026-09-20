@@ -1,0 +1,38 @@
+[SEED FIXTURE — representative posting text for pipeline testing.
+ Verify every line against the live posting before applying.]
+
+BlackRock
+2027 Full-Time Analyst Program (AMRS)
+New York, NY | Wilmington, DE | Atlanta, GA
+
+About this role
+
+BlackRock's Analyst Program is a two-year program for graduating students
+beginning full time in the summer following graduation. Analysts join one of
+several business areas across the Americas region, including Aladdin Engineering,
+Risk and Quantitative Analysis, Portfolio Management Group, and Client Businesses.
+
+Aladdin is the technology platform that underpins the firm's investment process,
+bringing risk analytics, portfolio construction, and trading onto a single system.
+Analysts placed in Risk and Quantitative Analysis work alongside portfolio
+managers on risk measurement, scenario analysis, and the quantitative models that
+sit behind portfolio construction decisions.
+
+Responsibilities
+- Support portfolio managers with risk measurement and exposure reporting
+- Contribute to quantitative research on systematic strategies and signals
+- Build and maintain tooling in Python; exposure to C++ is a plus
+- Communicate analytical results clearly to investment professionals
+
+Qualifications
+- Bachelor's degree expected between December 2026 and June 2027
+- Coursework in finance, economics, mathematics, statistics, or computer science
+- Demonstrated quantitative ability and comfort working with data
+- Strong written and verbal communication
+
+Compensation: $110,000 base salary
+
+Application deadline: November 14, 2026
+Program begins: July 2027
+
+BlackRock is an Equal Opportunity Employer.

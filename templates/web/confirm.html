@@ -1,0 +1,83 @@
+{% extends "web/base.html" %}
+{% block title %}Check what it found — apply{% endblock %}
+{% block content %}
+
+<h1 class="page-title">Check what it found</h1>
+<p class="page-sub">Correct anything wrong, then add it. The job description is kept
+exactly as pasted either way.</p>
+
+{% for note in notes %}<p class="notice">{{ note }}</p>{% endfor %}
+
+<form method="post" action="/add/create">
+  <input type="hidden" name="jd" value="{{ jd_escaped }}">
+  <div class="columns">
+    <section>
+      <div class="field-row">
+        <label for="company">Company</label>
+        <input id="company" name="company" value="{{ parsed.company or '' }}" required>
+
+        <label for="role">Role</label>
+        <input id="role" name="role" value="{{ parsed.role or '' }}" required>
+
+        <label for="track">Track</label>
+        <select id="track" name="track">
+          {% for t in tracks %}
+          <option value="{{ t }}" {% if t == parsed.classification.track.value %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="deadline">Deadline</label>
+        <input id="deadline" name="deadline" type="date"
+               value="{{ parsed.deadline.isoformat() if parsed.deadline else '' }}">
+
+        <label for="location">Location</label>
+        <input id="location" name="location" value="{{ parsed.location or '' }}">
+
+        <label for="comp">Comp</label>
+        <input id="comp" name="comp" value="{{ parsed.comp or '' }}">
+
+        <label for="source">Source</label>
+        <select id="source" name="source">
+          {% for s in ['', 'handshake', 'company_site', 'referral', 'linkedin'] %}
+          <option value="{{ s }}" {% if s == (parsed.source or '') %}selected{% endif %}>{{ s or '—' }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="priority">Priority</label>
+        <input id="priority" name="priority" type="number" min="1" max="5" value="3">
+
+        <label for="url">Posting URL</label>
+        <input id="url" name="source_url" value="{{ parsed.source_url or '' }}">
+      </div>
+      <div class="controls">
+        <button class="primary" type="submit">Add to the pipeline</button>
+        <a href="/add" style="color:var(--ink-2);font-size:var(--t-s)">Start over</a>
+      </div>
+    </section>
+
+    <section>
+      <div class="panel">
+        <h2>Why this track</h2>
+        {% if parsed.classification.tied %}
+          <p class="notice quiet" style="margin-top:0">
+            Nothing in this posting matched a track strongly, so it defaulted to
+            <strong>corporate</strong> &mdash; the least over-claiming thing to be
+            wrong about. Set it yourself if you know better.</p>
+        {% else %}
+        <div class="bars">
+          {% for name, score, matched in parsed.classification.table() %}
+            <span>{{ name }}</span>
+            <span class="bar" style="width:{{ (score / (top_score or 1) * 100) | round }}%;
+              {% if name == parsed.classification.track.value %}background:var(--signal){% endif %}"></span>
+            <span class="n">{{ score }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <h3>Matched</h3>
+        <p style="font-size:var(--t-s);color:var(--ink-2);margin:0">
+          {{ parsed.classification.matched.get(parsed.classification.track, []) | join(', ') or 'nothing' }}</p>
+      </div>
+    </section>
+  </div>
+</form>
+{% endblock %}
