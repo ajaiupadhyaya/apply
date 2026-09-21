@@ -812,6 +812,92 @@ def spend(ledger: bool = typer.Option(False, "--ledger", help="Show individual c
 
 
 @app.command()
+def ingest(
+    file: Optional[Path] = typer.Option(None, "--file", "-f",
+                                        help="An alert export written by Claude."),
+    imap: bool = typer.Option(False, "--imap", help="Read the mailbox directly."),
+    user: Optional[str] = typer.Option(None, "--user", help="IMAP address."),
+    days: int = typer.Option(30, "--days", help="How far back to read."),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """File the postings out of Handshake's job-alert emails.
+
+    APPLY never fetches a page from Handshake. It reads the mail Handshake
+    already sends you, which is a different thing and carries no risk to a
+    VCU-provisioned account.
+
+    Two ways in. `--imap` reads the mailbox directly and needs a Gmail app
+    password in the ANTHROPIC-style keychain slot APPLY_IMAP_PASSWORD; that is
+    the path an unattended run uses. `--file` reads an export, which is how it
+    works when Claude does the fetching through the Gmail connector.
+    """
+    conn = _conn()
+    profile = _profile()
+    preferences = profile.raw.get("search") or {}
+
+    if imap:
+        import os
+
+        address = user or profile.email
+        password = os.environ.get("APPLY_IMAP_PASSWORD", "")
+        if not password:
+            _fail(
+                "no IMAP password. Gmail needs an app password, not your account "
+                "password:\n"
+                "  1. myaccount.google.com → Security → 2-Step Verification → App passwords\n"
+                "  2. security add-generic-password -U -a \"$USER\" -s APPLY_IMAP_PASSWORD -w\n"
+                "  3. export APPLY_IMAP_PASSWORD=\"$(security find-generic-password "
+                "-a \"$USER\" -s APPLY_IMAP_PASSWORD -w)\"\n"
+                "If VCU's Workspace forbids app passwords, ask Claude to export the "
+                "alerts instead and use --file."
+            )
+        try:
+            messages = discover_mod.fetch_imap(user=address, password=password, days=days)
+        except Exception as exc:                         # noqa: BLE001
+            _fail(f"could not read the mailbox: {exc}")
+    elif file:
+        if not file.exists():
+            _fail(f"no such file: {file}")
+        messages = discover_mod.load_messages(file)
+    else:
+        _fail("give me the mail: --imap, or --file <export.json>.")
+
+    result = discover_mod.ingest_alerts(conn, messages, preferences=preferences,
+                                        dry_run=dry_run)
+    console.print(
+        f"\n[dim]{len(messages)} messages read · {result.fetched} carried jobs · "
+        f"{result.unique} unique postings · {result.already_known} already known · "
+        f"{result.rejected} rejected[/]\n"
+    )
+    if not result.worth_reading:
+        console.print("[dim]nothing new worth reading.[/]")
+        return
+
+    table = Table(box=None, header_style="dim", padding=(0, 2))
+    for column in ("score", "", "company", "role", "location", "deadline"):
+        table.add_column(column, justify="right" if column == "score" else "left")
+    for posting, verdict in result.worth_reading[:40]:
+        table.add_row(
+            str(verdict.value),
+            Text(verdict.verdict.value, style="bold green" if verdict.pursue else "yellow"),
+            Text(posting.employer[:22], overflow="ellipsis"),
+            Text((posting.title or "")[:42], overflow="ellipsis"),
+            Text((posting.location or "—")[:22], overflow="ellipsis"),
+            str(posting.deadline or "—"),
+        )
+    console.print(table)
+    console.print(
+        "\n[dim]Alerts carry no description, so nothing from this channel is "
+        "written up automatically — open it in Handshake and paste the full "
+        "posting with `apply add --clipboard` when one is worth pursuing.[/]"
+    )
+    if dry_run:
+        console.print("[dim]--dry-run: nothing was written.[/]")
+    else:
+        console.print(f"\n[green]✓[/] filed {len(result.created)}.")
+
+
+@app.command()
 def resolve(
     url: str = typer.Argument(..., help="A firm's careers page."),
     name: str = typer.Option("New Employer", "--name", help="What to call it in the registry."),

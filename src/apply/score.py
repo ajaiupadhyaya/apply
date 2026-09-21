@@ -103,7 +103,14 @@ NON_US = _any([
 #: — right role, right timing, right city, target firm — lands near 90 and clears
 #: the pursue bar with room to spare. Calibrated against the two seed postings.
 ROLE_FIT = [
+    # Loose between "quantitative" and the noun: "Quantitative Finance
+    # Researcher" is the same job as "Quantitative Researcher".
+    (r"quantitative[\s\w]{0,18}(research\w*|analyst|trader|trading)", 25),
     (r"quantitative\s+(research\w*|trad\w*|analyst)", 25),
+    # Graduate programmes are what the banks call an analyst programme, and
+    # they are exactly the thing worth catching.
+    (r"graduate\s+(program|programme|scheme|analyst)", 23),
+    (r"sales\s+and\s+trading", 22),
     (r"analyst\s+program", 22),
     (r"summer\s+analyst", 22),
     (r"investment\s+bank\w*\s+(analyst|associate|intern)", 22),
@@ -116,6 +123,15 @@ ROLE_FIT = [
     (r"financial\s+analyst", 18),
     (r"credit\s+analyst", 18),
     (r"economist", 17),
+    (r"investment\s+management", 19),
+    (r"private\s+(equity|credit|bank\w*)", 19),
+    (r"\bm&a\b", 19),
+    (r"corporate\s+bank\w*", 18),
+    (r"capital\s+markets", 17),
+    (r"asset\s+management", 17),
+    (r"wealth\s+management", 14),
+    (r"treasury", 14),
+    (r"actuarial", 13),
     (r"trading\s+(analyst|assistant|intern)", 17),
     (r"\btrader\b", 16),
     (r"corporate\s+development", 16),
@@ -145,6 +161,14 @@ TIMING = [
     (r"\bjunior\s+or\s+senior\b", 12),
     (r"part[\s-]?time", 8),
     (r"\bintern(ship)?\b", 8),
+]
+
+
+#: Checked against the title alone. A year in a job title is a campus signal;
+#: the same year buried in a description usually is not.
+TITLE_TIMING = [
+    (r"\b20(26|27)\b", 14),
+    (r"\bclass\s+of\b", 14),
 ]
 
 
@@ -222,6 +246,9 @@ def score(posting: RawPosting, preferences: dict | None = None) -> Score:
     timing_hit = 0
     for pattern, weight in TIMING:
         if re.search(pattern, haystack, re.I):
+            timing_hit = max(timing_hit, weight)
+    for pattern, weight in TITLE_TIMING:
+        if re.search(pattern, title, re.I):
             timing_hit = max(timing_hit, weight)
     if timing_hit:
         value += timing_hit

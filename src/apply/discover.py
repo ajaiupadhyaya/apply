@@ -212,3 +212,164 @@ def _store(conn, posting: RawPosting, verdict: Score) -> str | None:
     except Exception:                                 # noqa: BLE001 — unique index race
         return None
     return slug
+
+
+# ------------------------------------------------------------- alert mail
+
+
+@dataclass(slots=True)
+class Message:
+    """One alert email, however it was fetched."""
+
+    subject: str
+    body: str
+    received: _dt.date
+    sender: str = ""
+    id: str = ""
+    url: str | None = None
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> "Message":
+        received = raw.get("received") or raw.get("date") or ""
+        if isinstance(received, str) and received:
+            received = _dt.date.fromisoformat(received[:10])
+        return cls(
+            subject=raw.get("subject", ""),
+            body=raw.get("body") or raw.get("plaintextBody") or "",
+            received=received or _dt.date.today(),
+            sender=raw.get("sender", ""),
+            id=str(raw.get("id", "")),
+            url=raw.get("url"),
+        )
+
+
+def ingest_alerts(
+    conn,
+    messages: list[Message],
+    *,
+    preferences: dict | None = None,
+    dry_run: bool = False,
+) -> Result:
+    """Turn job-alert emails into postings, through the same gate as everything else.
+
+    Alerts carry no description, so nothing that arrives this way can reach
+    `pursue` on the strength of a title — which is the intended outcome. A
+    posting seen only in an email is filed for a human to open, not fed to a
+    letter writer.
+    """
+    from .sources.alerts import is_job_email, parse_alert
+
+    preferences = preferences or {}
+    result = Result()
+
+    raw: list[RawPosting] = []
+    for message in messages:
+        if not is_job_email(message.subject, message.sender):
+            continue
+        result.fetched += 1
+        raw.extend(parse_alert(message.subject, message.body, message.received,
+                               url=message.url))
+
+    unique = dedupe(raw)
+    result.unique = len(unique)
+
+    for posting in unique:
+        if db.fingerprint_exists(conn, posting.fingerprint):
+            result.already_known += 1
+            continue
+        verdict = score_posting(posting, preferences)
+        if verdict.verdict is Verdict.REJECT:
+            result.rejected += 1
+            result.rejections.append((posting, verdict))
+        elif verdict.verdict is Verdict.PURSUE:
+            result.pursue.append((posting, verdict))
+        else:
+            result.maybe.append((posting, verdict))
+
+    if not dry_run:
+        for posting, verdict in result.worth_reading:
+            slug = _store(conn, posting, verdict)
+            if slug:
+                result.created.append(slug)
+    return result
+
+
+def load_messages(path: Path) -> list[Message]:
+    """Read an alert export. Accepts a bare list or {"messages": [...]}."""
+    import json
+
+    payload = json.loads(Path(path).read_text())
+    rows = payload.get("messages") if isinstance(payload, dict) else payload
+    return [Message.from_dict(row) for row in (rows or [])]
+
+
+def fetch_imap(
+    *,
+    user: str,
+    password: str,
+    host: str = "imap.gmail.com",
+    query: str = "handshake",
+    days: int = 30,
+    limit: int = 60,
+) -> list[Message]:
+    """Read alert mail over IMAP, for runs with no human and no connector.
+
+    Gmail needs an app password here, not the account password. If VCU's
+    Workspace forbids app passwords this raises, and the file-drop path is the
+    fallback.
+    """
+    import email
+    import imaplib
+    from email.header import decode_header, make_header
+
+    since = (_dt.date.today() - _dt.timedelta(days=days)).strftime("%d-%b-%Y")
+    out: list[Message] = []
+    connection = imaplib.IMAP4_SSL(host)
+    try:
+        connection.login(user, password)
+        connection.select("INBOX", readonly=True)
+        status, data = connection.search(None, f'(SINCE {since} FROM "{query}")')
+        if status != "OK":
+            return []
+        ids = (data[0] or b"").split()[-limit:]
+        for message_id in ids:
+            status, raw = connection.fetch(message_id, "(RFC822)")
+            if status != "OK" or not raw or not raw[0]:
+                continue
+            parsed = email.message_from_bytes(raw[0][1])
+            subject = str(make_header(decode_header(parsed.get("Subject", ""))))
+            received = _dt.date.today()
+            if parsed.get("Date"):
+                try:
+                    received = email.utils.parsedate_to_datetime(parsed["Date"]).date()
+                except (TypeError, ValueError):
+                    pass
+            body = _plain_text(parsed)
+            out.append(Message(subject=subject, body=body, received=received,
+                               sender=parsed.get("From", ""), id=message_id.decode()))
+    finally:
+        try:
+            connection.logout()
+        except Exception:                                 # noqa: BLE001
+            pass
+    return out
+
+
+def _plain_text(parsed) -> str:
+    """Prefer the text/plain part; fall back to stripping the HTML one."""
+    from .sources.base import strip_html
+
+    if not parsed.is_multipart():
+        payload = parsed.get_payload(decode=True) or b""
+        text = payload.decode(parsed.get_content_charset() or "utf-8", "replace")
+        return text if parsed.get_content_type() == "text/plain" else strip_html(text)
+
+    html = ""
+    for part in parsed.walk():
+        if part.get_content_type() == "text/plain":
+            payload = part.get_payload(decode=True) or b""
+            return payload.decode(part.get_content_charset() or "utf-8", "replace")
+        if part.get_content_type() == "text/html" and not html:
+            payload = part.get_payload(decode=True) or b""
+            html = payload.decode(part.get_content_charset() or "utf-8", "replace")
+    return strip_html(html)

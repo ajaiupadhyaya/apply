@@ -181,13 +181,28 @@ On a live four-employer pass: 555 fetched, 497 unique, 447 rejected for free.
 
 ### Handshake
 
-APPLY never logs into Handshake and never fetches a page from it. Handshake
+`apply ingest` reads the job-alert mail Handshake already sends you and files
+the postings out of it. APPLY never logs into Handshake and never fetches a page from it. Handshake
 emails you job matches, and reading your own inbox is not automated access — so
 the route in is saved-search alerts funnelled into one Gmail label.
 
-**[docs/handshake-alerts.md](docs/handshake-alerts.md)** is the twenty-minute
-setup: which saved searches to create, how to set the Gmail filters, and what the
-ingester will do with them.
+```
+apply ingest --imap            # read the mailbox directly; what an unattended run uses
+apply ingest --file x.json     # read an export, when Claude does the fetching
+```
+
+Two transports, one parser. `--imap` needs a Gmail app password and runs from
+cron; `--file` takes an export and is the fallback when a Workspace forbids app
+passwords. The parsing is the part that is hard, and it is shared.
+
+An alert carries a title, an employer, a location and sometimes a deadline — but
+never a description. So nothing from this channel can reach `pursue` on the
+strength of a title, by construction: it is filed for you to open, not fed to a
+letter writer. That is the deliberate cost of not scraping.
+
+**[docs/handshake-alerts.md](docs/handshake-alerts.md)** covers which saved
+searches to create. Ignore its Gmail-filter section — the ingester queries the
+mailbox directly and needs no labels.
 
 ---
 
@@ -257,6 +272,8 @@ and it saves the most time.
 |---|---|
 | `apply init` | create `apply.db`, scaffold the profile |
 | `apply discover [--dry-run] [--hydrate N] [--show-rejects]` | poll every target firm and file what is worth reading |
+| `apply ingest [--imap\|--file F]` | file the postings out of Handshake's alert mail |
+| `apply resolve <careers-url> --name N` | work out a firm's job board and print its registry entry |
 | `apply targets` | the employer registry |
 | `apply spend [--ledger]` | model spending against the monthly cap |
 | `apply doctor` | unresolved profile values, toolchain, credential |
@@ -291,6 +308,8 @@ templates/web/               the dashboard
 src/apply/                   models, db, profile, parse, classify, generate,
                              fieldpack, digest, llm, cli, web
 src/apply/sources/           greenhouse, lever, ashby, workday adapters
+src/apply/sources/alerts.py  job-alert email parsing
+src/apply/resolve.py         find a firm's board from its careers page
 src/apply/score.py           the free relevance gate
 src/apply/discover.py        one unattended pass
 src/apply/budget.py          the spend ledger and its ceilings
