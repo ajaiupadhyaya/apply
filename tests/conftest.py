@@ -13,6 +13,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURES = Path(__file__).parent / "fixtures"
+#: The two example postings `apply seed` loads. Shipped with the repo, not the tests.
+EXAMPLES = REPO / "data" / "examples"
 
 
 @pytest.fixture
@@ -20,7 +22,7 @@ def workspace(tmp_path, monkeypatch):
     """An isolated data dir (with the real profile) and an isolated out/."""
     data = tmp_path / "data"
     data.mkdir()
-    shutil.copy(REPO / "data" / "profile.yaml", data / "profile.yaml")
+    shutil.copy(FIXTURES / "profile.yaml", data / "profile.yaml")
     out = tmp_path / "out"
     out.mkdir()
 
@@ -48,12 +50,12 @@ def conn(workspace):
 
 @pytest.fixture
 def blackrock_jd() -> str:
-    return (FIXTURES / "blackrock.txt").read_text()
+    return (EXAMPLES / "blackrock.txt").read_text()
 
 
 @pytest.fixture
 def vcimco_jd() -> str:
-    return (FIXTURES / "vcimco.txt").read_text()
+    return (EXAMPLES / "vcimco.txt").read_text()
 
 
 def posting_from(text: str, **overrides):

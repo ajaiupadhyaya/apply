@@ -23,7 +23,6 @@ import datetime as _dt
 import sqlite3
 from dataclasses import dataclass
 
-from . import db
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS spend (
@@ -166,7 +165,3 @@ class Budget:
                 (start,),
             ).fetchall()
         ]
-
-
-def open_budget(caps: dict | None = None, run_id: str | None = None) -> Budget:
-    return Budget(db.connect(), caps=caps, run_id=run_id)

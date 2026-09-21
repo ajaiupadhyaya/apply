@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
-import os
 import subprocess
 import sys
 import webbrowser
@@ -27,9 +26,9 @@ from rich.text import Text
 from . import (budget as budget_mod, db, digest as digest_mod,
                discover as discover_mod, generate, notify as notify_mod,
                resolve as resolve_mod, run as run_mod, schedule as schedule_mod)
-from .models import Posting, Status, Track, TransitionError, slugify
+from .models import Status, Track, TransitionError
 from .parse import parse as parse_jd
-from .profile import ASK, Profile, ProfileError, data_dir
+from .profile import Profile, ProfileError, data_dir
 
 app = typer.Typer(
     add_completion=False,
@@ -97,13 +96,6 @@ def _deadline_text(row) -> Text:
     style = "bold red" if left <= 3 else "yellow" if left <= 7 else ""
     suffix = f"  {left}d" if left >= 0 else f"  {-left}d ago"
     return Text(f"{d.isoformat()}{suffix}", style=style)
-
-
-def _print_lint(artifacts) -> None:
-    for error in artifacts.lint.errors:
-        console.print(f"  [bold red]lint[/] {error}")
-    for warning in artifacts.lint.warnings + artifacts.warnings:
-        console.print(f"  [yellow]note[/] {warning}")
 
 
 def _open_path(path: Path) -> None:
@@ -794,12 +786,32 @@ def fields(slug: str, plain: bool = typer.Option(False, "--plain", help="label=v
 @app.command()
 def followup(
     slug: str,
-    action: str = typer.Argument(..., help="What to do."),
+    action: Optional[str] = typer.Argument(None, help="What to do, e.g. 'email the recruiter'."),
     days: int = typer.Option(7, "--in", help="Days from today."),
+    done: bool = typer.Option(False, "--done", help="Mark this posting's open follow-ups done."),
 ) -> None:
-    """Queue a follow-up."""
+    """Queue a follow-up, or mark one done.
+
+    `apply submit` queues one automatically for 14 days out. Without --done a
+    reminder stays in the digest until it is dealt with, which is the point —
+    but it has to be possible to deal with it.
+    """
     conn = _conn()
     row = _row(conn, slug)
+    if done:
+        pending = db.followups(conn, row.application.id)
+        if not pending:
+            console.print(f"[dim]no open follow-ups for `{slug}`.[/]")
+            return
+        for item in pending:
+            db.complete_followup(conn, item.id)
+            console.print(f"[green]✓[/] done: {item.due_on}  {item.action}")
+        db.add_event(conn, row.application.id, "note",
+                     f"{len(pending)} follow-up(s) marked done")
+        return
+    if not action:
+        _fail("say what the follow-up is, e.g. apply followup <slug> \"email the recruiter\" "
+              "— or pass --done to clear the open ones.")
     due = _dt.date.today() + _dt.timedelta(days=days)
     db.add_followup(conn, row.application.id, due, action)
     console.print(f"[green]✓[/] {due}: {action}")
@@ -1301,7 +1313,7 @@ def targets() -> None:
 def seed() -> None:
     """Load the two seed postings so the pipeline has real data on day one."""
     conn = _conn()
-    fixtures = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+    fixtures = Path(__file__).resolve().parents[2] / "data" / "examples"
     wanted = {
         "blackrock.txt": ("blackrock-analyst-2027", 1),
         "vcimco.txt": ("vcimco-investment-intern-2027", 1),

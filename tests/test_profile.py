@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from apply.profile import ASK, Profile, ProfileError, deep_merge
+from apply.profile import Profile, ProfileError, deep_merge
 
 
 def test_deep_merge_overlays_without_flattening():
@@ -67,10 +67,17 @@ def test_a_missing_profile_says_what_to_do(tmp_path, monkeypatch):
 
 
 def test_class_standing_is_derived_not_stored(profile):
-    """A stored year is wrong within a year and nobody updates it."""
-    assert profile.class_standing == "senior"          # graduates May 2027
-    assert 0 < profile.years_to_graduation() < 1
+    """A stored year is wrong within a year and nobody updates it.
+
+    Dates are pinned: asserting on "today" would start failing the day the
+    fixture profile's owner graduates."""
+    import datetime as dt
+
+    assert profile.standing_on(dt.date(2026, 9, 21)) == "senior"   # graduates May 2027
+    assert 0 < profile.years_to_graduation(dt.date(2026, 9, 21)) < 1
+    assert profile.standing_on(dt.date(2025, 9, 1)) == "junior"
+    assert profile.standing_on(dt.date(2027, 6, 1)) == "graduated"
 
 
 def test_search_preferences_carry_the_derived_standing(profile):
-    assert profile.search_preferences["class_standing"] == "senior"
+    assert profile.search_preferences["class_standing"] == profile.class_standing
