@@ -843,7 +843,10 @@ def discover(
     console.print(
         f"\n[dim]{result.fetched} fetched · {result.unique} unique · "
         f"{result.already_known} already known · {result.hydrated} hydrated · "
-        f"{result.rejected} rejected[/]\n"
+        f"{result.rejected} rejected"
+        + (f" · {result.deferred} waiting for a later run (--hydrate raises the budget)"
+           if result.deferred else "")
+        + "[/]\n"
     )
 
     if show_rejects and result.rejections:
@@ -1303,10 +1306,22 @@ def targets() -> None:
     for e in sorted(employers, key=lambda x: (x.get("priority", 3), x["name"])):
         table.add_row(
             str(e.get("priority", 3)), e["name"], e.get("ats", "?"),
-            e.get("board") or f"{e.get('tenant','?')}/{e.get('site','?')}",
+            _board_label(e),
             ", ".join(e.get("tracks") or []) or "—",
         )
     console.print(table)
+
+
+def _board_label(e: dict) -> str:
+    if e.get("board"):
+        return e["board"]
+    if e.get("url"):
+        return e["url"].split("://", 1)[-1]
+    if e.get("tenant"):
+        return f"{e['tenant']}/{e.get('site', '?')}"
+    if e.get("host"):
+        return f"{e['host'].split('.', 1)[0]}/{e.get('site', '?')}"
+    return "?"
 
 
 @app.command()

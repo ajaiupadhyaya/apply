@@ -17,10 +17,18 @@ from __future__ import annotations
 ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
     "apply.sources.ats": (
         ("boards-api.greenhouse.io", "api.lever.co", "api.ashbyhq.com",
-         "*.myworkdayjobs.com"),
+         "*.myworkdayjobs.com", "*.oraclecloud.com"),
         "Public job-board APIs. Workday's /wday/cxs/ endpoint takes a POST "
         "because it is a search query, not a submission — it is the same call "
-        "the employer's own careers page makes to render itself.",
+        "the employer's own careers page makes to render itself. Oracle's "
+        "requisition search is a GET against the same REST resource its "
+        "careers page reads.",
+    ),
+    "apply.sources.pages": (
+        ("*",),
+        "One careers page per employer named in the owner's registry, by GET. "
+        "Reads the listing data the page embeds to render itself; follows no "
+        "link and sends nothing.",
     ),
     "apply.resolve": (
         ("*",),

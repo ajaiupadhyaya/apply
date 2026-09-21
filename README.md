@@ -81,6 +81,13 @@ API behind its careers page. It calls no model, so it costs nothing.
 | Lever | `api.lever.co/v0/postings` | one request per firm |
 | Ashby | `api.ashbyhq.com/posting-api` | one request per firm |
 | Workday | the `/wday/cxs/` endpoint its own careers page calls | list, then one request per posting; carries real deadlines |
+| Oracle Recruiting Cloud | the REST resource its careers page calls | 200 postings a request, then one per posting; carries real close times |
+| Embedded page data | the `__NEXT_DATA__` blob a Next.js careers page renders from | one request per firm, descriptions included; for firms with no board API |
+
+A firm whose careers site sits behind bot protection (a Cloudflare challenge,
+say) is not polled. Getting past that would mean pretending to be a browser,
+which is the line this project doesn't cross; those firms arrive through alert
+mail instead.
 
 Adding a firm doesn't mean reading devtools:
 
@@ -131,14 +138,16 @@ a week, so the gate runs first, and free:
 fetch     one request per employer
 dedupe    by fingerprint, across sources and against what is already stored
 score     titles and locations
-hydrate   fetch the full description — only for postings still standing
+hydrate   fetch the full description — only for postings still standing,
+          best first, up to --hydrate (60); the rest wait for the next run
 re-score  with the description, where the disqualifiers live
 record    pursue and maybe are filed; reject never is
 ```
 
 Hard rejects, each of which names itself: senior titles, engineering roles,
 off-function roles, anywhere outside the US, three or more years of required
-experience, a required advanced degree, and programmes aimed at a class year
+experience, a required advanced degree or a title naming one ("Ph.D. Intern",
+"MBA Associate" — pre-doctoral roles pass), and programmes aimed at a class year
 other than yours. That last one is derived from your graduation date rather than
 stored, because a stored class year is wrong within a year.
 

@@ -114,6 +114,9 @@ class Result:
     already_known: int = 0
     rejected: int = 0
     hydrated: int = 0
+    #: Survivors the hydration budget did not reach. Not filed this run, so the
+    #: next run finds them again and fetches their description then.
+    deferred: int = 0
     pursue: list[tuple[RawPosting, Score]] = field(default_factory=list)
     maybe: list[tuple[RawPosting, Score]] = field(default_factory=list)
     created: list[str] = field(default_factory=list)
@@ -213,6 +216,14 @@ def run(
     # after hydration.
     survivors.sort(key=lambda pair: -pair[1].value)
     needs_body = [pair for pair in survivors if not pair[0].hydrated]
+    # Whatever the budget does not reach waits for the next run rather than
+    # being filed on its title alone. Filed thin, it would be "already known"
+    # forever and never get its description or its deadline; left unfiled, the
+    # next run meets it as new and fetches both. A big board converges over a
+    # few nights, best-scoring first.
+    waiting = {id(posting) for posting, _ in needs_body[hydrate_limit:]}
+    result.deferred = len(waiting)
+    survivors = [pair for pair in survivors if id(pair[0]) not in waiting]
     for posting, _ in needs_body[:hydrate_limit]:
         adapter = ADAPTERS.get(posting.source)
         config = by_name.get(posting.employer)

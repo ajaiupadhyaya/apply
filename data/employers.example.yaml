@@ -11,9 +11,14 @@
 #
 #   ats: greenhouse | lever | ashby   -> needs `board` (the slug in their careers URL)
 #   ats: workday                      -> needs `host`, `tenant`, `site`
+#   ats: oracle                       -> needs `host`, `site`; optional `location_id`
+#   ats: nextdata                     -> needs `url`, `lists`
 #
-# `search` applies to Workday only: it has no "list everything" mode worth
-# using, so give it the terms you care about.
+# `search` applies to Workday and Oracle. Workday has no "list everything" mode
+# worth using, so give it the terms you care about. Oracle does: leave `search`
+# out and it reads the whole board, 200 postings a request, up to `max_results`.
+# `location_id` is the id of one of its location filters (a country, say); find
+# it in the `locationsFacet` of any search response.
 #
 # `aliases` lists other spellings — what LinkedIn or Handshake call the firm.
 # Punctuation, case and suffixes like "Inc." are already ignored, so "J.P.
@@ -50,3 +55,24 @@ employers:
     max_results: 120
     tracks: [corporate]
     priority: 3
+
+  - name: Oracle
+    ats: oracle
+    host: eeho.fa.us2.oraclecloud.com
+    site: CX_45001
+    search: ["analyst", "intern"]
+    max_results: 400
+    tracks: [corporate]
+    priority: 3
+
+  # A careers page with no board API, which renders from the JSON it embeds as
+  # __NEXT_DATA__. The record shape is one firm's, so this is a template rather
+  # than a working example — check the firm's robots.txt allows the page first.
+  # A list whose name contains "internal" is never read.
+  #
+  # - name: Example Capital
+  #   ats: nextdata
+  #   url: https://www.example.com/careers
+  #   lists: [regularJobs, internships]
+  #   tracks: [quant]
+  #   priority: 2

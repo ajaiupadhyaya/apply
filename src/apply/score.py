@@ -65,15 +65,19 @@ OFF_FUNCTION = _any([
 TOO_TECHNICAL = _any([
     r"software\s+engineer\w*", r"\bswe\b", r"backend", r"back-end", r"frontend",
     r"front-end", r"full[\s-]?stack", r"mobile\s+engineer", r"\bios\b", r"android",
-    r"devops", r"\bsre\b", r"site\s+reliability", r"security\s+engineer",
-    r"infrastructure\s+engineer", r"platform\s+engineer", r"systems\s+engineer",
-    r"network\s+engineer", r"firmware", r"embedded", r"\bqa\b",
+    r"devops", r"\bsre\b", r"site\s+reliability", r"security\s+engineer\w*",
+    r"infrastructure\s+engineer\w*", r"platform\s+engineer\w*", r"systems\s+engineer\w*",
+    r"network\s+engineer\w*", r"firmware", r"embedded", r"\bqa\b",
     r"quality\s+assurance", r"data\s+engineer\w*", r"machine\s+learning\s+engineer\w*",
     r"computer\s+science\s+intern",
     r"\bml\s+engineer\b", r"solutions\s+architect", r"web\s+developer",
     # Found by a live pass: "Hardware Engineer (FPGA/ASIC)" scored 59.
-    r"hardware\s+engineer", r"\bfpga\b", r"\basic\b", r"electrical\s+engineer",
+    r"hardware\s+engineer\w*", r"\bfpga\b", r"\basic\b", r"electrical\s+engineer\w*",
     r"\bsysadmin\b", r"database\s+administrator", r"compiler", r"kernel",
+    # Found by a live pass: "Systems Engineering Intern" slipped past the bare
+    # "systems engineer" (the boundary rejects "-ing"), and "Software Developer
+    # Intern" scored 75 because only "engineer" was listed.
+    r"software\s+develop\w*", r"developers?",
 ])
 
 #: Experience and credential bars a 2027 undergraduate cannot clear.
@@ -81,6 +85,12 @@ YEARS = re.compile(r"(\d+)\s*\+?\s*(?:-\s*\d+\s*)?years?(?:\s+of)?\s+(?:relevant
 ADVANCED_DEGREE = re.compile(
     r"(ph\.?d|doctorate|mba|master'?s|graduate\s+degree|advanced\s+degree)[^.]{0,40}"
     r"(required|is\s+required|must\s+have|mandatory)", re.I)
+#: A title naming a graduate programme is aimed at graduate students, whatever
+#: the body says: "Quantitative Analyst, Ph.D. Intern" scored 92 in a live pass.
+#: Pre-doctoral roles are the opposite — built for undergraduates — so they pass.
+GRADUATE_PROGRAM = re.compile(
+    r"\bph\.?\s?d\b|\bmba\b|\bmaster'?s\s+(?:intern|student|program)"
+    r"|\bpost[\s-]?doc\w*|\b(?<!pre\s)(?<!pre-)doctoral\b", re.I)
 
 #: A posting aimed explicitly at one class year. A single employer can run a
 #: dozen separate "Sophomore Intern" programmes, none of them open to a junior
@@ -238,6 +248,8 @@ def score(posting: RawPosting, preferences: dict | None = None,
         return reject(f"off-function: {OFF_FUNCTION.search(title).group(0)!r}", "function")
     if TOO_TECHNICAL.search(title):
         return reject(f"engineering role: {TOO_TECHNICAL.search(title).group(0)!r}", "technical")
+    if GRADUATE_PROGRAM.search(title):
+        return reject(f"for graduate students: {GRADUATE_PROGRAM.search(title).group(0)!r}", "degree")
 
     if standing:
         for year, pattern in CLASS_SCOPED.items():

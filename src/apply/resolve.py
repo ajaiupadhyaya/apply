@@ -34,6 +34,7 @@ FINGERPRINTS: list[tuple[str, str]] = [
     ("greenhouse", r"boards-api\.greenhouse\.io/v1/boards/([a-z0-9_-]+)"),
     ("lever", r"jobs\.lever\.co/([a-z0-9-]+)"),
     ("ashby", r"jobs\.ashbyhq\.com/([a-z0-9-]+)"),
+    ("oracle", r"([a-z0-9-]+\.fa(?:\.[a-z0-9-]+)?\.oraclecloud\.com)/hcmUI/CandidateExperience/(?:[a-z-]+/)?sites/(CX_\d+)"),
     # Recognised but not supported: reporting them beats silently finding nothing.
     ("icims", r"([a-z0-9-]+)\.icims\.com"),
     ("smartrecruiters", r"careers\.smartrecruiters\.com/([A-Za-z0-9]+)"),
@@ -42,7 +43,7 @@ FINGERPRINTS: list[tuple[str, str]] = [
     ("taleo", r"([a-z0-9-]+)\.taleo\.net"),
 ]
 
-SUPPORTED = {"workday", "greenhouse", "lever", "ashby"}
+SUPPORTED = {"workday", "greenhouse", "lever", "ashby", "oracle"}
 
 
 @dataclass(slots=True)
@@ -60,6 +61,8 @@ class Candidate:
         if self.ats == "workday":
             lines.append('    search: ["analyst", "intern", "2027"]')
             lines.append("    max_results: 120")
+        elif self.ats == "oracle":
+            lines.append("    max_results: 1000")
         lines.append(f"    priority: {priority}")
         return "\n".join(lines)
 
@@ -82,6 +85,9 @@ def candidates(html: str) -> list[Candidate]:
                     continue
                 config = {"host": f"{tenant}.{wd}.myworkdayjobs.com",
                           "tenant": tenant, "site": site}
+            elif ats == "oracle":
+                host, site = match.groups()
+                config = {"host": host, "site": site}
             else:
                 config = {"board": match.group(1)}
             key = f"{ats}:{'/'.join(str(v) for v in config.values())}"
