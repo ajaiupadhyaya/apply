@@ -1,0 +1,26 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor pyproject promises, and the version it is developed on.
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - name: Install
+        run: uv sync --python ${{ matrix.python }}
+      - name: Lint (pyflakes rules)
+        run: uvx ruff check --select F src tests
+      # No TeX here, so the handful of tests that compile a PDF skip themselves.
+      # Every test that could reach the Anthropic API is blocked in conftest.
+      - name: Test
+        run: uv run --python ${{ matrix.python }} pytest -q

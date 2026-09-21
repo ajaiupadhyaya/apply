@@ -1,16 +1,15 @@
 # Getting Handshake into the pipeline, without touching Handshake
 
 APPLY never logs into Handshake, never stores a session token, and never fetches
-a page from `joinhandshake.com`. Your account is provisioned by VCU Career
-Services, Handshake's terms prohibit automated access, and an account flagged in
-October is an account you do not have in January.
+a page from `joinhandshake.com`. Student accounts are usually provisioned by a
+university careers office, Handshake's terms prohibit automated access, and an
+account flagged in October is an account you do not have in January.
 
 The way in is that **Handshake already emails you jobs**. Reading your own inbox
 is not automated access to Handshake. So the job is to make those emails
-complete, frequent enough, and easy to find — then point the ingester at one
-Gmail label.
+complete and frequent enough — APPLY finds them by sender and does the rest.
 
-Everything below is a one-time setup. Budget twenty minutes.
+Everything below is a one-time setup. Budget fifteen minutes.
 
 ---
 
@@ -50,81 +49,72 @@ keywords miss them.
 
 ---
 
-## 2. Funnel every alert into one Gmail label
+## 2. Nothing to set up in Gmail
 
-The ingester reads exactly one label. Everything else is a filter feeding it.
-
-Create the label first: in Gmail, **Settings → Labels → Create new label**, named
-`apply/alerts`. The slash makes it nest under a parent called `apply`, which
-keeps it out of the way.
-
-Then create the filters. In Gmail, **Settings → Filters and Blocked Addresses →
-Create a new filter**, paste the search string into the **Has the words** box,
-and on the next screen tick **Apply the label: apply/alerts** and **Skip the
-Inbox**. Skipping the inbox matters — the point is that these stop interrupting
-you and become a queue instead.
-
-| Source | Paste into "Has the words" |
-|---|---|
-| Handshake | `from:(joinhandshake.com)` |
-| LinkedIn job alerts | `from:(linkedin.com) AND subject:("job alert" OR "jobs for you" OR "new jobs")` |
-| Greenhouse alerts | `from:(greenhouse.io OR my.greenhouse.io)` |
-| Indeed | `from:(indeed.com) AND subject:("new jobs" OR "job alert")` |
-| Catch-all for firm alerts | `subject:("job alert" OR "new opportunities" OR "jobs for you" OR "new roles")` |
-
-Run the catch-all last and check what it caught before trusting it; it is the one
-most likely to pull in something you did not mean.
-
-**Apply the filter to existing mail.** The final screen offers "Also apply filter
-to matching conversations" — tick it. That backfills the label with whatever is
-already sitting in your inbox, and gives the first ingestion run something to
-work with.
+The ingester finds Handshake and LinkedIn job mail by its sender, so there are
+no labels or filters to create. If you'd rather these stopped landing in your
+inbox, a Gmail filter that skips the inbox for `from:(joinhandshake.com)` is
+harmless — APPLY reads archived mail too.
 
 ---
 
-## 3. Add the sources Handshake does not cover
+## 3. What Handshake does not cover
 
-Handshake is broad but shallow on the firms at the top of your list — Jane
-Street, IMC and Optiver post to their own boards, and BlackRock posts to Workday.
-Those are already covered by the employer registry (`apply targets`), which polls
-their public job-board APIs directly and does not need email at all.
+Handshake is broad but shallow on the firms most worth targeting: many post
+only to their own job boards. Those are covered by the employer registry
+(`apply targets`), which polls each firm's public job-board API directly and
+does not depend on email at all.
 
-The division of labour is worth being explicit about:
+The division of labour:
 
-- **Employer registry** — firms you have named. Complete, structured, has
-  deadlines where the ATS carries them. This is the reliable half.
-- **Email alerts** — everything else, including the Handshake-only postings and
-  the firms you have not thought to add yet. Broader, messier, and the reason the
-  system can surprise you with something good.
-
----
-
-## 4. What the ingester will do with them
-
-Reading the label is the next phase of the build, so this is what to expect
-rather than what exists today:
-
-1. Read unread threads under `apply/alerts` via the Gmail connector, oldest first.
-2. Pull every job link out of each email, with the surrounding text as a hint.
-3. Resolve each link: follow it to the employer's real posting where that is a
-   public page, and keep the email's own summary where it is not.
-4. Fingerprint against everything already stored, so a role that arrives through
-   both Handshake and the employer's Greenhouse board collapses to one posting.
-5. Score it exactly like a registry posting — same gate, same thresholds.
-6. Mark the thread read, so the next run starts where this one stopped.
-
-A Handshake alert that points at a Handshake-hosted posting is the one case where
-the link cannot be followed. Those get filed with the email's own text and the
-URL, marked `⚠ description from the alert email only`, and you open Handshake
-yourself to read the full posting. That is the deliberate cost of not scraping.
+- **Employer registry** — firms you have named. Complete and structured, with
+  full descriptions, and with deadlines where the job board carries them.
+- **Alert mail** — everything else, including Handshake-only postings and firms
+  you haven't thought to add yet. Broader and thinner, and the reason the system
+  can surprise you with something good.
 
 ---
 
-## 5. Authorising Gmail
+## 4. What happens to the mail
 
-The connector needs authorising once, interactively, from your Gmail connector
-settings on claude.ai. Until then the ingester will report that Gmail is not
-connected and the registry half of discovery will run on its own.
+Each run of `apply ingest` (or the overnight `apply run`):
 
-APPLY reads only the `apply/alerts` label and only marks those threads read. It
-never sends, never deletes, and never reads anything outside that label.
+1. Finds Handshake and LinkedIn job mail by sender, and skips everything else
+   those services send — application confirmations, appointment reminders,
+   recruiter messages.
+2. Reads each posting out of the email: employer, role, location, and pay where
+   given.
+3. Resolves the year of any deadline from the email's own date — "due Thu, Sep
+   24" in a message sent on the 20th is unambiguous — and never guesses one
+   otherwise.
+4. Recognises your registry firms under other spellings, and collapses a
+   posting seen both in an alert and on the firm's own board into one.
+5. Scores it through the same gate as everything else, and files what survives.
+
+Nothing is marked read or moved; the mailbox is opened read-only.
+
+A Handshake alert gives the title and not the description, and the posting
+behind it is on Handshake, which APPLY does not fetch. So these are filed for
+you to open. When one is worth pursuing, copy the full posting and run
+`apply describe <slug> --clipboard`, which attaches the text and re-scores it.
+
+---
+
+## 5. Getting the mail to APPLY
+
+Two ways in, and the parsing is the same either way:
+
+- **IMAP, for unattended runs.** Create a Gmail app password (myaccount.google.com
+  → Security → 2-Step Verification → App passwords) and store it in the Keychain:
+
+  ```bash
+  security add-generic-password -U -a "$USER" -s APPLY_IMAP_PASSWORD -w
+  ```
+
+  `apply ingest --imap` and the scheduled run read it from there. If your
+  institution's Google Workspace doesn't offer app passwords, the option simply
+  won't appear.
+
+- **An export, when Claude does the fetching.** Claude can read the same mail
+  through a Gmail connector and write it to a JSON file for
+  `apply ingest --file export.json`.
