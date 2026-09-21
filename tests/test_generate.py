@@ -5,11 +5,10 @@ from __future__ import annotations
 import pytest
 
 from apply.generate import (
-    PROHIBITED, compose, jd_anchors, latex_escape, letter_from_body, lint,
-    select_resume,
+    PROHIBITED, jd_anchors, latex_escape, lint, package_from_files, select_resume,
 )
 from apply.models import Track
-from conftest import posting_from
+from conftest import FakeClaude, posting_from
 
 import shutil
 
@@ -42,38 +41,31 @@ def test_escape_of_none_is_empty():
     assert latex_escape(None) == ""
 
 
-# ---------------------------------------------------------- composition
+# ----------------------------------------------------------------- routing
 
-def test_quant_proof_paragraph_is_ohcamel(profile, blackrock_jd):
+def test_quant_postings_route_to_the_quant_resume_and_ohcamel(profile, blackrock_jd):
+    from apply.context import proof_asset
+
     posting = posting_from(blackrock_jd)
     assert posting.track == Track.QUANT.value
-    assert "OhCamel" in compose(profile, posting).paragraphs[1]
+    assert "OhCamel" in proof_asset(profile, posting.track)
+    assert select_resume(posting.track) == "resume_quant"
 
 
-def test_allocator_proof_paragraph_is_the_consulting_role(profile, vcimco_jd):
+def test_allocator_postings_lead_with_the_consulting_role(profile, vcimco_jd):
+    from apply.context import proof_asset
+
     posting = posting_from(vcimco_jd)
     assert posting.track == Track.ALLOCATOR.value
-    proof = compose(profile, posting).paragraphs[1]
-    assert "Bloomberg Terminal" in proof
-    assert "OhCamel" not in proof
+    asset = proof_asset(profile, posting.track)
+    assert "consulting" in asset and "OhCamel" not in asset
 
 
-def test_every_track_composes_four_paragraphs(profile, vcimco_jd):
+def test_every_track_has_a_default_proof_asset(profile):
+    from apply.context import proof_asset
+
     for track in Track:
-        posting = posting_from(vcimco_jd, track=track.value)
-        assert len(compose(profile, posting).paragraphs) == 4
-
-
-def test_the_closing_states_the_sponsorship_answer(profile, vcimco_jd):
-    closing = compose(profile, posting_from(vcimco_jd)).closing
-    assert "will not require sponsorship" in closing
-
-
-def test_a_role_that_names_itself_does_not_get_the_word_role(profile, vcimco_jd):
-    program = posting_from(vcimco_jd, role="2027 Analyst Program")
-    assert "2027 Analyst Program at" in compose(profile, program).paragraphs[0]
-    plain = posting_from(vcimco_jd, role="Investment Intern")
-    assert "Investment Intern role at" in compose(profile, plain).paragraphs[0]
+        assert proof_asset(profile, track.value), track
 
 
 # --------------------------------------------------------------- anchors
@@ -113,9 +105,11 @@ def test_every_prohibited_phrase_is_caught(profile, vcimco_jd, phrase):
     assert any(phrase in e for e in result.errors)
 
 
-def test_a_clean_composed_letter_passes(profile, vcimco_jd):
+def test_a_clean_grounded_draft_passes(profile, vcimco_jd, fake_claude):
+    from apply import writer
+
     posting = posting_from(vcimco_jd)
-    assert lint(compose(profile, posting).full_text, profile, posting).ok
+    assert lint(writer.full_text(fake_claude.package()), profile, posting).ok
 
 
 def test_unsourced_superlatives_fail(profile, vcimco_jd):
@@ -161,11 +155,32 @@ def test_an_ask_placeholder_fails(profile, vcimco_jd):
     assert not lint("I started in ASK.", profile, posting).ok
 
 
-def test_a_missing_anchor_warns_but_does_not_block(profile, vcimco_jd):
-    posting = posting_from(vcimco_jd)
-    result = lint("NAME THE SPECIFIC PLATFORM here.", profile, posting)
-    assert result.ok
-    assert result.warnings
+@pytest.mark.parametrize("sentence", [
+    "I will require sponsorship to begin work.",
+    "I would need visa sponsorship.",
+])
+def test_a_sponsorship_claim_contradicting_the_profile_fails(profile, vcimco_jd, sentence):
+    """The one field where a wrong answer is disqualifying gets its own check."""
+    assert not lint(sentence, profile, posting_from(vcimco_jd)).ok
+
+
+@pytest.mark.parametrize("sentence", [
+    "I will not require sponsorship, now or in the future.",
+    "I won't need sponsorship.",
+    "I am authorized to work without sponsorship.",
+    "I do not require employment sponsorship.",
+])
+def test_a_correct_sponsorship_statement_passes(profile, vcimco_jd, sentence):
+    assert lint(sentence, profile, posting_from(vcimco_jd)).ok
+
+
+def test_a_number_from_a_context_document_is_sourced(profile, vcimco_jd, workspace):
+    """A figure the owner put in data/context/ is theirs to cite."""
+    directory = workspace / "data" / "context"
+    directory.mkdir(exist_ok=True)
+    (directory / "ohcamel.md").write_text("The engine has 210 tests.")
+    assert lint("OhCamel has 210 tests.", profile, posting_from(vcimco_jd)).ok
+    assert not lint("OhCamel has 950 tests.", profile, posting_from(vcimco_jd)).ok
 
 
 # -------------------------------------------------------------- variants
@@ -176,10 +191,26 @@ def test_resume_variant_selection():
         assert select_resume(track) == "resume_traditional"
 
 
-def test_body_md_overrides_the_composed_paragraphs(profile, vcimco_jd):
-    posting = posting_from(vcimco_jd)
-    letter = letter_from_body(profile, posting, "First para.\n\nSecond para.")
-    assert letter.paragraphs[0] == "First para."
+def test_a_hand_edited_body_reads_back_with_its_closing(tmp_path):
+    (tmp_path / "body.md").write_text(
+        "<!-- instructions -->\n\nFirst para.\n\nSecond para.\n\nThe closing.")
+    package = package_from_files(tmp_path)
+    assert package.paragraphs() == ["First para.", "Second para."]
+    assert package.closing == "The closing."
+
+
+def test_extra_hand_edited_paragraphs_are_kept_not_dropped(tmp_path):
+    (tmp_path / "body.md").write_text("\n\n".join(f"P{i}." for i in range(1, 7)) + "\n\nEnd.")
+    package = package_from_files(tmp_path)
+    assert "P6." in " ".join(package.paragraphs())
+
+
+def test_answers_read_back_from_answers_md(tmp_path):
+    (tmp_path / "body.md").write_text("Para.\n\nClose.")
+    (tmp_path / "answers.md").write_text(
+        "## Why this role (short)\n\nShort one.\n\n## Why this role (long)\n\nLong one.")
+    package = package_from_files(tmp_path)
+    assert (package.why_role_short, package.why_role_long) == ("Short one.", "Long one.")
 
 
 # ----------------------------------------------------- filenames and sweep
@@ -215,11 +246,11 @@ def test_regenerating_under_a_new_name_removes_the_old_pdf(profile, vcimco_jd):
     from apply import generate as gen_mod
 
     posting = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher")
-    first = gen_mod.build(profile, posting)
+    first = gen_mod.build(profile, posting, caller=FakeClaude())
     assert first.letter_pdf.exists()
 
     posting.role = "Fund Flow Quantitative Researcher"
-    second = gen_mod.build(profile, posting)
+    second = gen_mod.build(profile, posting, caller=FakeClaude())
     assert second.letter_pdf.exists()
     assert second.letter_pdf != first.letter_pdf
     assert not first.letter_pdf.exists(), "the superseded letter was left behind"

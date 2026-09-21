@@ -61,6 +61,43 @@
       {% endif %}
     </div>
 
+    {% if audit %}
+    <div class="panel">
+      <h2>What the audit found</h2>
+      <p style="font-size:var(--t-s);margin:0 0 .75rem">
+        <span class="status {{ 'ready' if audit.status == 'verified' else '' }}">{{ audit.status }}</span>
+        <span style="color:var(--ink-3)">
+          &nbsp;{{ audit.drafts }} draft{{ 's' if audit.drafts != 1 else '' }}
+          {% if audit.cost_usd %}· ${{ '%.2f' % audit.cost_usd }}{% endif %}
+          {% if audit.checked_at %}· {{ audit.checked_at }}{% endif %}</span>
+      </p>
+      {% if audit.reason and audit.status != 'verified' %}
+        <p class="notice">{{ audit.reason }}</p>
+      {% endif %}
+      {% for claim in audit.unsupported_claims %}
+        <p class="notice"><strong>Unsupported:</strong> {{ claim }}</p>
+      {% endfor %}
+      {% if audit.authorization_correct == false %}
+        <p class="notice"><strong>Authorization</strong> does not match your profile.</p>
+      {% endif %}
+      {% if audit.findings %}
+      <ul class="log">
+        {% for f in audit.findings %}
+        <li><span class="kind">{{ f.severity }}</span>
+            <span style="flex:1">{{ f.problem }}
+              <span style="display:block;color:var(--ink-3)">→ {{ f.suggestion }}</span></span></li>
+        {% endfor %}
+      </ul>
+      {% elif audit.status == 'verified' %}
+        <p style="font-size:var(--t-s);color:var(--ink-2)">No findings.</p>
+      {% endif %}
+      {% if audit.writer_notes and audit.writer_notes != 'edited by hand' %}
+        <h3>The writer's note</h3>
+        <p style="font-size:var(--t-s);color:var(--ink-2);margin:0">{{ audit.writer_notes }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="panel">
       <h2>Job description</h2>
       <div class="jd">{{ row.posting.jd_raw }}</div>

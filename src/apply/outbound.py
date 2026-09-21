@@ -40,6 +40,11 @@ ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
         ("imap.gmail.com",),
         "Reads the owner's own alert mail, read-only, over IMAP.",
     ),
+    "apply.context": (
+        ("api.github.com",),
+        "Reads the owner's own public READMEs through their gh session, by GET, "
+        "to use as source material.",
+    ),
     "apply.cli": (
         ("*",),
         "`apply add --url` fetches one careers page the owner named. Refuses "

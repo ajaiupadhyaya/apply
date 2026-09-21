@@ -20,7 +20,18 @@
 - No new runtime dependencies without asking the owner.
 - Use `uv` for everything: `uv run apply ...`, `uv add ...`, `uv sync`. Never bare pip.
 
-## Two deliberate deviations from the original spec
+## How letters are written
+- Claude writes every letter and portal answer (src/apply/writer.py); an
+  independent request audits it. Do not reintroduce template sentences in
+  profile.yaml — the `writing:` block is instructions, never prose to paste.
+- The hard rules live in writer.WRITER_RULES and generate.lint. The brief may
+  change voice and emphasis; it may never loosen grounding.
+- Tests never call the API. tests/conftest.py strips the key, blocks the
+  Keychain lookup, and trips on llm.call; use the FakeClaude fixture.
+
+## Deliberate deviations from the original spec
+0. Letters are written by Claude from a brief, not composed from stored
+   sentences. See README "How the letters get written".
 1. Resume templates are `.tex.j2`, not `.tex`. A static `.tex` would have to embed
    phone/address/GPA, which live in the gitignored private overlay. Rendering them
    keeps private facts out of version control.

@@ -26,6 +26,7 @@ from pathlib import Path
 
 from . import db, digest as digest_mod, discover, generate
 from .budget import Budget, BudgetExceeded
+from .llm import LLMUnavailable
 from .models import Status
 from .profile import Profile, data_dir
 
@@ -77,7 +78,7 @@ def halted(directory: Path | None = None) -> Path | None:
 
 def run(
     *,
-    llm: str = "manual",
+    llm: str = "api",
     generate_limit: int | None = None,
     discover_postings: bool = True,
     ingest_mail: bool = True,
@@ -177,26 +178,28 @@ def _write_documents(conn, profile, budget, report, *, llm: str, cap: int) -> No
 
     for row in candidates[:cap]:
         slug = row.posting.slug
-        if llm == "api":
-            try:
-                budget.check(0.20, f"write:{slug}")
-            except BudgetExceeded as exc:
-                report.skipped_budget += 1
-                report.steps.append(Step(f"write:{slug}", False, str(exc)))
-                break                       # the ceiling will not move this run
         try:
-            artifacts = generate.build(profile, row.posting, llm=llm)
+            # The writer checks and records every call against the ledger
+            # itself, so a letter that needs a revision is paid for honestly.
+            artifacts = generate.build(profile, row.posting, llm=llm, budget=budget)
+        except BudgetExceeded as exc:
+            report.skipped_budget += 1
+            report.steps.append(Step(f"write:{slug}", False, str(exc)))
+            break                           # the ceiling will not move this run
+        except LLMUnavailable as exc:
+            report.steps.append(Step("write", False, str(exc).splitlines()[0]))
+            break                           # no key, no network: nothing else will work
         except Exception as exc:                        # noqa: BLE001
             report.generation_failed.append((slug, f"{type(exc).__name__}: {exc}"))
             continue
 
-        if artifacts.usage is not None:
-            budget.record(artifacts.usage, "write", slug)
+        if artifacts.status == "prompt":
+            continue                        # manual mode: PROMPT.md only, nothing to review
 
         if not artifacts.ok:
-            report.generation_failed.append((slug, "; ".join(artifacts.lint.errors)))
-            db.add_event(conn, row.application.id, "note",
-                         "lint refused: " + "; ".join(artifacts.lint.errors))
+            why = getattr(artifacts.written, "reason", "") or "; ".join(artifacts.lint.errors)
+            report.generation_failed.append((slug, why))
+            db.add_event(conn, row.application.id, "note", f"not written: {why[:300]}")
             continue
 
         db.set_documents(
@@ -208,7 +211,8 @@ def _write_documents(conn, profile, budget, report, *, llm: str, cap: int) -> No
         )
         # `generated` and no further. Reading it is still yours.
         db.transition(conn, row.application.id, Status.GENERATED, via="gen",
-                      detail=f"written unattended by {report.run_id}")
+                      detail=f"written unattended by {report.run_id} "
+                             f"({artifacts.status}, ${artifacts.written.cost:.2f})")
         report.generated.append(slug)
 
 

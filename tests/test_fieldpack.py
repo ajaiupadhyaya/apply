@@ -57,10 +57,18 @@ def test_private_facts_appear_when_the_overlay_exists(workspace, vcimco_jd):
     assert values["GPA"] == "3.87"
 
 
-def test_the_per_application_essay_is_left_blank(profile, vcimco_jd):
+def test_the_per_application_answers_are_blank_until_written(profile, vcimco_jd):
     pack = build(profile, posting_from(vcimco_jd))
-    why = next(e for e in pack["essays"] if e["key"] == "why_this_firm")
-    assert why["answer"] == ""
+    keys = {e["key"]: e["answer"] for e in pack["essays"]}
+    assert keys["why_this_firm_short"] == "" and keys["why_this_firm_long"] == ""
+
+
+def test_claude_s_answers_reach_the_copy_buttons(profile, vcimco_jd):
+    pack = build(profile, posting_from(vcimco_jd),
+                 answers={"short": "Short answer.", "long": "Long answer."})
+    keys = {e["key"]: e["answer"] for e in pack["essays"]}
+    assert keys["why_this_firm_short"] == "Short answer."
+    assert keys["why_this_firm_long"] == "Long answer."
 
 
 def test_write_produces_readable_json(profile, vcimco_jd, tmp_path):

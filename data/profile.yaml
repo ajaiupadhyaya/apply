@@ -1,4 +1,4 @@
-# APPLY — public profile. Single source of truth for every generated document.
+# APPLY — public profile. The facts every generated document is allowed to use.
 #
 # Rules:
 #   - Anything typed into an application form comes from here.
@@ -33,6 +33,13 @@ education:
     note: prior coursework in Computer Science and Economics
     current: false
 
+# When I can start. A letter states this only as written here, and says nothing
+# about a start date while these are ASK. Worth filling in: the auditor refused
+# a live draft for inventing "starting in May" because this did not exist.
+availability:
+  full_time: ASK               # e.g. "from June 2027, after graduating"
+  internship: ASK              # e.g. "summer 2027" — see the note in README
+
 authorization:
   # Confirmed by the owner, 2026-09-20.
   us_work_authorized: true
@@ -55,9 +62,9 @@ experience:
       - "Translate a research question into the right instrument, universe, and
          date convention before any data leaves the terminal."
     tags: [data, finance, research]
-    # Resume bullets are written in resume voice. A letter needs sentences.
-    # These are the same facts in first person; letters draw from here.
-    letter_prose:
+    # More detail on the same role, for the writer to draw on. Source
+    # material, not sentences to paste.
+    detail:
       - "I advise faculty and graduate researchers on Bloomberg Terminal, WRDS,
          and Morningstar Direct, which in practice means being handed a research
          question stated loosely and turning it into the right instrument,
@@ -73,10 +80,9 @@ projects:
     name: OhCamel
     url: https://github.com/ajaiupadhyaya/OhCamel
     tracks: [quant]
-    # one_line is a whole sentence: paragraph 3 of a letter prints it verbatim.
+    # one_line, three_line and technical are descriptions for the writer to
+    # draw on. resume_line is printed verbatim on the resume.
     one_line: "OhCamel is a reactive risk and limits engine written in OCaml."
-    # resume_line is a clause, not a sentence: the resume prints the name in bold
-    # and this immediately after it.
     resume_line: >-
       Reactive risk and limits engine on an incremental computation framework;
       recomputes exposure and limit breaches only along the dependency paths a
@@ -157,82 +163,53 @@ essays:
 # about me, and this file is public.
 
 # ---------------------------------------------------------------------------
-# Letter content. This is the voice of every generated letter, and it lives
-# here rather than in code so it can be rewritten without a commit to src/.
+# Writing brief. Instructions for Claude, not sentences for a template: nothing
+# in this block is ever pasted into a letter. Claude writes every sentence from
+# the facts above, the files in data/context/, and the posting, and a second,
+# independent request audits the result before any PDF exists.
 #
-# Structure is fixed at four paragraphs:
-#   1. position + timing + one clause of why this firm
-#   2. the proof paragraph — ONE asset, in operational detail
-#   3. two supporting items, one sentence each
-#   4. why this firm, citing something specific from the posting
-#
-# {anchor} is the only substitution filled from the job description. Everything
-# else on this page is a fact or a sentence the owner has already approved.
+# Edit this to change how every future letter reads. The hard rules — nothing
+# unsourced, the banned phrases, one page, authorization stated exactly — live
+# in code (src/apply/writer.py) and cannot be loosened from here.
 # ---------------------------------------------------------------------------
-letters:
-  proof:
-    quant:
-      source: project:ohcamel
-      lead: "The clearest thing I can point you to is a system I built myself."
-      close: >-
-        It is a small system. What it taught me is not OCaml, it is that a risk
-        number is only as good as the argument for where it gets recomputed, and
-        that argument is most of the work.
-    allocator:
-      source: experience:0
-      lines: [0, 1, 2]
-      lead: >-
-        For the past stretch I have been the person faculty and graduate
-        researchers come to when their data does not agree with itself.
-      close: >-
-        Manager research runs on the same instinct. A return series is worth what
-        its conventions are worth, and someone has to be willing to go find out
-        what they are before the number gets used.
-    banking:
-      source: experience:0
-      lines: [0, 1]
-      lead: >-
-        Most of what I do now is take a question that is stated loosely and turn
-        it into something a terminal can actually answer.
-      close: >-
-        I write BASIS on the same principle: a claim goes into the issue only
-        once it is sourced, and a thesis that does not survive the fortnight gets
-        said out loud rather than quietly dropped.
-    corporate:
-      source: experience:0
-      lines: [0, 2]
-      lead: >-
-        The useful half of my job is not pulling the data. It is making sure the
-        person who receives it can rerun it next quarter and trust what comes back.
-      close: >-
-        That is the whole of good reporting as far as I can tell: a number, the
-        convention behind it, and a way for the reader to check both.
+writing:
+  voice: >-
+    Plain, specific and a little understated: someone who does the work and
+    assumes the reader does too. Vary sentence length and shape. Prefer the
+    concrete noun to the abstract one and the verb to the adjective. It should
+    read like a person wrote it for this one employer rather than like a brief
+    being followed. No sentence should survive being moved into a letter to a
+    different firm.
 
-  # Paragraph 4. {anchor} is the specific platform, mandate, or structure the
-  # posting names. Each sentence takes the anchor as a complement rather than a
-  # subject, so it stays grammatical whether the anchor is "Aladdin Engineering",
-  # "the long-term pool", or "Investment Committee".
-  why_firm:
-    quant: >-
-      What I keep returning to in the posting is {anchor}. That is where the
-      modelling decisions are load-bearing rather than decorative, and I would
-      rather spend early years somewhere they are visible.
-    allocator: >-
-      The specific draw is {anchor}. An office that has to hold a view across
-      managers and asset classes cannot outsource its judgement to a screen, and
-      that is the kind of research I want to be doing.
-    banking: >-
-      The specific draw is {anchor}. Deal work rewards people who can hold a
-      position long enough to defend it, and that is the habit I have been
-      building.
-    corporate: >-
-      What made this posting stand out is {anchor}. Reporting work gets
-      interesting exactly where someone has to decide what a number means before
-      it goes out, and that decision sits inside this role.
-  no_anchor: >-
-    [[ NAME THE SPECIFIC PLATFORM, MANDATE, OR TEAM HERE -- the posting text did
-    not give the generator anything concrete enough to quote ]]
+  letter:
+    length: 280 to 380 words across the body and closing. One page, always.
+    structure: >-
+      Four body paragraphs and a short closing. First: the role, when I
+      graduate, and in a single clause why this firm. Second: one piece of work
+      in operational detail — what it does and what building it forced me to
+      decide. This is the paragraph that gets the letter read, so it carries the
+      specifics. Third: two other pieces of work, a sentence or so each. Fourth:
+      why this firm, anchored to something concrete the posting names. The
+      closing states work authorization, gives availability only if the profile
+      states it, and ends plainly.
+    proof_asset:
+      # The default subject of paragraph 2 on each track. Claude may choose a
+      # different piece of work if the posting makes it clearly stronger, and
+      # has to say why in its notes.
+      quant: OhCamel — lead with what the engine does and the design problems it forced.
+      allocator: The UVA consulting role, framed as data integrity and research support.
+      banking: The UVA consulting role and BASIS, framed as analysis and written communication.
+      corporate: The UVA consulting role, framed as reporting that others can rerun and trust.
 
-  close: >-
-    I would welcome the chance to talk. Thank you for your time and consideration.
-  signoff: Sincerely,
+  answers:
+    why_role: >-
+      The reasoning of paragraph 4, said directly: what in this posting matches
+      what I have actually done, and what I want to learn there. Specific to this
+      employer and useless anywhere else.
+
+  avoid:
+    - restating the resume line by line
+    - opening with "I am writing to express my interest"
+    - praising the firm in terms the posting does not use
+    - claiming a skill, outcome or responsibility the sources do not show
+    - hedging — "I believe", "I feel that", "I think I could"

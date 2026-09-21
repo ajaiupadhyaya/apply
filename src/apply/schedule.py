@@ -4,10 +4,11 @@ launchd rather than cron because it is what macOS actually supervises: it
 survives reboots, it does not need the Terminal open, and it will catch up a
 missed run after the laptop wakes.
 
-The job runs through `zsh -lc`, which matters. A launchd process gets almost no
-environment, so a bare `uv run apply run` would start with no ANTHROPIC_API_KEY
-and quietly fall back to the free path. Going through a login shell sources
-~/.zshrc, which reads the key out of the Keychain.
+The job runs through `zsh -lc` so that PATH is set (uv lives under Homebrew).
+It does NOT rely on the shell for the API key: a non-interactive login shell
+never reads ~/.zshrc, so the key exported there is absent under launchd. The
+app reads the key from the Keychain itself (llm._keychain_key), which works
+here and everywhere else.
 
 Installing a LaunchAgent is persistent configuration on someone's machine, so
 nothing here installs anything on its own — `--show` prints exactly what would
@@ -44,7 +45,8 @@ class Schedule:
         out = self.project / "out"
         return {
             "Label": LABEL,
-            # A login shell, so ~/.zshrc runs and the Keychain key is exported.
+            # A login shell for PATH. The key comes from the Keychain, read by
+            # the app itself — ~/.zshrc is never sourced by a non-interactive shell.
             "ProgramArguments": [
                 "/bin/zsh", "-lc",
                 f"cd {_quote(self.project)} && {self.command}",

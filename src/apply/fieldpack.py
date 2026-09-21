@@ -29,7 +29,7 @@ def _field(labels: list[str], value, *, note: str | None = None) -> dict | None:
     return out
 
 
-def build(profile: Profile, posting: Posting) -> dict:
+def build(profile: Profile, posting: Posting, answers: dict | None = None) -> dict:
     ident = profile.identity
     loc = ident.get("location", {}) or {}
     auth = profile.authorization
@@ -96,13 +96,22 @@ def build(profile: Profile, posting: Posting) -> dict:
                 "key": key,
                 "answer": str(text).strip(),
             })
-    # The one answer that is never reused.
+    # The answer that is never reused: written by Claude for this posting,
+    # audited in the same pass as the letter.
+    answers = answers or {}
     essays.append({
-        "prompt": "Why are you interested in this role / this firm?",
-        "key": "why_this_firm",
-        "answer": "",
-        "note": "Written per application. The cover letter's fourth paragraph is "
-                "the starting point; do not paste it verbatim.",
+        "prompt": "Why are you interested in this role / this firm? (short)",
+        "key": "why_this_firm_short",
+        "answer": (answers.get("short") or "").strip(),
+        "note": "About 80 words. Written for this posting and audited alongside "
+                "the letter.",
+    })
+    essays.append({
+        "prompt": "Why are you interested in this role / this firm? (long)",
+        "key": "why_this_firm_long",
+        "answer": (answers.get("long") or "").strip(),
+        "note": "About 200 words. Written for this posting and audited alongside "
+                "the letter.",
     })
 
     return {
@@ -120,8 +129,9 @@ def build(profile: Profile, posting: Posting) -> dict:
     }
 
 
-def write(profile: Profile, posting: Posting, directory: Path) -> Path:
+def write(profile: Profile, posting: Posting, directory: Path,
+          answers: dict | None = None) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / "fieldpack.json"
-    path.write_text(json.dumps(build(profile, posting), indent=2) + "\n")
+    path.write_text(json.dumps(build(profile, posting, answers), indent=2) + "\n")
     return path

@@ -172,10 +172,18 @@ def doctor() -> None:
     from . import llm as llm_mod
 
     if llm_mod.available():
-        console.print("[green]✓[/] Anthropic credential present (`--llm=api` available)")
+        console.print("[green]✓[/] Anthropic credential present — Claude writes and audits")
     else:
-        console.print("[dim]•[/] no Anthropic credential — `--llm=manual` (the default) "
-                      "still works and costs nothing")
+        console.print("[bold red]✗[/] no Anthropic credential — letters cannot be written.\n"
+                      "    security add-generic-password -U -a \"$USER\" -s ANTHROPIC_API_KEY -w")
+
+    from . import context as context_mod
+
+    docs = context_mod.load_documents()
+    console.print(f"[green]✓[/] {len(docs)} context document{'s' if len(docs) != 1 else ''}"
+                  if docs else
+                  "[dim]•[/] no context documents — `apply context pull <owner/repo>` "
+                  "gives Claude more to work from")
 
     console.print(
         f"\n[dim]sponsorship answer on file: "
@@ -317,15 +325,25 @@ def _fetch(url: str) -> str:
 def gen(
     slug: str,
     track: Optional[str] = typer.Option(None, "--track", help="Override the classification."),
-    llm: str = typer.Option("manual", "--llm", help="manual | api"),
-    from_body: bool = typer.Option(False, "--from-body", help="Render out/<slug>/body.md."),
+    llm: str = typer.Option("api", "--llm",
+                            help="api (Claude writes and audits) | manual (PROMPT.md only)"),
+    from_body: bool = typer.Option(False, "--from-body",
+                                   help="Check and render your edited out/<slug>/body.md."),
     to: Optional[str] = typer.Option(None, "--to", help="Address the letter to a person."),
-    anchor: Optional[str] = typer.Option(None, "--anchor", help="Force paragraph 4's citation."),
+    anchor: Optional[str] = typer.Option(None, "--anchor", help="Suggest paragraph 4's citation."),
     model: Optional[str] = typer.Option(None, "--model"),
     effort: str = typer.Option("high", "--effort", help="low | medium | high | xhigh | max"),
     no_resume: bool = typer.Option(False, "--no-resume"),
 ) -> None:
-    """Generate the letter, pick the resume variant, and build the field pack."""
+    """Claude writes the letter and portal answers; a second pass audits them.
+
+    Nothing is pasted from a template. The draft is linted for free, compiled
+    to check it fits one page, then audited by an independent request against
+    your profile, your context documents and the posting. A draft with an
+    unsupported claim is revised, and if it still fails, no PDF is built.
+    """
+    from . import llm as llm_mod
+
     conn = _conn()
     row = _row(conn, slug)
     profile = _profile()
@@ -336,38 +354,57 @@ def gen(
         db.update_posting(conn, posting)
         console.print(f"[dim]track overridden to {posting.track}[/]")
 
+    budget = budget_mod.Budget(conn, caps=(profile.raw.get("budget") or {}))
     was_ready = application.status == Status.READY.value
+    label = ("checking your edits" if from_body
+             else "writing the prompt" if llm == "manual"
+             else "Claude is writing, then auditing")
     try:
-        artifacts = generate.build(
-            profile, posting, llm=llm, from_body=from_body, to=to,
-            anchor_override=anchor, model=model, effort=effort, skip_resume=no_resume,
-        )
-    except (generate.CompileError, FileNotFoundError, KeyError) as exc:
+        with console.status(f"{label}…"):
+            artifacts = generate.build(
+                profile, posting, llm=llm, from_body=from_body, to=to,
+                anchor_override=anchor, model=model, effort=effort,
+                skip_resume=no_resume, budget=budget,
+            )
+    except budget_mod.BudgetExceeded as exc:
         _fail(str(exc))
-    except Exception as exc:  # LLMUnavailable and friends
+    except llm_mod.LLMUnavailable as exc:
+        _fail(str(exc))
+    except (generate.CompileError, FileNotFoundError, ValueError) as exc:
         _fail(str(exc))
 
-    _print_lint(artifacts)
+    if artifacts.status == "prompt":
+        console.print(Panel.fit(
+            f"Wrote [bold]{artifacts.prompt_md.name}[/] — the exact request the API "
+            f"would receive.\n\nPaste it into Claude, save the letter body to "
+            f"[bold]body.md[/] in the same folder, then:\n"
+            f"  apply gen {slug} --from-body",
+            title="manual", border_style="dim"))
+        return
+
+    written = artifacts.written
+    _print_verification(written)
+    for warning in artifacts.warnings:
+        console.print(f"  [yellow]note[/] {warning}")
+    if written is not None and written.usage is not None:
+        console.print(f"  [dim]{len(written.attempts)} draft"
+                      f"{'s' if len(written.attempts) != 1 else ''} · {written.usage}[/]")
 
     if not artifacts.ok:
-        # The PDF is gone, so the database must not keep pointing at it.
         db.set_documents(
-            conn, application.id,
-            resume_variant=application.resume_variant,
-            letter_path=None,
-            resume_path=application.resume_path,
+            conn, application.id, resume_variant=application.resume_variant,
+            letter_path=None, resume_path=application.resume_path,
             fieldpack_path=application.fieldpack_path,
         )
         db.add_event(conn, application.id, "note",
-                     "lint refused the letter: " + "; ".join(artifacts.lint.errors))
+                     f"not written ({artifacts.status}): "
+                     f"{getattr(written, 'reason', '')[:300]}")
         console.print(
-            f"\n[bold red]No PDF was produced.[/] The lint refused this letter.\n"
-            f"  Source written for inspection: {artifacts.letter_tex}"
-        )
+            f"\n[bold red]No PDF was built.[/] "
+            f"{getattr(written, 'reason', '') or 'See the findings above.'}\n"
+            f"  The last draft is in {artifacts.directory}/body.md — edit it and "
+            f"run [bold]apply gen {slug} --from-body[/].")
         raise typer.Exit(1)
-
-    if artifacts.usage is not None:
-        console.print(f"  [dim]{artifacts.usage}[/]")
 
     db.set_documents(
         conn, application.id,
@@ -377,28 +414,45 @@ def gen(
         fieldpack_path=str(artifacts.fieldpack) if artifacts.fieldpack else None,
     )
     db.transition(conn, application.id, Status.GENERATED, via="gen",
-                  detail=f"generated from {artifacts.source}")
+                  detail=f"{artifacts.source}, {artifacts.status}"
+                         + (f", ${written.cost:.2f}" if written and written.cost else ""))
 
-    anchor_line = artifacts.anchors[0].with_article if artifacts.anchors else "[yellow]none found[/]"
     console.print(Panel.fit(
         f"[bold]{posting.company}[/] — {posting.role}   [dim]({posting.track})[/]\n"
-        f"anchor    {anchor_line}\n"
         f"letter    {artifacts.letter_pdf.name}\n"
         f"resume    {artifacts.resume_pdf.name if artifacts.resume_pdf else '—'}"
         f"  [dim]{artifacts.resume_variant}[/]\n"
-        f"fieldpack {artifacts.fieldpack.name if artifacts.fieldpack else '—'}\n"
+        f"answers   answers.md · fieldpack.json\n"
         f"folder    {artifacts.directory}",
-        title="generated", border_style="yellow",
-    ))
+        title=artifacts.status, border_style="green" if written.verified else "yellow"))
     if was_ready:
-        console.print("[yellow]•[/] this application was `ready`; regenerating reset it "
-                      "to `generated` and cleared the review. Read it again.")
-    if artifacts.prompt_md:
-        console.print(
-            f"\n[dim]To improve the prose: paste {artifacts.prompt_md.name} into Claude, "
-            f"save the result to body.md, then `apply gen {slug} --from-body`.[/]"
-        )
+        console.print("[yellow]•[/] this was `ready`; regenerating reset it to "
+                      "`generated` and cleared the review. Read it again.")
     console.print(f"\nNext: [bold]apply review {slug}[/]")
+
+
+def _print_verification(written) -> None:
+    """What the auditor found, ranked, in the terminal."""
+    from rich.markup import escape as esc
+
+    if written is None:
+        return
+    review = written.review
+    colour = {"verified": "green", "unverified": "yellow"}.get(written.status, "red")
+    console.print(f"\n  [{colour}]{written.status}[/]"
+                  + (f"  [dim]{esc(written.reason)}[/]" if written.reason
+                     and written.status != "verified" else ""))
+    if review is None:
+        return
+    for claim in review.unsupported_claims:
+        console.print(f"  [bold red]unsupported[/] {esc(claim)}")
+    if not review.authorization_correct:
+        console.print("  [bold red]authorization[/] does not match the profile")
+    for finding in review.findings:
+        style = {"blocker": "bold red", "should-fix": "yellow", "nit": "dim"}[finding.severity]
+        console.print(f"  [{style}]{finding.severity}[/] [dim]{esc(finding.where)}[/] "
+                      f"{esc(finding.problem)}")
+        console.print(f"      [green]→[/] {esc(finding.suggestion)}")
 
 
 # ------------------------------------------------------------------- check
@@ -410,52 +464,100 @@ def check(
     model: Optional[str] = typer.Option(None, "--model"),
     effort: str = typer.Option("high", "--effort"),
 ) -> None:
-    """Have Claude read the generated letter against the posting and report problems.
+    """Audit the current letter again, without rewriting or rebuilding it.
 
-    Read-only. It cannot change a status, and its opinion is not a review — you
-    still have to read the letter yourself.
+    Reads out/<slug>/body.md — Claude's draft, or your edits of it — and has an
+    independent request check it against your sources. Changes no status and no
+    file except verification.json.
     """
+    import json
+
     from . import llm as llm_mod
+    from . import writer
 
     conn = _conn()
     row = _row(conn, slug)
     profile = _profile()
-    body = generate.out_dir() / slug / "cover_letter.tex"
-    if not body.exists():
-        _fail(f"nothing generated yet. Run `apply gen {slug}` first.")
-
-    letter = generate.compose(profile, row.posting)
-    body_md = generate.out_dir() / slug / "body.md"
-    if body_md.exists():
-        letter = generate.letter_from_body(profile, row.posting, body_md.read_text())
-
+    directory = generate.out_dir() / slug
     try:
-        result, usage = llm_mod.review(
-            profile, row.posting, letter.full_text,
-            model=model or llm_mod.DEFAULT_MODEL, effort=effort,
-        )
-    except llm_mod.LLMUnavailable as exc:
+        package = generate.package_from_files(directory)
+    except (FileNotFoundError, ValueError) as exc:
         _fail(str(exc))
 
-    colour = "green" if result.verdict == "send" else "yellow"
-    console.print(Panel.fit(f"[bold {colour}]{result.verdict.upper()}[/]",
-                            title=f"check — {slug}", border_style=colour))
+    budget = budget_mod.Budget(conn, caps=(profile.raw.get("budget") or {}))
+    anchors = [a.with_article for a in generate.jd_anchors(
+        row.posting.jd_raw, row.posting.company, row.posting.role, row.posting.location)]
+    try:
+        with console.status("auditing…"):
+            written = writer.write(
+                profile, row.posting,
+                lint=lambda p: generate.lint(writer.full_text(p), profile, row.posting).errors,
+                anchors=anchors, budget=budget, first_draft=package, max_drafts=1,
+                model=model or llm_mod.DEFAULT_MODEL, effort=effort,
+            )
+    except (budget_mod.BudgetExceeded, llm_mod.LLMUnavailable) as exc:
+        _fail(str(exc))
 
-    if result.unsupported_claims:
-        console.print("[bold red]Claims the sources do not support:[/]")
-        for claim in result.unsupported_claims:
-            console.print(f"  [red]•[/] {claim}")
-    for finding in result.findings:
-        style = {"blocker": "bold red", "should-fix": "yellow", "nit": "dim"}[finding.severity]
-        console.print(f"\n[{style}]{finding.severity}[/] [dim]{finding.where}[/]")
-        console.print(f"  {finding.problem}")
-        console.print(f"  [green]→[/] {finding.suggestion}")
+    (directory / "verification.json").write_text(json.dumps(written.as_record(), indent=2) + "\n")
+    _print_verification(written)
+    if written.review:
+        console.print(f"\n[dim]strongest: {written.review.strongest_sentence}[/]")
+        console.print(f"[dim]weakest:   {written.review.weakest_sentence}[/]")
+    if written.usage:
+        console.print(f"[dim]{written.usage}[/]")
+    db.add_event(conn, row.application.id, "note", f"audit: {written.status}")
 
-    console.print(f"\n[dim]strongest: {result.strongest_sentence}[/]")
-    console.print(f"[dim]weakest:   {result.weakest_sentence}[/]")
-    console.print(f"[dim]{usage}[/]")
-    db.add_event(conn, row.application.id, "note",
-                 f"llm check: {result.verdict}, {len(result.findings)} findings")
+
+# ----------------------------------------------------------------- context
+
+
+context_app = typer.Typer(help="Source material Claude may draw on: READMEs, notes, a bio.",
+                          invoke_without_command=True)
+app.add_typer(context_app, name="context")
+
+
+@context_app.callback()
+def context_list(ctx: typer.Context) -> None:
+    """List the context documents Claude currently reads."""
+    if ctx.invoked_subcommand is not None:
+        return
+    from . import context as context_mod
+
+    docs = context_mod.load_documents()
+    directory = context_mod.context_dir()
+    if not docs:
+        console.print(
+            f"[dim]no context documents in {directory}.[/]\n\n"
+            f"  Pull a project README:  [bold]apply context pull ajaiupadhyaya/OhCamel[/]\n"
+            f"  Or drop any .md file in that folder — notes, a bio, a writeup.")
+        return
+    total = sum(len(t) for _, t in docs)
+    table = Table(box=None, header_style="dim", padding=(0, 2))
+    table.add_column("document"); table.add_column("chars", justify="right")
+    for name, text in docs:
+        table.add_row(name, f"{len(text):,}")
+    console.print(table)
+    console.print(f"\n[dim]{total:,} of {context_mod.MAX_TOTAL_CHARS:,} chars · cached "
+                  f"per run, so it costs little after the first call · {directory}[/]")
+
+
+@context_app.command("pull")
+def context_pull(
+    repo: str = typer.Argument(..., help="owner/name, e.g. ajaiupadhyaya/OhCamel"),
+    name: Optional[str] = typer.Option(None, "--name", help="File name to save as."),
+) -> None:
+    """Fetch a GitHub README, keep its shape in its own words, and file it.
+
+    Everything in data/context/ is something a letter is allowed to claim, so
+    only pull what you would stand behind in an interview.
+    """
+    from . import context as context_mod
+
+    try:
+        path = context_mod.pull_readme(repo, name=name)
+    except Exception as exc:                            # noqa: BLE001
+        _fail(f"could not pull {repo}: {exc}")
+    console.print(f"[green]✓[/] {path}  [dim]({path.stat().st_size:,} bytes)[/]")
 
 
 # -------------------------------------------------------------------- show
@@ -815,7 +917,7 @@ def spend(ledger: bool = typer.Option(False, "--ledger", help="Show individual c
 
 @app.command(name="run")
 def run_once(
-    llm: str = typer.Option("manual", "--llm", help="manual (free) | api (spends)"),
+    llm: str = typer.Option("api", "--llm", help="api (Claude writes; spends) | manual (prompts only)"),
     limit: Optional[int] = typer.Option(None, "--limit",
                                         help="Max documents to write. Defaults to max_auto_per_day."),
     no_discover: bool = typer.Option(False, "--no-discover"),
@@ -879,7 +981,7 @@ def schedule(
     remove: bool = typer.Option(False, "--remove"),
     show: bool = typer.Option(False, "--show", help="Print the plist without writing it."),
     at: str = typer.Option("06:30", "--at", help="Local time, HH:MM."),
-    llm: str = typer.Option("manual", "--llm", help="What the scheduled run uses."),
+    llm: str = typer.Option("api", "--llm", help="What the scheduled run uses."),
 ) -> None:
     """Run the pass every morning, via launchd.
 

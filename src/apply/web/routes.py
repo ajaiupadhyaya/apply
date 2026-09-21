@@ -72,6 +72,14 @@ def detail(request: Request, slug: str, m: str | None = None, ok: str = "1"):
     def _name(path: str | None) -> str | None:
         return Path(path).name if path and Path(path).exists() else None
 
+    audit = None
+    audit_path = directory / "verification.json"
+    if audit_path.exists():
+        try:
+            audit = json.loads(audit_path.read_text())
+        except ValueError:
+            audit = None
+
     anchors = [
         a.with_article
         for a in generate.jd_anchors(
@@ -89,6 +97,7 @@ def detail(request: Request, slug: str, m: str | None = None, ok: str = "1"):
             letter_name=_name(row.application.letter_path),
             resume_name=_name(row.application.resume_path),
             markable=MARKABLE,
+            audit=audit,
             message=m,
             message_ok=(ok == "1"),
         ),
@@ -166,30 +175,35 @@ def add_create(
 
 @router.post("/app/{app_id}/generate")
 def do_generate(app_id: int):
+    """Claude writes, a second request audits. Takes a minute; the page waits."""
+    from ..budget import Budget, BudgetExceeded
+    from ..llm import LLMUnavailable
+
     conn = db.connect()
     application = db.get_application_by_id(conn, app_id)
     posting = db.get_posting_by_id(conn, application.posting_id)
     profile = Profile.load()
+    budget = Budget(conn, caps=(profile.raw.get("budget") or {}))
 
     try:
-        artifacts = generate.build(profile, posting)
+        artifacts = generate.build(profile, posting, budget=budget)
+    except (BudgetExceeded, LLMUnavailable) as exc:
+        return _flash(posting.slug, str(exc).splitlines()[0], ok=False)
     except Exception as exc:  # noqa: BLE001 — surfaced to the owner, not swallowed
         return _flash(posting.slug, f"Could not generate: {exc}", ok=False)
 
+    written = artifacts.written
     if not artifacts.ok:
         db.set_documents(
             conn, app_id,
             resume_variant=application.resume_variant, letter_path=None,
             resume_path=application.resume_path, fieldpack_path=application.fieldpack_path,
         )
-        db.add_event(conn, app_id, "note",
-                     "lint refused the letter: " + "; ".join(artifacts.lint.errors))
-        return _flash(
-            posting.slug,
-            "The lint refused this letter, so no PDF was built: "
-            + "; ".join(artifacts.lint.errors),
-            ok=False,
-        )
+        reason = getattr(written, "reason", "") or "; ".join(artifacts.lint.errors)
+        db.add_event(conn, app_id, "note", f"not written: {reason[:300]}")
+        return _flash(posting.slug,
+                      f"No PDF was built — {reason}. The audit is below; the draft is in "
+                      f"body.md if you want to fix it by hand.", ok=False)
 
     db.set_documents(
         conn, app_id,
@@ -200,16 +214,14 @@ def do_generate(app_id: int):
     )
     was_ready = application.status == Status.READY.value
     db.transition(conn, app_id, Status.GENERATED, via="gen",
-                  detail=f"generated from {artifacts.source} (dashboard)")
+                  detail=f"{artifacts.status}, ${written.cost:.2f} (dashboard)")
 
-    message = "Generated. Read the letter, then mark it ready."
+    message = (f"Written and audited ({artifacts.status}, ${written.cost:.2f}). "
+               f"Read it, then mark it ready.")
     if was_ready:
-        message = ("Regenerated, so this went back to `generated` and the earlier "
-                   "review was cleared. Read it again.")
-    warnings = artifacts.lint.warnings + artifacts.warnings
-    if warnings:
-        message += "  " + "  ".join(warnings)
-    return _flash(posting.slug, message, ok=not warnings)
+        message = ("Rewritten, so this went back to `generated` and the earlier review "
+                   "was cleared. Read it again.")
+    return _flash(posting.slug, message, ok=written.verified)
 
 
 @router.post("/app/{app_id}/review")

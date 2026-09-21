@@ -24,51 +24,57 @@ needs_latex = pytest.mark.skipif(
 
 # 1 --------------------------------------------------------------------
 def test_vcimco_is_allocator_with_the_right_deadline_and_proof(profile, vcimco_jd):
+    """Claude writes the letter now, so what is deterministic — and asserted — is
+    the routing: allocator track, the real deadline, and paragraph 2 assigned to
+    the consulting work rather than OhCamel."""
+    from apply import writer
+
     parsed = parse(vcimco_jd)
     assert parsed.classification.track.value == "allocator"
     assert parsed.deadline == _dt.date(2026, 10, 14)
 
-    proof = generate.compose(profile, parsed.to_posting()).paragraphs[1]
-    assert "Bloomberg Terminal" in proof and "WRDS" in proof
-    assert "OhCamel" not in proof
+    _, user = writer.prompts(profile, parsed.to_posting(), [])
+    task = user.split("# TASK", 1)[1]
+    assert "consulting" in task and "OhCamel" not in task
 
 
 # 2 --------------------------------------------------------------------
 def test_blackrock_is_quant_and_its_proof_is_ohcamel(profile, blackrock_jd):
+    from apply import writer
+
     parsed = parse(blackrock_jd)
     assert parsed.classification.track.value == "quant"
-    assert "OhCamel" in generate.compose(profile, parsed.to_posting()).paragraphs[1]
+    _, user = writer.prompts(profile, parsed.to_posting(), [])
+    assert "OhCamel" in user.split("# TASK", 1)[1]
 
 
 # 3 --------------------------------------------------------------------
 @needs_latex
-def test_passionate_fails_the_lint_and_produces_no_pdf(profile, vcimco_jd):
+def test_passionate_fails_the_lint_and_produces_no_pdf(profile, vcimco_jd, fake_claude):
     posting = posting_from(vcimco_jd)
     directory = generate.out_dir() / posting.slug
-    directory.mkdir(parents=True, exist_ok=True)
 
-    good = generate.build(profile, posting)
+    good = generate.build(profile, posting, caller=fake_claude())
     assert good.letter_pdf.exists()
 
-    (directory / "body.md").write_text(
-        "I am applying for the Investment Intern role at VCIMCO.\n\n"
-        "I am passionate about institutional investing.\n\n"
-        "BASIS is a research report I write.\n\n"
-        "The specific draw is the Investment Committee."
-    )
-    bad = generate.build(profile, posting, from_body=True)
+    # Claude writes it with the banned word, three times running.
+    fake = fake_claude(packages=[fake_claude.package(
+        paragraph_2="I am passionate about institutional investing.")])
+    bad = generate.build(profile, posting, caller=fake)
     assert not bad.ok
     assert any("passionate" in e for e in bad.lint.errors)
     assert bad.letter_pdf is None
+    assert fake.count("Review") == 0          # never paid to audit a failing draft
     # And the previous PDF is gone, so yesterday's letter cannot look current.
     assert not good.letter_pdf.exists()
+    assert not list(directory.glob("*_Cover_Letter_*.pdf"))
 
 
 # 4 --------------------------------------------------------------------
 @needs_latex
-def test_an_ampersand_in_a_company_name_compiles(profile, vcimco_jd):
+def test_an_ampersand_in_a_company_name_compiles(profile, vcimco_jd, fake_claude):
     posting = posting_from(vcimco_jd, company="Smith & Co.", slug="smith-co-analyst-2027")
-    artifacts = generate.build(profile, posting)
+    artifacts = generate.build(profile, posting, caller=fake_claude())
     assert artifacts.ok
     assert generate.page_count(artifacts.letter_pdf) == 1
     assert r"Smith \& Co." in artifacts.letter_tex.read_text()

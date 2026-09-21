@@ -63,61 +63,78 @@ uv run apply seed
 
 ---
 
-## The four-paragraph letter
+## How the letters get written
 
-Structure is fixed, because it is what makes the letters consistently good:
+**Claude writes every letter and portal answer. Nothing is pasted from a
+template.** A second, independent request audits each draft before a PDF exists.
 
-1. **Position and timing.** Which role, that you graduate May 2027, one clause of
-   why this firm. Two sentences.
-2. **The proof paragraph.** *One* asset, in operational detail. This is the
-   paragraph that gets the letter read. The track picks the asset:
-   `quant` → OhCamel · `allocator` → the Bloomberg/WRDS consulting work ·
-   `banking` → that plus BASIS · `corporate` → that, framed as reporting.
-3. **Supporting evidence.** Two other items, one sentence each.
-4. **Why this firm.** Cites something specific and checkable from the posting —
-   a platform, a mandate, a team. Never generic praise.
+```
+apply gen <slug>                    # Claude writes, lints, fits, audits, revises
+apply gen <slug> --from-body        # check and render your own edits to body.md
+apply check <slug>                  # audit the current letter again, change nothing
+apply gen <slug> --llm manual       # write PROMPT.md to paste into Claude by hand
+```
 
-All of that prose lives in `data/profile.yaml` under `letters:`, not in code, so
-you can rewrite the voice of every letter without touching `src/`.
+What Claude reads, all of it yours:
+
+- **`data/profile.yaml`** — the facts (education, experience, projects, skills,
+  work authorization, availability) and a **writing brief** under `writing:`:
+  instructions about voice, structure and emphasis, never sentences. Edit the
+  brief and every future letter changes.
+- **`data/context/`** — longer source material. `apply context pull owner/repo`
+  files a GitHub README in your own words (introduction, every heading, each
+  section's opening). Everything here is something a letter may claim, so curate
+  it like a reference list.
+- **the posting**, verbatim.
+
+Phone, street address and GPA are never sent to the API.
+
+### The loop
+
+```
+write    one request drafts the letter and both portal answers
+lint     free — banned phrases, unsourced figures, sponsorship wording
+fit      free — typeset it; it must be one page
+audit    paid — a separate request checks every sentence against your sources
+revise   paid — the writer gets its draft back with the exact problems
+```
+
+Free checks run first, so nobody pays to audit a draft that runs to two pages.
+Up to three drafts. If an **unsupported claim**, a **wrong authorization
+statement**, or a **blocking** finding survives the last one, no PDF is built —
+the draft stays in `body.md` for you to fix by hand. Style findings never block:
+"correct" is the auditor's job and "good" is yours, so they are recorded and
+shown at review time instead.
+
+Your own edits to `body.md` are audited but never rewritten.
+
+The first live run caught exactly the failure this exists for: the writer kept
+inventing "starting in May" because the brief asked for availability and the
+profile held none. The auditor refused it three drafts running. That is why
+`availability:` now exists in the profile, and why the writer is told explicitly
+to state no start date while it is empty.
+
+### What it costs
+
+Measured on Opus 5 at high effort: **about $0.42 for a letter verified on the
+first draft**, most of it the model's reasoning, which bills as output. A draft
+needing revisions costs more — the refused run above was $0.81 for three. At the
+default $15/month ceiling that is roughly 30–35 letters. `--effort medium` cuts
+the reasoning roughly in half; whether that is worth it is your call.
+
+The shared source block is cached, so an audit or a revision re-reads your
+profile and context at about a tenth of the price.
 
 ### The lint
 
-Runs on the prose, before it becomes a PDF. A letter that fails produces **no
-PDF**, and deletes any stale one, so yesterday's letter can never look current.
+Runs on the prose before it becomes a PDF, on every draft and every answer.
 
 - The banned words: *passionate, dynamic, synergy, leverage my skills,
   fast-paced environment, I believe I would be a great fit*
 - Any superlative about the firm the posting did not use first
-- Any number or date that appears in neither `profile.yaml` nor the posting
+- Any figure in neither your profile, your context documents, nor the posting
+- Any sentence about sponsorship that contradicts your profile
 - More than one page after compilation
-
-### Writing the letter with Claude
-
-Three ways, in increasing cost:
-
-```bash
-apply gen <slug>                    # deterministic draft. Free. Always works.
-                                    #   ...also writes out/<slug>/PROMPT.md
-apply gen <slug> --from-body        # render the paragraphs you saved to body.md
-apply gen <slug> --llm=api          # Claude writes it. ~$0.10–0.20 a letter.
-apply check <slug>                  # Claude reads it back against the posting
-```
-
-The deterministic draft is factually safe but flat — it is a floor, not a
-ceiling. `PROMPT.md` contains the posting, the profile slice this track is
-allowed to cite, the structure, and the banned list; paste it into Claude, save
-the four paragraphs to `out/<slug>/body.md`, and render with `--from-body`.
-
-For `--llm=api`, export a key from your Anthropic Console:
-
-```bash
-export ANTHROPIC_API_KEY='sk-ant-...'          # put this in ~/.zshrc
-```
-
-Nothing is written to disk and nothing is stored in `apply.db`. Whatever the
-model returns goes through the same lint as the deterministic draft — it cannot
-introduce a number that is in neither the profile nor the posting, and it cannot
-move an application one step along the state machine.
 
 ---
 
@@ -334,7 +351,8 @@ and it saves the most time.
 | `apply doctor` | unresolved profile values, toolchain, credential |
 | `apply add --clipboard\|--file\|--stdin\|--url` | add a posting |
 | `apply gen <slug> [--track T] [--llm api] [--from-body] [--anchor "…"]` | build the documents |
-| `apply check <slug>` | have Claude read the letter against the posting |
+| `apply check <slug>` | audit the current letter again, without rewriting it |
+| `apply context [pull owner/repo]` | the source material Claude reads |
 | `apply show <slug> [--jd]` | everything known about one posting |
 | `apply review <slug>` | opens the PDF, asks, promotes `generated → ready` |
 | `apply submit <slug>` | asks, promotes `ready → submitted`, queues a follow-up |
@@ -379,18 +397,24 @@ tools/autofill.user.js       optional Tampermonkey script. Fills; never clicks.
 
 ---
 
-## Three deliberate deviations from the spec
+## Deliberate deviations from the spec
 
-1. **Resume templates are `.tex.j2`, not `.tex`.** A static `.tex` would have to
+1. **Claude writes the letters; there is no template prose.** The original spec
+   composed letters from sentences stored in the profile. They read as
+   templates, so they are gone: the profile now holds a writing brief of
+   instructions, and an independent audit plus the deterministic lint are what
+   make a model-written letter safe to send.
+
+2. **Resume templates are `.tex.j2`, not `.tex`.** A static `.tex` would have to
    embed phone, address, and GPA, which live in the gitignored overlay.
    Rendering them keeps private facts out of version control.
 
-2. **The hallucination guard allows numbers from the posting, not only the
+3. **The hallucination guard allows numbers from the posting, not only the
    profile.** A figure quoted from the job description is sourced, not invented,
    and paragraph 4 often needs one. The guard is still absolute: a number from
    neither source fails the build.
 
-3. **No HTMX.** A CDN script tag would break the offline-forever premise, and
+4. **No HTMX.** A CDN script tag would break the offline-forever premise, and
    vendoring an unverifiable blob is worse. State changes are form POSTs with a
    redirect; the only scripted interaction is the copy button. At this scale a
    client framework buys nothing.
