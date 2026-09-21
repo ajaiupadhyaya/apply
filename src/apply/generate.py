@@ -313,7 +313,16 @@ def lint(body: str, profile: Profile, posting: Posting) -> LintResult:
 
     # Hallucination guard. A number may come from the profile or from the
     # posting itself; a number from neither was invented.
-    sourced = profile.sourced_tokens | _digit_tokens(posting.jd_raw)
+    #
+    # The company and role count as part of the posting. Without them a firm
+    # whose name contains a digit — Point72, 3M, 7-Eleven — gets its own name
+    # reported as an invented figure whenever the description does not happen
+    # to repeat it.
+    sourced = (
+        profile.sourced_tokens
+        | _digit_tokens(posting.jd_raw)
+        | _digit_tokens(f"{posting.company} {posting.role}")
+    )
     for token in sorted(_digit_tokens(body)):
         if token not in sourced:
             result.errors.append(
@@ -703,6 +712,36 @@ def _safe(text: str) -> str:
     return _FILENAME_SAFE.sub("_", text).strip("_") or "Untitled"
 
 
+#: Words that make a filename longer without making it clearer.
+_FILLER = {"the", "a", "an", "of", "for", "and", "to", "in", "at", "program",
+           "programme", "position", "role", "opportunity", "full", "time",
+           "fulltime", "summer", "intern", "internship", "20", "2026", "2027"}
+
+
+def _document_tag(posting: Posting, words: int = 3) -> str:
+    """Company plus enough of the role to tell two letters apart."""
+    company = _safe(posting.company)
+    significant = [
+        w for w in _FILENAME_SAFE.sub(" ", posting.role or "").split()
+        if w.lower() not in _FILLER and len(w) > 1
+    ][:words]
+    return f"{company}_{_safe(' '.join(significant))}" if significant else company
+
+
+def _sweep(directory: Path, *, keep: Path, kind: str) -> None:
+    """Delete this folder's older PDFs of the same kind.
+
+    A renamed document leaves its predecessor behind, and a folder holding both
+    AJ_Upadhyaya_Cover_Letter_Point72.pdf and
+    AJ_Upadhyaya_Cover_Letter_Point72_Quantitative_Research.pdf is a folder you
+    will eventually upload the wrong file from. Scoped to one slug's directory
+    and one document kind; nothing else is ever removed.
+    """
+    for candidate in directory.glob(f"*_{kind}_*.pdf"):
+        if candidate != keep:
+            candidate.unlink(missing_ok=True)
+
+
 @dataclass(slots=True)
 class Artifacts:
     slug: str
@@ -870,7 +909,9 @@ def build(
     artifacts.lint = lint(letter.full_text, profile, posting)
     artifacts.letter_tex.write_text(render_letter(profile, posting, letter))
 
-    stale = directory / f"{profile.file_name}_Cover_Letter_{_safe(posting.company)}.pdf"
+    # The role goes in the filename. Three Point72 letters that are all called
+    # AJ_Upadhyaya_Cover_Letter_Point72.pdf is how the wrong one gets uploaded.
+    stale = directory / f"{profile.file_name}_Cover_Letter_{_document_tag(posting)}.pdf"
     if not artifacts.lint.ok:
         # A letter that fails the lint must not leave a PDF behind — least of all
         # yesterday's PDF, which would look current.
@@ -881,6 +922,7 @@ def build(
     compiled = compile_pdf(artifacts.letter_tex, max_pages=1)
     compiled.replace(stale)
     artifacts.letter_pdf = stale
+    _sweep(directory, keep=stale, kind="Cover_Letter")
 
     if not skip_resume:
         variant = select_resume(posting.track)
@@ -890,9 +932,10 @@ def build(
         artifacts.resume_tex = directory / f"{variant}.tex"
         artifacts.resume_tex.write_text(source_tex)
         built = compile_pdf(artifacts.resume_tex, max_pages=1)
-        target = directory / f"{profile.file_name}_Resume_{_safe(posting.company)}.pdf"
+        target = directory / f"{profile.file_name}_Resume_{_document_tag(posting)}.pdf"
         built.replace(target)
         artifacts.resume_pdf = target
+        _sweep(directory, keep=target, kind="Resume")
 
     artifacts.fieldpack = fieldpack_mod.write(profile, posting, directory)
     if llm == "manual" and source == "composed":

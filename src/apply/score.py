@@ -37,7 +37,10 @@ def _any(patterns: list[str]) -> re.Pattern:
 
 #: Titles that are not open to someone graduating in 2027, whatever else they say.
 SENIORITY = _any([
-    r"senior", r"sr\.?", r"vice\s+president", r"\bvp\b", r"director", r"principal",
+    # "Rising Senior Summer Analyst" and "junior or senior year" describe a
+    # student, not a job level. Only the standalone rank is disqualifying.
+    r"(?<!rising\s)senior(?!\s+year)",
+    r"sr\.?", r"vice\s+president", r"\bvp\b", r"director", r"principal",
     r"staff", r"lead", r"head\s+of", r"chief", r"executive", r"managing\s+director",
     r"\bmd\b", r"partner", r"manager", r"supervisor", r"president",
 ])
@@ -74,6 +77,16 @@ YEARS = re.compile(r"(\d+)\s*\+?\s*(?:-\s*\d+\s*)?years?(?:\s+of)?\s+(?:relevant
 ADVANCED_DEGREE = re.compile(
     r"(ph\.?d|doctorate|mba|master'?s|graduate\s+degree|advanced\s+degree)[^.]{0,40}"
     r"(required|is\s+required|must\s+have|mandatory)", re.I)
+
+#: A posting aimed explicitly at one class year. The Federal Reserve alone runs
+#: nine separate "Sophomore Intern" programmes, and none of them is open to a
+#: junior or senior.
+CLASS_SCOPED = {
+    "freshman": _any([r"freshman", r"first[\s-]?year\s+(student|intern)"]),
+    "sophomore": _any([r"sophomore"]),
+    "junior": _any([r"rising\s+junior(?!\s+or)", r"junior\s+year"]),
+    "senior": _any([r"rising\s+senior(?!\s+or)"]),
+}
 
 #: Places. NYC is the stated goal, so it is the heaviest single signal here.
 NYC = _any([r"new\s+york", r"\bnyc\b", r"manhattan", r"\bny\b", r"hudson\s+yards"])
@@ -192,9 +205,11 @@ class Score:
 DEFAULT_THRESHOLDS = {"pursue": 70, "maybe": 45}
 
 
-def score(posting: RawPosting, preferences: dict | None = None) -> Score:
+def score(posting: RawPosting, preferences: dict | None = None,
+          standing: str | None = None) -> Score:
     """Relevance only. Urgency is the digest's job, not this function's."""
     preferences = preferences or {}
+    standing = standing or preferences.get("class_standing")
     thresholds = {**DEFAULT_THRESHOLDS, **(preferences.get("thresholds") or {})}
     title = posting.title or ""
     location = posting.location or ""
@@ -211,6 +226,14 @@ def score(posting: RawPosting, preferences: dict | None = None) -> Score:
         return reject(f"off-function: {OFF_FUNCTION.search(title).group(0)!r}", "function")
     if TOO_TECHNICAL.search(title):
         return reject(f"engineering role: {TOO_TECHNICAL.search(title).group(0)!r}", "technical")
+
+    if standing:
+        for year, pattern in CLASS_SCOPED.items():
+            hit = pattern.search(title)
+            if hit and year != standing:
+                return reject(
+                    f"aimed at {year} students; you are a {standing}"
+                    f" ({hit.group(0)!r})", "class year")
 
     remote = bool(REMOTE.search(location) or REMOTE.search(title))
     in_nyc = bool(NYC.search(location))

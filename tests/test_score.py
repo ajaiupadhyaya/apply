@@ -116,3 +116,40 @@ def test_thresholds_are_configurable():
     posting = make(title="Business Analyst", body=body)
     assert score(posting, {"thresholds": {"pursue": 10, "maybe": 5}}).verdict is Verdict.PURSUE
     assert score(posting, {"thresholds": {"pursue": 99, "maybe": 98}}).verdict is Verdict.REJECT
+
+
+# ------------------------------------------------------------- class year
+
+@pytest.mark.parametrize("title", [
+    "2027 Summer Intern - Research Group - Sophomore Intern",
+    "Sophomore Summer Analyst Program",
+    "Freshman Insight Programme",
+])
+def test_roles_scoped_to_another_class_year_are_rejected(title):
+    """The Federal Reserve alone runs nine separate sophomore programmes."""
+    result = score(make(title=title), standing="senior")
+    assert result.verdict is Verdict.REJECT
+    assert result.rejected_by == "class year"
+
+
+def test_a_rising_senior_is_a_student_not_a_job_level():
+    """"Rising Senior Summer Analyst" used to trip the seniority gate."""
+    result = score(make(title="Rising Senior Summer Analyst",
+                        body="Graduating in 2027. " * 20), standing="senior")
+    assert result.verdict is not Verdict.REJECT
+
+
+def test_junior_or_senior_year_wording_is_not_a_job_level():
+    result = score(make(title="Summer Analyst",
+                        body="Open to students in their junior or senior year. " * 10),
+                   standing="senior")
+    assert result.verdict is not Verdict.REJECT
+
+
+def test_a_senior_job_title_is_still_rejected():
+    assert score(make(title="Senior Risk Analyst"), standing="senior").rejected_by == "seniority"
+
+
+def test_without_a_standing_the_class_gate_does_not_fire():
+    """Callers that do not know the owner's year should not guess one."""
+    assert score(make(title="Sophomore Summer Analyst")).rejected_by != "class year"

@@ -64,3 +64,13 @@ def test_a_missing_profile_says_what_to_do(tmp_path, monkeypatch):
     monkeypatch.setenv("APPLY_DATA_DIR", str(tmp_path))
     with pytest.raises(ProfileError, match="apply init"):
         Profile.load()
+
+
+def test_class_standing_is_derived_not_stored(profile):
+    """A stored year is wrong within a year and nobody updates it."""
+    assert profile.class_standing == "senior"          # graduates May 2027
+    assert 0 < profile.years_to_graduation() < 1
+
+
+def test_search_preferences_carry_the_derived_standing(profile):
+    assert profile.search_preferences["class_standing"] == "senior"

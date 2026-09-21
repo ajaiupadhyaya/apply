@@ -150,19 +150,63 @@ def test_the_stylesheet_defines_dark_mode_and_a_narrow_breakpoint():
 
 
 # Beyond the spec, but the same class of guarantee -----------------------
-def test_nothing_in_the_codebase_posts_to_an_employer():
-    """A crude but load-bearing grep: no outbound write anywhere in src/."""
+def test_no_browser_automation_exists_anywhere():
+    """The machinery that would make submitting possible is simply absent.
+
+    This is the load-bearing guarantee: there is no driver, no click, no form
+    submission in the codebase, so no bug and no future edit can accidentally
+    fire one.
+    """
     import re
-    from pathlib import Path
+    from apply.outbound import FORBIDDEN_MACHINERY
 
     offenders = []
     for path in (generate.repo_root() / "src").rglob("*.py"):
-        text = path.read_text()
-        for pattern in (r"httpx\.post", r"requests\.post", r"urlopen\(",
-                        r"\.click\(", r"webdriver", r"playwright", r"selenium"):
-            if re.search(pattern, text):
-                offenders.append(f"{path.name}: {pattern}")
-    assert offenders == [], f"outbound-write machinery found: {offenders}"
+        if path.name == "outbound.py":
+            continue                      # the file that declares the list
+        text = path.read_text().lower()
+        for needle in FORBIDDEN_MACHINERY:
+            if needle in text:
+                offenders.append(f"{path.name}: {needle}")
+        if re.search(r"\.click\s*\(", text):
+            offenders.append(f"{path.name}: .click(")
+    assert offenders == [], f"submission machinery found: {offenders}"
+
+
+def test_every_outbound_call_site_is_declared():
+    """A request from an undeclared module fails the suite.
+
+    Discovery is made of network calls, so "makes no requests" is the wrong
+    invariant. The right one is that every place that can send anything is
+    listed in apply.outbound with a reason it is not an employer.
+    """
+    import re
+    from apply.outbound import ALLOWED
+
+    sends = re.compile(r"\b(?:httpx|requests|client|connection)\.(?:post|put|patch)\s*\(|urlopen\s*\(")
+    undeclared = []
+    for path in (generate.repo_root() / "src" / "apply").rglob("*.py"):
+        if not sends.search(path.read_text()):
+            continue
+        module = "apply." + ".".join(
+            path.relative_to(generate.repo_root() / "src" / "apply").with_suffix("").parts)
+        module = module.replace(".__init__", "")
+        if module not in ALLOWED:
+            undeclared.append(module)
+    assert undeclared == [], (
+        f"these modules send requests but are not declared in apply.outbound: {undeclared}")
+
+
+def test_no_employer_facing_host_is_allowed():
+    """Nothing in the allow-list is an application portal."""
+    from apply.outbound import ALLOWED
+
+    portals = ("workday.com/apply", "myworkdayjobs.com/apply", "joinhandshake",
+               "greenhouse.io/applications", "lever.co/apply")
+    for hosts, reason in ALLOWED.values():
+        assert reason.strip(), "every allowed host needs a stated reason"
+        for host in hosts:
+            assert not any(p in host for p in portals), host
 
 
 def test_no_credential_is_ever_written_to_disk():

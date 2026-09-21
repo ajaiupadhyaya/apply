@@ -24,7 +24,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from . import budget as budget_mod, db, digest as digest_mod, discover as discover_mod, generate, resolve as resolve_mod
+from . import (budget as budget_mod, db, digest as digest_mod,
+               discover as discover_mod, generate, notify as notify_mod,
+               resolve as resolve_mod, run as run_mod, schedule as schedule_mod)
 from .models import Posting, Status, Track, TransitionError, slugify
 from .parse import parse as parse_jd
 from .profile import ASK, Profile, ProfileError, data_dir
@@ -715,7 +717,7 @@ def discover(
     conn = _conn()
     profile = _profile()
     employers = discover_mod.load_employers()
-    preferences = profile.raw.get("search") or {}
+    preferences = profile.search_preferences
 
     with console.status(f"polling {len(employers)} employers…"):
         result = discover_mod.run(conn, employers=employers, preferences=preferences,
@@ -811,6 +813,148 @@ def spend(ledger: bool = typer.Option(False, "--ledger", help="Show individual c
     )
 
 
+@app.command(name="run")
+def run_once(
+    llm: str = typer.Option("manual", "--llm", help="manual (free) | api (spends)"),
+    limit: Optional[int] = typer.Option(None, "--limit",
+                                        help="Max documents to write. Defaults to max_auto_per_day."),
+    no_discover: bool = typer.Option(False, "--no-discover"),
+    no_ingest: bool = typer.Option(False, "--no-ingest"),
+    hydrate: int = typer.Option(60, "--hydrate"),
+    notify: bool = typer.Option(False, "--notify", help="Write the summary and notify."),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """One unattended pass: discover, ingest, write, report.
+
+    This is what the scheduled job runs. It never moves an application past
+    `generated` — reading it and submitting it are still yours — and it stops
+    before doing anything if data/HALT exists.
+    """
+    report = run_mod.run(
+        llm=llm, generate_limit=limit, discover_postings=not no_discover,
+        ingest_mail=not no_ingest, hydrate=hydrate, dry_run=dry_run,
+    )
+
+    if report.halted:
+        console.print(Panel.fit(
+            f"[bold]Halted.[/] {data_dir() / run_mod.HALT_FILE} exists, so nothing ran.\n"
+            f"[dim]Remove that file to let runs resume.[/]",
+            border_style="red", title="run"))
+        raise typer.Exit(0)
+
+    for step in report.steps:
+        style = "green" if step.ok else "red"
+        console.print(f"  [{style}]{'✓' if step.ok else '✗'}[/] "
+                      f"{step.name:10} [dim]{step.detail}[/]")
+
+    console.print(Panel.fit(
+        f"{report.discovered} new from the registry · {report.ingested} from alerts\n"
+        f"{len(report.generated)} written · {len(report.generation_failed)} refused\n"
+        f"${report.usd:.2f} spent · {report.duration:.0f}s",
+        title=report.run_id, border_style="cyan"))
+
+    for slug, why in report.generation_failed:
+        console.print(f"  [yellow]refused[/] {slug} [dim]{why[:90]}[/]")
+
+    conn = db.connect()
+    summary = run_mod.summarise(conn, report)
+    if notify:
+        profile = _profile()
+        topic = (profile.raw.get("notify") or {}).get("ntfy_topic")
+        for line in notify_mod.deliver(report, digest_mod.headline(conn), summary,
+                                       generate.out_dir(), ntfy_topic=topic):
+            console.print(f"  [dim]{line}[/]")
+    else:
+        console.print(f"\n[dim]{run_mod.summarise(conn, report).splitlines()[2]}[/]")
+
+    counts = digest_mod.headline(conn)
+    if counts["awaiting_review"]:
+        console.print(f"\nNext: [bold]apply status[/] — "
+                      f"{counts['awaiting_review']} awaiting your eyes.")
+
+
+@app.command()
+def schedule(
+    install: bool = typer.Option(False, "--install", help="Write and load the LaunchAgent."),
+    remove: bool = typer.Option(False, "--remove"),
+    show: bool = typer.Option(False, "--show", help="Print the plist without writing it."),
+    at: str = typer.Option("06:30", "--at", help="Local time, HH:MM."),
+    llm: str = typer.Option("manual", "--llm", help="What the scheduled run uses."),
+) -> None:
+    """Run the pass every morning, via launchd.
+
+    With no flags this reports what is currently scheduled. `--show` prints the
+    file that would be written; `--install` is a separate, explicit act, because
+    it is persistent configuration on your machine.
+    """
+    try:
+        hour, minute = (int(part) for part in at.split(":", 1))
+    except ValueError:
+        _fail(f"--at wants HH:MM, got {at!r}")
+
+    plan = schedule_mod.Schedule(
+        hour=hour, minute=minute, project=generate.repo_root(),
+        command=f"uv run apply run --notify --llm {llm}",
+    )
+
+    if show:
+        console.print(plan.render())
+        return
+
+    if remove:
+        if schedule_mod.remove():
+            console.print("[green]✓[/] unloaded and removed.")
+        else:
+            console.print("[dim]nothing was installed.[/]")
+        return
+
+    if install:
+        try:
+            path = schedule_mod.install(plan)
+        except Exception as exc:                        # noqa: BLE001
+            _fail(str(exc))
+        console.print(Panel.fit(
+            f"Runs every day at [bold]{at}[/].\n"
+            f"{plan.command}\n\n"
+            f"[dim]{path}\n"
+            f"logs: {plan.project / 'out' / 'run.log'}[/]",
+            title="scheduled", border_style="green"))
+        console.print("[dim]Stop it any time with `apply schedule --remove`, or "
+                      "pause a single night with `touch data/HALT`.[/]")
+        return
+
+    state = schedule_mod.status()
+    if not state["installed"]:
+        console.print(
+            "[dim]nothing scheduled.[/]\n\n"
+            "  See what would be installed:  [bold]apply schedule --show[/]\n"
+            "  Install it:                   [bold]apply schedule --install --at 06:30[/]"
+        )
+        return
+    console.print(Panel.fit(
+        f"every day at [bold]{state['at']}[/]   "
+        f"{'[green]loaded[/]' if state['loaded'] else '[red]not loaded[/]'}\n"
+        f"[dim]{state['command']}\n{state['path']}\nlogs: {state['log']}[/]",
+        title="scheduled", border_style="cyan"))
+
+
+@app.command()
+def runs(limit: int = typer.Option(10, "--limit")) -> None:
+    """What the scheduled runs have done."""
+    conn = _conn()
+    rows = run_mod.history(conn, limit)
+    if not rows:
+        console.print("[dim]no runs recorded yet.[/]")
+        return
+    table = Table(box=None, header_style="dim", padding=(0, 2))
+    for column in ("started", "found", "alerts", "written", "usd"):
+        table.add_column(column, justify="right" if column != "started" else "left")
+    for row in rows:
+        table.add_row(str(row["started_at"])[:16], str(row["discovered"]),
+                      str(row["ingested"]), str(row["generated"]), f"${row['usd']:.2f}")
+    console.print(table)
+
+
 @app.command()
 def ingest(
     file: Optional[Path] = typer.Option(None, "--file", "-f",
@@ -833,7 +977,7 @@ def ingest(
     """
     conn = _conn()
     profile = _profile()
-    preferences = profile.raw.get("search") or {}
+    preferences = profile.search_preferences
 
     if imap:
         import os

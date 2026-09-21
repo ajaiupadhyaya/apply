@@ -206,6 +206,58 @@ mailbox directly and needs no labels.
 
 ---
 
+## Running it while you are away
+
+`apply run` is one unattended pass: discover, ingest the alert mail, write
+documents for what earned one, report. It is what the scheduled job runs.
+
+```
+apply run --dry-run            # score everything, write nothing
+apply run                      # the real pass, free (deterministic letters)
+apply run --llm api --notify   # Claude writes them; notify when something needs you
+apply runs                     # what the scheduled passes have done
+```
+
+What it will never do, whoever calls it:
+
+- move an application past `generated` — `ready` and `submitted` belong to the
+  review and submit actions, and this code path does not call them
+- regenerate something that already has documents, so running it twice costs
+  nothing the second time
+- spend past the ledger's ceilings; a refused call ends that step, not the run
+- do anything at all if `data/HALT` exists
+
+One employer being down, one letter failing to compile, or the mailbox being
+unreachable are recorded and stepped over. A run that half-worked beats a run
+that raised.
+
+### On a schedule
+
+```
+apply schedule --show                    # print the LaunchAgent, install nothing
+apply schedule --install --at 06:30
+apply schedule                           # what is currently scheduled
+apply schedule --remove
+touch data/HALT                          # pause tonight without uninstalling
+```
+
+launchd rather than cron: it survives reboots, needs no terminal open, and
+catches up a missed run after the laptop wakes. The job runs through `zsh -lc`
+so `~/.zshrc` is sourced and the Keychain-held API key is actually present —
+a bare invocation would silently fall back to the free path.
+
+### Notifications
+
+A quiet run notifies nothing. A system that pings every morning to say it found
+nothing gets muted within a fortnight, and then the one morning it matters the
+notification is invisible too. It interrupts only when something is ready, needs
+reading, closes within seven days, or broke.
+
+`out/LATEST_RUN.md` is always written either way. Set `notify.ntfy_topic` in
+`profile.private.yaml` to get a push on your phone as well.
+
+---
+
 ## What it costs to run
 
 The discovery pass is free. Letter writing and verification are not, so
@@ -275,6 +327,9 @@ and it saves the most time.
 | `apply ingest [--imap\|--file F]` | file the postings out of Handshake's alert mail |
 | `apply resolve <careers-url> --name N` | work out a firm's job board and print its registry entry |
 | `apply targets` | the employer registry |
+| `apply run [--llm api] [--notify]` | one unattended pass: discover, ingest, write, report |
+| `apply schedule [--show\|--install\|--remove] [--at HH:MM]` | run the pass every morning via launchd |
+| `apply runs` | what the scheduled passes have done |
 | `apply spend [--ledger]` | model spending against the monthly cap |
 | `apply doctor` | unresolved profile values, toolchain, credential |
 | `apply add --clipboard\|--file\|--stdin\|--url` | add a posting |
@@ -313,6 +368,10 @@ src/apply/resolve.py         find a firm's board from its careers page
 src/apply/score.py           the free relevance gate
 src/apply/discover.py        one unattended pass
 src/apply/budget.py          the spend ledger and its ceilings
+src/apply/run.py             one unattended pass
+src/apply/notify.py          summary file, macOS banner, optional phone push
+src/apply/schedule.py        the launchd agent
+src/apply/outbound.py        every host this system may reach, and why
 docs/handshake-alerts.md     Handshake + Gmail setup
 out/<slug>/                  generated artifacts. Gitignored.
 tools/autofill.user.js       optional Tampermonkey script. Fills; never clicks.

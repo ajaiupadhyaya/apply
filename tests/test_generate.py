@@ -11,6 +11,11 @@ from apply.generate import (
 from apply.models import Track
 from conftest import posting_from
 
+import shutil
+
+needs_latex_gen = pytest.mark.skipif(
+    shutil.which("pdflatex") is None, reason="pdflatex is not installed")
+
 
 # ------------------------------------------------------------- escaping
 
@@ -137,6 +142,15 @@ def test_a_number_from_the_posting_is_allowed(profile, vcimco_jd):
     assert lint("The posting mentions $20/hr.", profile, posting).ok
 
 
+def test_a_company_name_containing_a_digit_is_not_a_hallucination(profile, vcimco_jd):
+    """Point72, 3M, 7-Eleven. The firm's own name is sourced by definition."""
+    posting = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher")
+    assert lint("I am applying to Point72.", profile, posting).ok
+
+    numeric = posting_from(vcimco_jd, company="3M", role="Analyst")
+    assert lint("I am applying to 3M.", profile, numeric).ok
+
+
 def test_a_number_from_the_profile_is_allowed(profile, vcimco_jd):
     posting = posting_from(vcimco_jd)
     assert lint("I graduate in May 2027.", profile, posting).ok
@@ -166,3 +180,47 @@ def test_body_md_overrides_the_composed_paragraphs(profile, vcimco_jd):
     posting = posting_from(vcimco_jd)
     letter = letter_from_body(profile, posting, "First para.\n\nSecond para.")
     assert letter.paragraphs[0] == "First para."
+
+
+# ----------------------------------------------------- filenames and sweep
+
+def test_two_roles_at_one_firm_get_different_filenames(profile, vcimco_jd):
+    """Three letters all called AJ_Upadhyaya_Cover_Letter_Point72.pdf is how the
+    wrong one gets uploaded."""
+    from apply.generate import _document_tag
+
+    a = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher Intern")
+    b = posting_from(vcimco_jd, company="Point72", role="Fund Flow Quantitative Researcher")
+    assert _document_tag(a) != _document_tag(b)
+    assert _document_tag(a).startswith("Point72")
+
+
+def test_the_tag_drops_filler_but_keeps_the_distinguishing_words(profile, vcimco_jd):
+    from apply.generate import _document_tag
+
+    tag = _document_tag(posting_from(
+        vcimco_jd, company="BlackRock", role="2027 Full-Time Analyst Program (AMRS)"))
+    assert "2027" not in tag and "Program" not in tag
+    assert "Analyst" in tag and "AMRS" in tag
+
+
+def test_a_role_of_only_filler_still_yields_a_name(profile, vcimco_jd):
+    from apply.generate import _document_tag
+
+    assert _document_tag(posting_from(vcimco_jd, company="Acme", role="Internship")) == "Acme"
+
+
+@needs_latex_gen
+def test_regenerating_under_a_new_name_removes_the_old_pdf(profile, vcimco_jd):
+    from apply import generate as gen_mod
+
+    posting = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher")
+    first = gen_mod.build(profile, posting)
+    assert first.letter_pdf.exists()
+
+    posting.role = "Fund Flow Quantitative Researcher"
+    second = gen_mod.build(profile, posting)
+    assert second.letter_pdf.exists()
+    assert second.letter_pdf != first.letter_pdf
+    assert not first.letter_pdf.exists(), "the superseded letter was left behind"
+    assert len(list(second.directory.glob("*_Cover_Letter_*.pdf"))) == 1

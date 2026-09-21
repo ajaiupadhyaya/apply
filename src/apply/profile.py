@@ -217,6 +217,30 @@ class Profile:
     def grad_year(self) -> int:
         return self.grad_expected[0]
 
+    def years_to_graduation(self, today: _dt.date | None = None) -> float:
+        """How far off graduation is, in years. Negative once it has passed."""
+        today = today or _dt.date.today()
+        year, month = self.grad_expected
+        return ((year - today.year) * 12 + (month - today.month)) / 12.0
+
+    @property
+    def class_standing(self) -> str:
+        """freshman | sophomore | junior | senior | graduated.
+
+        Derived from the graduation date rather than stored, because the stored
+        version is wrong within a year and nobody remembers to update it.
+        """
+        left = self.years_to_graduation()
+        if left <= 0:
+            return "graduated"
+        if left <= 1:
+            return "senior"
+        if left <= 2:
+            return "junior"
+        if left <= 3:
+            return "sophomore"
+        return "freshman"
+
     # ---------- experience and projects ----------
 
     @property
@@ -258,6 +282,16 @@ class Profile:
     def needs_sponsorship_ever(self) -> bool:
         a = self.authorization
         return bool(a.get("requires_sponsorship_now") or a.get("requires_sponsorship_future"))
+
+    @property
+    def search_preferences(self) -> dict:
+        """The `search:` block plus anything derived rather than stored.
+
+        Class standing is derived on purpose: a stored value is wrong within a
+        year, and nobody remembers to update it.
+        """
+        return {"class_standing": self.class_standing,
+                **(self.raw.get("search") or {})}
 
     @property
     def essays(self) -> dict:
