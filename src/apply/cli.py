@@ -1067,7 +1067,7 @@ def ingest(
                              help="Ignore alerts older than this (0 = no limit)."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
-    """File the postings out of Handshake's job-alert emails.
+    """File the postings out of Handshake and LinkedIn job-alert emails.
 
     APPLY never fetches a page from Handshake. It reads the mail Handshake
     already sends you, which is a different thing and carries no risk to a
