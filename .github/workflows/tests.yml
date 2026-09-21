@@ -15,7 +15,7 @@ jobs:
         python: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0   # publishes exact tags only; there is no moving v10
       - name: Install
         run: uv sync --python ${{ matrix.python }}
       - name: Lint (pyflakes rules)
