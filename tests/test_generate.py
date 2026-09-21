@@ -137,9 +137,9 @@ def test_a_number_from_the_posting_is_allowed(profile, vcimco_jd):
 
 
 def test_a_company_name_containing_a_digit_is_not_a_hallucination(profile, vcimco_jd):
-    """Point72, 3M, 7-Eleven. The firm's own name is sourced by definition."""
-    posting = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher")
-    assert lint("I am applying to Point72.", profile, posting).ok
+    """Acme Capital, 3M, 7-Eleven. The firm's own name is sourced by definition."""
+    posting = posting_from(vcimco_jd, company="Acme Capital", role="Quantitative Researcher")
+    assert lint("I am applying to Acme Capital.", profile, posting).ok
 
     numeric = posting_from(vcimco_jd, company="3M", role="Analyst")
     assert lint("I am applying to 3M.", profile, numeric).ok
@@ -216,14 +216,14 @@ def test_answers_read_back_from_answers_md(tmp_path):
 # ----------------------------------------------------- filenames and sweep
 
 def test_two_roles_at_one_firm_get_different_filenames(profile, vcimco_jd):
-    """Three letters all called AJ_Upadhyaya_Cover_Letter_Point72.pdf is how the
+    """Three letters all called one shared filename is how the
     wrong one gets uploaded."""
     from apply.generate import _document_tag
 
-    a = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher Intern")
-    b = posting_from(vcimco_jd, company="Point72", role="Fund Flow Quantitative Researcher")
+    a = posting_from(vcimco_jd, company="Acme Capital", role="Quantitative Researcher Intern")
+    b = posting_from(vcimco_jd, company="Acme Capital", role="Fund Flow Quantitative Researcher")
     assert _document_tag(a) != _document_tag(b)
-    assert _document_tag(a).startswith("Point72")
+    assert _document_tag(a).startswith("Acme_Capital")
 
 
 def test_the_tag_drops_filler_but_keeps_the_distinguishing_words(profile, vcimco_jd):
@@ -245,7 +245,7 @@ def test_a_role_of_only_filler_still_yields_a_name(profile, vcimco_jd):
 def test_regenerating_under_a_new_name_removes_the_old_pdf(profile, vcimco_jd):
     from apply import generate as gen_mod
 
-    posting = posting_from(vcimco_jd, company="Point72", role="Quantitative Researcher")
+    posting = posting_from(vcimco_jd, company="Acme Capital", role="Quantitative Researcher")
     first = gen_mod.build(profile, posting, caller=FakeClaude())
     assert first.letter_pdf.exists()
 

@@ -10,9 +10,9 @@ either link to their board directly or embed its host in a script tag. The ones
 that render entirely in JavaScript defeat this, and those are reported honestly
 rather than guessed at.
 
-Resolved live on 2026-09-20: Capital One (Workday, capitalone/Capital_One),
-Harris Williams (Workday, on PNC's tenant — pnc/HarrisWilliams), and the Federal
-Reserve (Workday, rb/FRS).
+Worth knowing when a guess fails: a subsidiary often sits on its parent's
+Workday tenant rather than its own, so the tenant in the URL is the parent's
+name. The careers page carries the right one; guessing does not.
 """
 
 from __future__ import annotations

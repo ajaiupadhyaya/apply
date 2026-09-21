@@ -82,9 +82,9 @@ ADVANCED_DEGREE = re.compile(
     r"(ph\.?d|doctorate|mba|master'?s|graduate\s+degree|advanced\s+degree)[^.]{0,40}"
     r"(required|is\s+required|must\s+have|mandatory)", re.I)
 
-#: A posting aimed explicitly at one class year. The Federal Reserve alone runs
-#: nine separate "Sophomore Intern" programmes, and none of them is open to a
-#: junior or senior.
+#: A posting aimed explicitly at one class year. A single employer can run a
+#: dozen separate "Sophomore Intern" programmes, none of them open to a junior
+#: or senior.
 CLASS_SCOPED = {
     "freshman": _any([r"freshman", r"first[\s-]?year\s+(student|intern)"]),
     "sophomore": _any([r"sophomore"]),

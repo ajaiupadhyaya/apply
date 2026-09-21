@@ -1,68 +1,52 @@
 # The employer registry: which firms to poll, and how to reach their job board.
 #
-# Copy this to data/employers.yaml (gitignored) and put your real targets in it.
-# Each entry is set up once, by hand, and then polls forever.
+# Copy this to data/employers.yaml (gitignored) and replace these with the firms
+# you are targeting. The entries below are illustrative — one working example of
+# each supported job board, verified to answer — not recommendations.
+#
+# The fast way to add a firm:
+#     apply resolve <the firm's careers page> --name "Firm" --priority 2
+# which reads the page, identifies the board, confirms it answers, and prints
+# the block to paste here.
 #
 #   ats: greenhouse | lever | ashby   -> needs `board` (the slug in their careers URL)
 #   ats: workday                      -> needs `host`, `tenant`, `site`
 #
-# Finding a slug, once per firm:
-#   Greenhouse  the careers page is boards.greenhouse.io/<board>, or the page
-#               fetches boards-api.greenhouse.io/v1/boards/<board>/jobs
-#   Lever       jobs.lever.co/<board>
-#   Ashby       jobs.ashbyhq.com/<board>
-#   Workday     the URL looks like
-#               https://<host>/en-US/<site>/...  where host is <tenant>.wdN.myworkdayjobs.com
-#               Open the careers page with devtools on the Network tab and look
-#               for the POST to /wday/cxs/<tenant>/<site>/jobs — those are the values.
+# `search` applies to Workday only: it has no "list everything" mode worth
+# using, so give it the terms you care about.
 #
-# `search` applies to Workday only: it has no "list everything" mode worth using,
-# so give it the terms you actually care about.
-#
-# `aliases` lists other spellings of the firm — what LinkedIn or Handshake call
-# it. Punctuation, case and suffixes like "Inc." are ignored already, so "J.P.
-# Morgan" finds "JPMorgan" on its own; aliases are for real differences, like
-# "JPMorgan Chase & Co." A matched alert posting takes the firm's priority and
-# collapses with the copy from the firm's own board.
+# `aliases` lists other spellings — what LinkedIn or Handshake call the firm.
+# Punctuation, case and suffixes like "Inc." are already ignored, so "J.P.
+# Morgan" finds "JPMorgan" on its own; aliases are for real differences. A
+# matched alert posting takes the firm's priority and collapses with the copy
+# from the firm's own board.
 
 employers:
-  - name: Jane Street
+  - name: Airbnb
     ats: greenhouse
-    board: janestreet
-    tracks: [quant]
-    priority: 1
+    board: airbnb
+    tracks: [corporate]
+    priority: 3
 
-  - name: Optiver
-    ats: greenhouse
-    board: optiver
-    tracks: [quant]
-    priority: 2
+  - name: Palantir
+    ats: lever
+    board: palantir
+    tracks: [corporate]
+    priority: 3
 
-  - name: IMC Trading
-    ats: greenhouse
-    board: imc
-    tracks: [quant]
-    priority: 2
+  - name: Notion
+    ats: ashby
+    board: notion
+    tracks: [corporate]
+    priority: 3
 
-  - name: BlackRock
-    aliases: ["BlackRock Financial Management"]
+  - name: NVIDIA
+    aliases: ["NVIDIA Corporation"]
     ats: workday
-    host: blackrock.wd1.myworkdayjobs.com
-    tenant: blackrock
-    site: BlackRock_Professional
-    search: ["analyst", "intern", "2027"]
+    host: nvidia.wd5.myworkdayjobs.com
+    tenant: nvidia
+    site: NVIDIAExternalCareerSite
+    search: ["analyst", "intern"]
     max_results: 120
-    tracks: [quant, allocator]
-    priority: 1
-
-  # Not yet configured — each of these needs its tenant/site or board slug looked
-  # up once. Set enabled: true when you have filled in the details.
-  # - name: Capital One
-  #   ats: workday
-  #   host: capitalone.wd12.myworkdayjobs.com
-  #   tenant: capitalone
-  #   site: Capital_One
-  #   search: ["analyst", "rotational"]
-  #   tracks: [corporate]
-  #   priority: 2
-  #   enabled: false
+    tracks: [corporate]
+    priority: 3

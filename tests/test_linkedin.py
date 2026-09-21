@@ -14,8 +14,8 @@ import pathlib
 import pytest
 
 from apply import db, discover
-from apply.discover import Aliases, employer_key
-from apply.score import Verdict, score
+from apply.discover import Aliases
+from apply.score import score
 from apply.sources.alerts import (
     clean_linkedin_url, is_job_email, parse_alert, parse_linkedin, source_of,
 )
@@ -41,7 +41,7 @@ def test_job_senders_are_read(sender):
 
 
 @pytest.mark.parametrize("sender", [
-    "messages-noreply@linkedin.com",          # "Ajai, add Sebastian ..."
+    "messages-noreply@linkedin.com",          # connection suggestions
     "notifications-noreply@linkedin.com",     # "3 searches included you"
     "editors-noreply@linkedin.com",           # newsletters
     "linkedin@e.linkedin.com",                # marketing

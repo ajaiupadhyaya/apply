@@ -55,7 +55,7 @@ def test_reads_comp(text, expected):
 
 
 @pytest.mark.parametrize("text,expected", [
-    ("Location: Richmond, VA", "Richmond, VA"),
+    ("Location: Chicago, IL", "Chicago, IL"),
     ("Analyst\nAcme LP\nNew York, NY", "New York, NY"),
     ("Analyst\nAcme LP\nRichmond, Virginia", "Richmond, Virginia"),
 ])
@@ -64,9 +64,9 @@ def test_reads_location(text, expected):
 
 
 @pytest.mark.parametrize("text,company,role", [
-    ("Company: Markel\nJob Title: Investment Analyst", "Markel", "Investment Analyst"),
+    ("Company: Acme Capital\nJob Title: Investment Analyst", "Acme Capital", "Investment Analyst"),
     ("Jane Street — Quantitative Trader Intern", "Jane Street", "Quantitative Trader Intern"),
-    ("Summer Analyst at Harris Williams", "Harris Williams", "Summer Analyst"),
+    ("Summer Analyst at Beacon Partners", "Beacon Partners", "Summer Analyst"),
     ("Investment Intern\nVCIMCO\nRichmond, Virginia", "VCIMCO", "Investment Intern"),
     ("Analyst\nJPMorgan\nNYC", "JPMorgan", "Analyst"),
     ("Software Intern\neBay\nSan Jose, CA", "eBay", "Software Intern"),
