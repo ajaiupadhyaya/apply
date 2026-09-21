@@ -221,6 +221,24 @@ letter writer. That is the deliberate cost of not scraping.
 searches to create. Ignore its Gmail-filter section — the ingester queries the
 mailbox directly and needs no labels.
 
+### LinkedIn
+
+The same pipeline reads LinkedIn's job-alert mail. **[docs/linkedin-alerts.md](docs/linkedin-alerts.md)**
+has the nine saved searches to create and the one setting to switch on.
+
+Alert postings arrive as titles only. Target firms are recognised under
+LinkedIn's spellings and collapse with the copy from the firm's own board; firms
+you haven't registered are listed after each ingest with the command to add
+them; re-posts ("Jobs via eFinancialCareers") are flagged; and every link is
+stripped of LinkedIn's one-time sign-in token before anything is stored.
+
+```
+apply describe <slug> --clipboard   # attach the full posting to a title-only one
+```
+
+It appends the text, reads the deadline and pay out of it, and re-scores the
+posting against the full description — which is where the disqualifiers live.
+
 ---
 
 ## Running it while you are away
@@ -341,7 +359,8 @@ and it saves the most time.
 |---|---|
 | `apply init` | create `apply.db`, scaffold the profile |
 | `apply discover [--dry-run] [--hydrate N] [--show-rejects]` | poll every target firm and file what is worth reading |
-| `apply ingest [--imap\|--file F]` | file the postings out of Handshake's alert mail |
+| `apply ingest [--imap\|--file F]` | file the postings out of Handshake and LinkedIn alert mail |
+| `apply describe <slug> --clipboard` | attach the full posting to a title-only one, and re-score it |
 | `apply resolve <careers-url> --name N` | work out a firm's job board and print its registry entry |
 | `apply targets` | the employer registry |
 | `apply run [--llm api] [--notify]` | one unattended pass: discover, ingest, write, report |
@@ -390,7 +409,8 @@ src/apply/run.py             one unattended pass
 src/apply/notify.py          summary file, macOS banner, optional phone push
 src/apply/schedule.py        the launchd agent
 src/apply/outbound.py        every host this system may reach, and why
-docs/handshake-alerts.md     Handshake + Gmail setup
+docs/handshake-alerts.md     Handshake setup
+docs/linkedin-alerts.md      LinkedIn setup: the nine searches and one setting
 out/<slug>/                  generated artifacts. Gitignored.
 tools/autofill.user.js       optional Tampermonkey script. Fills; never clicks.
 ```

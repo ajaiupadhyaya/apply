@@ -168,7 +168,7 @@ def _profile_dir():
 KEYCHAIN_SERVICE = "ANTHROPIC_API_KEY"
 
 
-def _keychain_key() -> str | None:
+def _keychain_key(service: str = KEYCHAIN_SERVICE) -> str | None:
     """The key from the macOS login Keychain, if it is there.
 
     This is what makes the scheduled run work. launchd starts a non-interactive
@@ -185,7 +185,7 @@ def _keychain_key() -> str | None:
         return None
     result = subprocess.run(
         ["security", "find-generic-password", "-a", os.environ.get("USER", ""),
-         "-s", KEYCHAIN_SERVICE, "-w"],
+         "-s", service, "-w"],
         capture_output=True, text=True,
     )
     key = result.stdout.strip() if result.returncode == 0 else ""

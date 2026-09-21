@@ -126,12 +126,15 @@ def run(
                 report.steps.append(Step("ingest", True, "no mailbox configured; skipped"))
             else:
                 got = discover.ingest_alerts(conn, messages, preferences=preferences,
-                                             dry_run=dry_run)
+                                             dry_run=dry_run, max_age_days=21)
                 report.ingested = len(got.created)
-                report.steps.append(Step(
-                    "ingest", True,
-                    f"{len(messages)} messages, {got.rejected} rejected, "
-                    f"{len(got.created)} filed"))
+                detail = (f"{len(messages)} messages, {got.rejected} rejected, "
+                          f"{len(got.created)} filed")
+                if got.new_employers:
+                    detail += f", {len(got.new_employers)} firms not in the registry"
+                report.steps.append(Step("ingest", not got.unparsed, detail
+                    + (f"; {len(got.unparsed)} LinkedIn email(s) parsed to nothing — "
+                       f"layout may have changed" if got.unparsed else "")))
         except Exception as exc:                        # noqa: BLE001
             report.steps.append(Step("ingest", False, f"{type(exc).__name__}: {exc}"))
 
@@ -149,7 +152,11 @@ def _mail(profile: Profile) -> list[discover.Message] | None:
     """Alert mail, if a transport is configured. None means 'not set up'."""
     import os
 
-    password = os.environ.get("APPLY_IMAP_PASSWORD")
+    # Same reason as the API key: launchd never reads ~/.zshrc, so the
+    # environment variable is absent at 06:30. The Keychain is not.
+    from .llm import _keychain_key
+
+    password = os.environ.get("APPLY_IMAP_PASSWORD") or _keychain_key("APPLY_IMAP_PASSWORD")
     if password:
         return discover.fetch_imap(user=profile.email, password=password)
     drop = data_dir() / "alerts.json"

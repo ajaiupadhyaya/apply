@@ -47,7 +47,10 @@ SENIORITY = _any([
 
 #: Functions that are not what this person does, however senior.
 OFF_FUNCTION = _any([
-    r"sales", r"account\s+executive", r"recruit\w*", r"talent", r"marketing",
+    # "Sales and Trading" / "Sales & Trading" is a front-office markets track,
+    # not a sales job. Found by a real LinkedIn alert: UBS's Global Markets
+    # (Sales and Trading) Summer Analyst Program was being rejected here.
+    r"sales(?!\s*(?:and|&)\s*trading)", r"account\s+executive", r"recruit\w*", r"talent", r"marketing",
     r"human\s+resources", r"\bhr\b", r"facilities", r"custodian", r"janitor",
     r"nurse", r"physician", r"paralegal", r"attorney", r"counsel",
     r"executive\s+assistant", r"receptionist", r"copywriter", r"designer",
@@ -60,12 +63,13 @@ OFF_FUNCTION = _any([
 
 #: The line inside technology. Analysis of a business: yes. Building the product: no.
 TOO_TECHNICAL = _any([
-    r"software\s+engineer", r"\bswe\b", r"backend", r"back-end", r"frontend",
+    r"software\s+engineer\w*", r"\bswe\b", r"backend", r"back-end", r"frontend",
     r"front-end", r"full[\s-]?stack", r"mobile\s+engineer", r"\bios\b", r"android",
     r"devops", r"\bsre\b", r"site\s+reliability", r"security\s+engineer",
     r"infrastructure\s+engineer", r"platform\s+engineer", r"systems\s+engineer",
     r"network\s+engineer", r"firmware", r"embedded", r"\bqa\b",
-    r"quality\s+assurance", r"data\s+engineer", r"machine\s+learning\s+engineer",
+    r"quality\s+assurance", r"data\s+engineer\w*", r"machine\s+learning\s+engineer\w*",
+    r"computer\s+science\s+intern",
     r"\bml\s+engineer\b", r"solutions\s+architect", r"web\s+developer",
     # Found by a live pass: "Hardware Engineer (FPGA/ASIC)" scored 59.
     r"hardware\s+engineer", r"\bfpga\b", r"\basic\b", r"electrical\s+engineer",
@@ -96,6 +100,14 @@ HUB = _any([r"boston", r"chicago", r"san\s+francisco", r"stamford", r"greenwich"
             r"jersey\s+city", r"philadelphia", r"charlotte", r"atlanta", r"dallas",
             r"houston", r"los\s+angeles", r"miami", r"austin", r"seattle", r"denver"])
 REMOTE = _any([r"remote", r"work\s+from\s+home", r"virtual", r"anywhere"])
+
+def _us_location_pattern() -> re.Pattern:
+    from .parse import _STATE_ALT
+
+    return re.compile(rf"united\s+states|\busa?\b|,\s*(?:{_STATE_ALT})\b", re.I)
+
+
+_US_LOCATION = _us_location_pattern()
 
 #: A location string with none of the above and one of these is somewhere else.
 NON_US = _any([
@@ -240,7 +252,10 @@ def score(posting: RawPosting, preferences: dict | None = None,
     if not (in_nyc or remote or HOME.search(location) or HUB.search(location)):
         if NON_US.search(location):
             return reject(f"outside the US: {location!r}", "geography")
-        if location and not re.search(r"united\s+states|,\s*[A-Z]{2}\b|\busa\b", location, re.I):
+        # LinkedIn writes bare cities ("Chantilly"), so an unrecognised name on
+        # its own is neutral. Only a "City, Region" form whose region is plainly
+        # not American is refused — "Boise, Idaho" passes, "Kyiv, Ukraine" does not.
+        if location and "," in location and not _US_LOCATION.search(location):
             return reject(f"location not recognised as US: {location!r}", "geography")
 
     if body:

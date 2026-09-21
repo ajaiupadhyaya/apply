@@ -267,6 +267,22 @@ def update_posting(conn: sqlite3.Connection, p: Posting) -> None:
         )
 
 
+def update_description(conn: sqlite3.Connection, p: Posting) -> None:
+    """Store a posting's fuller text and whatever re-scoring it produced.
+
+    Separate from update_posting on purpose: jd_raw is only ever written here,
+    and only by `apply describe`, which appends to it rather than replacing
+    source text.
+    """
+    with conn:
+        conn.execute(
+            """UPDATE posting SET jd_raw=?, track=?, location=?, comp=?, deadline=?,
+               score=?, score_verdict=?, score_reasons=? WHERE id=?""",
+            (p.jd_raw, p.track, p.location, p.comp, _date_str(p.deadline),
+             p.score, p.score_verdict, p.score_reasons, p.id),
+        )
+
+
 def delete_posting(conn: sqlite3.Connection, slug: str) -> bool:
     with conn:
         cur = conn.execute("DELETE FROM posting WHERE slug = ?", (slug,))

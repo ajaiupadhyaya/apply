@@ -80,7 +80,7 @@ def _no_real_api(monkeypatch, tmp_path):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
     monkeypatch.setattr(llm, "_profile_dir", lambda: tmp_path / "no-anthropic-profile")
-    monkeypatch.setattr(llm, "_keychain_key", lambda: None)
+    monkeypatch.setattr(llm, "_keychain_key", lambda *a, **k: None)
 
     def tripwire(**_):
         raise AssertionError("a test tried to call the real Anthropic API")

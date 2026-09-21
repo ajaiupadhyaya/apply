@@ -1063,7 +1063,8 @@ def ingest(
                                         help="An alert export written by Claude."),
     imap: bool = typer.Option(False, "--imap", help="Read the mailbox directly."),
     user: Optional[str] = typer.Option(None, "--user", help="IMAP address."),
-    days: int = typer.Option(30, "--days", help="How far back to read."),
+    days: int = typer.Option(30, "--days",
+                             help="Ignore alerts older than this (0 = no limit)."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """File the postings out of Handshake's job-alert emails.
@@ -1084,16 +1085,18 @@ def ingest(
     if imap:
         import os
 
+        from .llm import _keychain_key
+
         address = user or profile.email
-        password = os.environ.get("APPLY_IMAP_PASSWORD", "")
+        password = (os.environ.get("APPLY_IMAP_PASSWORD", "")
+                    or _keychain_key("APPLY_IMAP_PASSWORD") or "")
         if not password:
             _fail(
                 "no IMAP password. Gmail needs an app password, not your account "
                 "password:\n"
                 "  1. myaccount.google.com → Security → 2-Step Verification → App passwords\n"
                 "  2. security add-generic-password -U -a \"$USER\" -s APPLY_IMAP_PASSWORD -w\n"
-                "  3. export APPLY_IMAP_PASSWORD=\"$(security find-generic-password "
-                "-a \"$USER\" -s APPLY_IMAP_PASSWORD -w)\"\n"
+                "APPLY reads it from the Keychain, so the scheduled run finds it too.\n"
                 "If VCU's Workspace forbids app passwords, ask Claude to export the "
                 "alerts instead and use --file."
             )
@@ -1109,12 +1112,18 @@ def ingest(
         _fail("give me the mail: --imap, or --file <export.json>.")
 
     result = discover_mod.ingest_alerts(conn, messages, preferences=preferences,
-                                        dry_run=dry_run)
+                                        dry_run=dry_run,
+                                        max_age_days=days if days > 0 else None)
     console.print(
         f"\n[dim]{len(messages)} messages read · {result.fetched} carried jobs · "
         f"{result.unique} unique postings · {result.already_known} already known · "
-        f"{result.rejected} rejected[/]\n"
+        f"{result.rejected} rejected"
+        + (f" · {result.skipped_old} alerts older than {days}d skipped" if result.skipped_old else "")
+        + "[/]\n"
     )
+    for subject in result.unparsed:
+        console.print(f"  [bold yellow]canary[/] a LinkedIn job email parsed to nothing — "
+                      f"the layout may have changed: [dim]{subject[:70]}[/]")
     if not result.worth_reading:
         console.print("[dim]nothing new worth reading.[/]")
         return
@@ -1132,15 +1141,93 @@ def ingest(
             str(posting.deadline or "—"),
         )
     console.print(table)
+    if result.new_employers:
+        console.print("\n[bold]Firms that surfaced and are not in your registry[/] "
+                      "[dim]— resolve one to get its full descriptions automatically[/]")
+        for firm, n in result.new_employers.most_common(8):
+            console.print(f"  {n:>2} × {firm}   [dim]apply resolve <careers url> "
+                          f"--name \"{firm}\"[/]")
     console.print(
-        "\n[dim]Alerts carry no description, so nothing from this channel is "
-        "written up automatically — open it in Handshake and paste the full "
-        "posting with `apply add --clipboard` when one is worth pursuing.[/]"
+        "\n[dim]Alerts carry only the title, so nothing from this channel is written "
+        "up automatically. When one is worth pursuing, open its link, copy the whole "
+        "posting, and run `apply describe <slug> --clipboard`.[/]"
     )
     if dry_run:
         console.print("[dim]--dry-run: nothing was written.[/]")
     else:
         console.print(f"\n[green]✓[/] filed {len(result.created)}.")
+
+
+@app.command()
+def describe(
+    slug: str,
+    file: Optional[Path] = typer.Option(None, "--file", "-f"),
+    clipboard: bool = typer.Option(False, "--clipboard", "-c"),
+    stdin: bool = typer.Option(False, "--stdin"),
+) -> None:
+    """Attach the full posting to one that arrived as a title only.
+
+    Alert emails from Handshake and LinkedIn carry a title, a firm and a place,
+    never the description. Open the link, copy the whole posting, and run this:
+    the text is added to the record (never replacing what was there), the
+    deadline and pay are read from it, and the posting is re-scored with the
+    body — which is where the disqualifiers live. Once it has a description it
+    can be written up like any other.
+    """
+    from .parse import find_comp, find_deadline, find_location
+    from .score import score as score_posting
+    from .sources.base import RawPosting
+
+    conn = _conn()
+    row = _row(conn, slug)
+    profile = _profile()
+    posting = row.posting
+    text, _ = _read_jd(file, stdin, clipboard, None)
+    if len(text.strip()) < 200:
+        _fail("that is too short to be a job description — copy the whole posting.")
+
+    stamp = _dt.date.today().isoformat()
+    if discover_mod._NO_DESCRIPTION in posting.jd_raw:
+        posting.jd_raw = posting.jd_raw.replace(
+            discover_mod._NO_DESCRIPTION, f"[full posting added {stamp}]\n\n{text.strip()}")
+    else:
+        posting.jd_raw = (f"{posting.jd_raw.rstrip()}\n\n[full posting added {stamp}]"
+                          f"\n\n{text.strip()}")
+
+    found_deadline, _ = find_deadline(text)
+    posting.deadline = posting.deadline or found_deadline
+    posting.comp = posting.comp or find_comp(text)
+    posting.location = posting.location or find_location(text)
+
+    before = (posting.score, posting.score_verdict)
+    verdict = score_posting(RawPosting(
+        employer=posting.company, title=posting.role, url=posting.source_url or "",
+        source=posting.source or "manual", location=posting.location,
+        description=text, employer_priority=posting.priority,
+    ), profile.search_preferences)
+    posting.score, posting.score_verdict = verdict.value, verdict.verdict.value
+    posting.score_reasons = "; ".join(verdict.reasons)
+    posting.track = verdict.track
+    db.update_description(conn, posting)
+    db.add_event(conn, row.application.id, "note",
+                 f"full posting attached; score {before[0]} -> {verdict.value}")
+
+    colour = {"pursue": "green", "maybe": "yellow"}.get(verdict.verdict.value, "red")
+    console.print(Panel.fit(
+        f"[bold]{posting.company}[/] — {posting.role}\n"
+        f"score     {before[0] if before[0] is not None else '—'} → "
+        f"[{colour}]{verdict.value} {verdict.verdict.value}[/]\n"
+        f"track     {posting.track}\n"
+        f"deadline  {posting.deadline or '⚠ not stated'}\n"
+        f"[dim]{'; '.join(verdict.reasons)[:150]}[/]",
+        title="described", border_style=colour))
+    if verdict.verdict.value == "reject":
+        console.print(f"[dim]The full text disqualified it: {verdict.reasons[0]}[/]")
+    elif row.application.status != Status.DRAFT.value:
+        console.print("[yellow]•[/] a letter already exists and predates this text — "
+                      f"regenerate it: [bold]apply gen {slug}[/]")
+    else:
+        console.print(f"\nNext: [bold]apply gen {slug}[/]")
 
 
 @app.command()

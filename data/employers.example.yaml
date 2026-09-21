@@ -18,6 +18,12 @@
 #
 # `search` applies to Workday only: it has no "list everything" mode worth using,
 # so give it the terms you actually care about.
+#
+# `aliases` lists other spellings of the firm — what LinkedIn or Handshake call
+# it. Punctuation, case and suffixes like "Inc." are ignored already, so "J.P.
+# Morgan" finds "JPMorgan" on its own; aliases are for real differences, like
+# "JPMorgan Chase & Co." A matched alert posting takes the firm's priority and
+# collapses with the copy from the firm's own board.
 
 employers:
   - name: Jane Street
@@ -39,6 +45,7 @@ employers:
     priority: 2
 
   - name: BlackRock
+    aliases: ["BlackRock Financial Management"]
     ats: workday
     host: blackrock.wd1.myworkdayjobs.com
     tenant: blackrock

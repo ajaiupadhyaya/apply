@@ -17,6 +17,8 @@ allowed to run as often as you like.
 from __future__ import annotations
 
 import datetime as _dt
+import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -44,6 +46,67 @@ def load_employers(path: Path | None = None) -> list[dict]:
     return [e for e in employers if e.get("enabled")]
 
 
+_SUFFIXES = re.compile(
+    r"\b(inc|incorporated|llc|l\.l\.c|lp|l\.p|llp|ltd|limited|plc|corp|corporation|"
+    r"co|company|group|holdings|the|& co)\b\.?", re.I)
+
+
+def employer_key(name: str) -> str:
+    """Punctuation-, case- and suffix-insensitive: "J.P. Morgan" and "JPMorgan"
+    are the same key, and so are "BlackRock, Inc." and "BlackRock"."""
+    text = re.sub(r"^jobs via\s+", "", name or "", flags=re.I)
+    text = _SUFFIXES.sub(" ", text)
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+class Aliases:
+    """Map any spelling of a registry employer back to its registry entry.
+
+    A registry entry may list `aliases:` for spellings that differ in more than
+    punctuation — "JPMorgan Chase & Co." for "JPMorgan". A registry name of six
+    or more characters also matches as a prefix, so "BlackRock Financial
+    Management" finds "BlackRock"; shorter names match exactly only, so "DRW"
+    cannot swallow "DRW Holdings Trust Company" by accident.
+    """
+
+    def __init__(self, employers: list[dict]):
+        self.exact: dict[str, dict] = {}
+        self.prefix: list[tuple[str, dict]] = []
+        for entry in employers:
+            for spelling in [entry["name"], *(entry.get("aliases") or [])]:
+                key = employer_key(spelling)
+                if key:
+                    self.exact.setdefault(key, entry)
+                    if len(key) >= 6:
+                        self.prefix.append((key, entry))
+        self.prefix.sort(key=lambda pair: -len(pair[0]))   # longest first
+
+    def find(self, name: str) -> dict | None:
+        key = employer_key(name)
+        if not key:
+            return None
+        if key in self.exact:
+            return self.exact[key]
+        for prefix, entry in self.prefix:
+            if key.startswith(prefix):
+                return entry
+        return None
+
+    def adopt(self, posting: RawPosting) -> bool:
+        """Rewrite a posting's employer to the registry's name, priority and
+        tracks. Returns whether it matched. Matching on the canonical name is
+        what makes a LinkedIn copy and the firm's own-board copy fingerprint the
+        same, and collapse to one posting."""
+        entry = self.find(posting.employer)
+        if entry is None:
+            return False
+        posting.raw = {**posting.raw, "listed_as": posting.employer}
+        posting.employer = entry["name"]
+        posting.employer_priority = int(entry.get("priority", 3))
+        posting.employer_tracks = tuple(entry.get("tracks") or ())
+        return True
+
+
 @dataclass(slots=True)
 class Result:
     fetched: int = 0
@@ -56,6 +119,12 @@ class Result:
     created: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     rejections: list[tuple[RawPosting, Score]] = field(default_factory=list)
+    #: Employers that surfaced in alert mail and are not in the registry yet —
+    #: each one a firm whose full descriptions `apply resolve` could unlock.
+    new_employers: Counter = field(default_factory=Counter)
+    #: Job mail that parsed to nothing: the canary for a changed email layout.
+    unparsed: list[str] = field(default_factory=list)
+    skipped_old: int = 0
 
     @property
     def worth_reading(self) -> list[tuple[RawPosting, Score]]:
@@ -174,6 +243,14 @@ def run(
     return result
 
 
+#: The placeholder a title-only posting carries until `apply describe` replaces it.
+_NO_DESCRIPTION = (
+    "(description not retrieved — this came from an alert email, which carries "
+    "only the title. Open the link above, copy the whole posting, then run: "
+    "apply describe <slug> --clipboard)"
+)
+
+
 def _store(conn, posting: RawPosting, verdict: Score) -> str | None:
     """Create the posting row. Returns the slug, or None if it already existed."""
     year = posting.deadline.year if posting.deadline else _dt.date.today().year
@@ -196,7 +273,7 @@ def _store(conn, posting: RawPosting, verdict: Score) -> str | None:
             company=posting.employer,
             role=posting.title,
             track=verdict.track,
-            jd_raw=header + (posting.description or "(description not retrieved)"),
+            jd_raw=header + (posting.description or _NO_DESCRIPTION),
             source=posting.source,
             source_url=posting.url,
             location=posting.location,
@@ -249,26 +326,41 @@ def ingest_alerts(
     *,
     preferences: dict | None = None,
     dry_run: bool = False,
+    employers: list[dict] | None = None,
+    max_age_days: int | None = None,
 ) -> Result:
-    """Turn job-alert emails into postings, through the same gate as everything else.
+    """Turn job-alert emails — Handshake or LinkedIn — into postings, through the
+    same gate as everything else.
 
     Alerts carry no description, so nothing that arrives this way can reach
-    `pursue` on the strength of a title — which is the intended outcome. A
-    posting seen only in an email is filed for a human to open, not fed to a
-    letter writer.
+    `pursue` on the strength of a title, which is the intended outcome: it is
+    filed for a human to open, not fed to a letter writer. `apply describe`
+    attaches the full text once you have read it.
     """
-    from .sources.alerts import is_job_email, parse_alert
+    from .sources.alerts import is_job_email, parse_alert, source_of
 
     preferences = preferences or {}
+    aliases = Aliases(employers if employers is not None else load_employers())
     result = Result()
+    today = _dt.date.today()
 
     raw: list[RawPosting] = []
     for message in messages:
-        if not is_job_email(message.subject, message.sender):
+        if not is_job_email(message.subject, message.sender, message.body):
+            continue
+        if max_age_days is not None and (today - message.received).days > max_age_days:
+            result.skipped_old += 1     # an old alert lists roles that have closed
             continue
         result.fetched += 1
-        raw.extend(parse_alert(message.subject, message.body, message.received,
-                               url=message.url))
+        found = parse_alert(message.subject, message.body, message.received,
+                            url=message.url, sender=message.sender)
+        if not found and source_of(message.sender, message.body) == "linkedin":
+            result.unparsed.append(message.subject or message.id or "(no subject)")
+        raw.extend(found)
+
+    # Canonical names first, so the fingerprint agrees with the registry's copy.
+    for posting in raw:
+        aliases.adopt(posting)
 
     unique = dedupe(raw)
     result.unique = len(unique)
@@ -281,10 +373,13 @@ def ingest_alerts(
         if verdict.verdict is Verdict.REJECT:
             result.rejected += 1
             result.rejections.append((posting, verdict))
-        elif verdict.verdict is Verdict.PURSUE:
+            continue
+        if verdict.verdict is Verdict.PURSUE:
             result.pursue.append((posting, verdict))
         else:
             result.maybe.append((posting, verdict))
+        if aliases.find(posting.employer) is None and not posting.raw.get("reposted_by"):
+            result.new_employers[posting.employer] += 1
 
     if not dry_run:
         for posting, verdict in result.worth_reading:
@@ -308,7 +403,8 @@ def fetch_imap(
     user: str,
     password: str,
     host: str = "imap.gmail.com",
-    query: str = "handshake",
+    senders: tuple[str, ...] = ("joinhandshake.com", "jobalerts-noreply@linkedin.com",
+                                "jobs-listings@linkedin.com"),
     days: int = 30,
     limit: int = 60,
 ) -> list[Message]:
@@ -328,7 +424,11 @@ def fetch_imap(
     try:
         connection.login(user, password)
         connection.select("INBOX", readonly=True)
-        status, data = connection.search(None, f'(SINCE {since} FROM "{query}")')
+        # IMAP's OR takes exactly two operands, so n senders nest n-1 deep.
+        clause = f'FROM "{senders[-1]}"'
+        for sender in reversed(senders[:-1]):
+            clause = f'OR FROM "{sender}" {clause}'
+        status, data = connection.search(None, f"(SINCE {since} {clause})")
         if status != "OK":
             return []
         ids = (data[0] or b"").split()[-limit:]
