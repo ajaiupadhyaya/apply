@@ -92,6 +92,43 @@ GRADUATE_PROGRAM = re.compile(
     r"\bph\.?\s?d\b|\bmba\b|\bmaster'?s\s+(?:intern|student|program)"
     r"|\bpost[\s-]?doc\w*|\b(?<!pre\s)(?<!pre-)doctoral\b", re.I)
 
+#: "Expected graduation date of December 2027 – June 2028". Every bank's
+#: summer programme states one, and it is the real eligibility line: a May 2027
+#: graduate is outside every 2027 summer analyst window and inside every 2027
+#: full-time one. Found by the writer, one letter in, not by the gate.
+_MONTH = (r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|"
+          r"aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|"
+          r"spring|summer|fall|autumn|winter)\s+(20\d\d)\b")
+GRAD_WINDOW = re.compile(
+    rf"graduat\w*[^.\n]{{0,60}}?{_MONTH}\s*(?:–|—|-|to|through|thru|until|and|or)\s*{_MONTH}",
+    re.I)
+_MONTHS = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
+           "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+#: A season as a bound: its first month opening a window, its last closing one.
+_SEASONS = {"spring": (1, 5), "summer": (6, 8), "fall": (9, 12), "autumn": (9, 12),
+            "winter": (12, 12)}
+
+
+def _bound(word: str, year: str, *, closing: bool) -> tuple[int, int]:
+    word = word.lower()
+    if word in _SEASONS:
+        first, last = _SEASONS[word]
+        return int(year), last if closing else first
+    return int(year), _MONTHS[word[:3]]
+
+
+def graduation_window(body: str) -> tuple[tuple[int, int], tuple[int, int], str] | None:
+    """The (year, month) range a posting says its hires graduate in, if it says."""
+    match = GRAD_WINDOW.search(body or "")
+    if not match:
+        return None
+    start = _bound(match.group(1), match.group(2), closing=False)
+    end = _bound(match.group(3), match.group(4), closing=True)
+    if end < start:
+        return None                                   # a misread, not a window
+    return start, end, match.group(0)
+
+
 #: A posting aimed explicitly at one class year. A single employer can run a
 #: dozen separate "Sophomore Intern" programmes, none of them open to a junior
 #: or senior.
@@ -280,6 +317,13 @@ def score(posting: RawPosting, preferences: dict | None = None,
         degree = ADVANCED_DEGREE.search(body)
         if degree:
             return reject(f"requires an advanced degree: {degree.group(0)[:48]!r}", "degree")
+        graduation = preferences.get("graduation")
+        window = graduation_window(body) if graduation else None
+        if window and not (window[0] <= tuple(graduation) <= window[1]):
+            (y0, m0), (y1, m1), _ = window
+            return reject(
+                f"graduates {y0}-{m0:02d} to {y1}-{m1:02d}; you graduate "
+                f"{graduation[0]}-{graduation[1]:02d}", "graduation")
 
     # --- positive signal -------------------------------------------------
     value = 0

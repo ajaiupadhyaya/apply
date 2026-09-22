@@ -151,6 +151,13 @@ experience, a required advanced degree or a title naming one ("Ph.D. Intern",
 other than yours. That last one is derived from your graduation date rather than
 stored, because a stored class year is wrong within a year.
 
+A posting that states a graduation window ("expected graduation date of
+December 2027 – June 2028") is rejected when your `grad_expected` falls outside
+it. That is the real eligibility line for campus programmes: a May 2027
+graduate is outside every 2027 summer analyst window and inside every 2027
+full-time one. Only a window with a month on both ends counts; "the 2026–2027
+academic year" and "June 2028 or earlier" are left for you to judge.
+
 Some seniority is a firm's own vocabulary: at a bank "Associate" is the grade
 above analyst, at a fund it is often the graduate hire. A registry entry's
 `senior_grades: ["associate"]` rejects that word in that firm's titles only.

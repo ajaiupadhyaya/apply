@@ -1,4 +1,5 @@
-"""A firm's own senior grades, and running the gate again over what is filed.
+"""A firm's own senior grades, graduation windows, and running the gate again
+over what is filed.
 
 A bank calls its post-MBA grade "Associate"; a fund often calls its graduate
 hire the same thing. So the grade is a registry setting per firm, not a global
@@ -8,9 +9,11 @@ is what `rescore` is for.
 
 from __future__ import annotations
 
+import pytest
+
 from apply import db, digest as digest_mod, discover
 from apply.models import Posting, Status
-from apply.score import Verdict, score
+from apply.score import Verdict, graduation_window, score
 from apply.sources import ats
 from apply.sources.base import RawPosting
 
@@ -137,3 +140,56 @@ def test_the_gate_reads_the_body_without_the_header_or_placeholder():
     assert discover._scoring_body(jd) == ""
     assert discover._scoring_body(f"[discovered x]\na\nb\nc\n{BODY}") == BODY.strip()
     assert discover._scoring_body("pasted by hand") == "pasted by hand"
+
+
+# ------------------------------------------------------- graduation window
+
+MAY_2027 = {"graduation": (2027, 5)}
+
+
+@pytest.mark.parametrize("text,window", [
+    ("Expected graduation date of December 2027 – June 2028 from a bachelor's",
+     ((2027, 12), (2028, 6))),
+    ("Graduating between December 2026 to June 2027", ((2026, 12), (2027, 6))),
+    ("with expected graduation of December 2027 or June 2028", ((2027, 12), (2028, 6))),
+    ("An expected graduation date between December 2027 and Spring 2028",
+     ((2027, 12), (2028, 5))),
+    ("graduation date of December 2026 through July 2027", ((2026, 12), (2027, 7))),
+    ("Graduation date of December 2026 - June 2027", ((2026, 12), (2027, 6))),
+])
+def test_graduation_windows_as_the_banks_write_them(text, window):
+    assert graduation_window(text)[:2] == window
+
+
+@pytest.mark.parametrize("text", [
+    "Expected graduation date in the 2026–2027 academic year",   # no months: not guessed
+    "an expected graduation date of June 2028 or earlier",       # one bound only
+    "Graduation date of June 2028 – December 2027",              # backwards: a misread
+    "Markets 2027 through June 2028",                            # no graduation mention
+])
+def test_what_is_not_a_clear_window_is_left_alone(text):
+    assert graduation_window(text) is None
+
+
+def test_a_summer_window_after_your_graduation_is_rejected():
+    posting = raw("2027 Markets Summer Analyst Program")
+    posting.description = BODY + "Graduation date of December 2027 – June 2028."
+    verdict = score(posting, MAY_2027)
+    assert verdict.verdict is Verdict.REJECT and verdict.rejected_by == "graduation"
+    assert "2027-12 to 2028-06" in verdict.reasons[0] and "2027-05" in verdict.reasons[0]
+
+
+def test_a_full_time_window_that_includes_you_passes():
+    posting = raw("2027 Markets Full-Time Analyst Program")
+    posting.description = BODY + "Graduating between December 2026 and June 2027."
+    assert score(posting, MAY_2027).verdict is not Verdict.REJECT
+
+
+def test_without_a_graduation_date_the_window_is_not_applied():
+    posting = raw("2027 Markets Summer Analyst Program")
+    posting.description = BODY + "Graduation date of December 2027 – June 2028."
+    assert score(posting, {}).rejected_by != "graduation"
+
+
+def test_the_profile_supplies_the_graduation_date(profile):
+    assert profile.search_preferences["graduation"] == profile.grad_expected
