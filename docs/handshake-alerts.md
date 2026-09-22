@@ -52,9 +52,12 @@ keywords miss them.
 ## 2. Nothing to set up in Gmail
 
 The ingester finds Handshake and LinkedIn job mail by its sender, so there are
-no labels or filters to create. If you'd rather these stopped landing in your
-inbox, a Gmail filter that skips the inbox for `from:(joinhandshake.com)` is
-harmless — APPLY reads archived mail too.
+no labels or filters to create.
+
+Don't filter them out of your inbox, though. `apply ingest --imap` and the
+scheduled run read the inbox and nothing else, so a Gmail filter that skips the
+inbox for `from:(joinhandshake.com)` hides every alert from APPLY without an
+error. A filter that only labels them, or marks them read, is harmless.
 
 ---
 

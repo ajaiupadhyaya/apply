@@ -298,9 +298,10 @@ nobody sees it. It interrupts only when something is ready, needs reading,
 closes within seven days, or broke. `out/LATEST_RUN.md` is written either way,
 and setting `notify.ntfy_topic` adds a push to your phone.
 
-Keys are read from the Keychain rather than the environment for a reason:
-launchd starts a non-interactive shell, which never reads `~/.zshrc`, so an
-exported variable simply isn't there at 06:30.
+Keys come from the environment when it has them (`ANTHROPIC_API_KEY`,
+`APPLY_IMAP_PASSWORD`) and from the Keychain when it doesn't. The scheduled run
+needs the Keychain: launchd starts a non-interactive shell, which never reads
+`~/.zshrc`, so an exported variable simply isn't there at 06:30.
 
 ---
 
