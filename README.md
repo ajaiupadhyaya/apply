@@ -83,6 +83,7 @@ API behind its careers page. It calls no model, so it costs nothing.
 | Workday | the `/wday/cxs/` endpoint its own careers page calls | list, then one request per posting; carries real deadlines |
 | Oracle Recruiting Cloud | the REST resource its careers page calls | 200 postings a request, then one per posting; carries real close times |
 | Embedded page data | the `__NEXT_DATA__` blob a Next.js careers page renders from | one request per firm, descriptions included; for firms with no board API |
+| Eightfold | the requisition API its careers page reads | ten postings a request, then one per posting; some boards are bot-protected |
 
 A firm whose careers site sits behind bot protection (a Cloudflare challenge,
 say) is not polled. Getting past that would mean pretending to be a browser,

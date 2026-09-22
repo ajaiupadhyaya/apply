@@ -24,6 +24,11 @@ ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
         "requisition search is a GET against the same REST resource its "
         "careers page reads.",
     ),
+    "apply.sources.eightfold": (
+        ("*.eightfold.ai",),
+        "The public requisition API an Eightfold careers page reads to render "
+        "itself, by GET. A search and a job detail, nothing else.",
+    ),
     "apply.sources.pages": (
         ("*",),
         "One careers page per employer named in the owner's registry, by GET. "
