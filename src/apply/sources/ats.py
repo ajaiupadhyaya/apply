@@ -197,6 +197,21 @@ class Ashby:
 # ---------------------------------------------------------------- workday
 
 
+def _is_a_place(value: str) -> bool:
+    """Whether a Workday bullet is a location rather than a requisition id.
+
+    A tenant decides for itself what goes in `bulletFields`, and they do not
+    agree: one sends the req id alone, one sends the id and a department, and
+    one — Raymond James — omits `locationsText` entirely and puts the place
+    first. Read positionally, that place became the posting's id, so every row
+    deduplicated against the wrong key and the geography gate saw nothing.
+
+    A place has a separator with spaces around it; a req id ("JR-0000122333",
+    "R-0012229", "45027") never does.
+    """
+    return ", " in value or " - " in value
+
+
 class Workday:
     """The endpoint a Workday careers page calls to render itself.
 
@@ -240,6 +255,9 @@ class Workday:
                             path = job.get("externalPath", "")
                             if not path or path in seen:
                                 continue
+                            bullets = [str(b) for b in (job.get("bulletFields") or []) if b]
+                            places = [b for b in bullets if _is_a_place(b)]
+                            ids = [b for b in bullets if not _is_a_place(b)]
                             seen[path] = RawPosting(
                                 employer=config["name"],
                                 title=job.get("title", ""),
@@ -247,8 +265,8 @@ class Workday:
                                     if config.get("site_url")
                                     else f"https://{config['host']}{path}",
                                 source=self.name,
-                                external_id=job.get("bulletFields", [path])[0] or path,
-                                location=job.get("locationsText"),
+                                external_id=ids[0] if ids else path,
+                                location=job.get("locationsText") or (places[0] if places else None),
                                 # "Posted 30+ Days Ago" is a bucket, not a date.
                                 posted_at=parse_relative(job.get("postedOn")),
                                 raw={**job, "_path": path},

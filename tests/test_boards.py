@@ -426,3 +426,66 @@ def test_a_posting_the_budget_reached_is_filed_even_if_still_thin(conn, monkeypa
     monkeypatch.setitem(discover.ADAPTERS, "greenhouse", Short(["Investment Analyst"]))
     result = discover.run(conn, employers=REGISTRY, hydrate_limit=5)
     assert result.deferred == 0 and len(result.created) == 1
+
+
+# ------------------------------------------- workday's inconsistent bullets
+
+WORKDAY = {"name": "Example Bank", "ats": "workday", "host": "example.wd1.myworkdayjobs.com",
+           "tenant": "example", "site": "Careers", "search": ["analyst"], "max_results": 20}
+
+
+def workday_list(postings: list[dict]):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"total": len(postings), "jobPostings": postings})
+    return handler
+
+
+def posting(**kw) -> dict:
+    return {"title": "Investment Banking Analyst",
+            "externalPath": "/job/New-York/Investment-Banking-Analyst_R-0012229",
+            "postedOn": "Posted 3 Days Ago", **kw}
+
+
+def test_a_tenant_that_states_its_locations_is_read_as_before(monkeypatch):
+    mock(monkeypatch, workday_list([posting(locationsText="New York, 745 7th Avenue",
+                                            bulletFields=["JR-0000122333"])]))
+
+    [got] = ADAPTERS["workday"].fetch(WORKDAY)
+
+    assert got.location == "New York, 745 7th Avenue"
+    assert got.external_id == "JR-0000122333"
+
+
+def test_a_tenant_that_hides_the_location_in_its_bullets_is_still_placed(monkeypatch):
+    """Raymond James omits locationsText and puts the place in bulletFields.
+
+    Read positionally, the place became the posting's id — so every row
+    deduplicated against the wrong key and the geography gate saw nothing.
+    """
+    mock(monkeypatch, workday_list([posting(
+        bulletFields=["Southfield, Michigan - United States", "R-0012229"])]))
+
+    [got] = ADAPTERS["workday"].fetch(WORKDAY)
+
+    assert got.location == "Southfield, Michigan - United States"
+    assert got.external_id == "R-0012229"
+
+
+def test_a_bullet_that_is_neither_a_place_nor_an_id_is_not_mistaken_for_one(monkeypatch):
+    """Blackstone's second bullet is a department."""
+    mock(monkeypatch, workday_list([posting(locationsText="New York",
+                                            bulletFields=["45027", "Finance"])]))
+
+    [got] = ADAPTERS["workday"].fetch(WORKDAY)
+
+    assert got.external_id == "45027" and got.location == "New York"
+
+
+def test_a_tenant_with_no_bullets_at_all_falls_back_to_the_path(monkeypatch):
+    """Golub Capital sends no bulletFields; the path is the only stable id."""
+    mock(monkeypatch, workday_list([posting(locationsText="2 Locations")]))
+
+    [got] = ADAPTERS["workday"].fetch(WORKDAY)
+
+    assert got.external_id == "/job/New-York/Investment-Banking-Analyst_R-0012229"
+    assert got.location == "2 Locations"
