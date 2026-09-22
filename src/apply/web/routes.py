@@ -46,15 +46,20 @@ def _flash(slug: str, message: str, ok: bool = True) -> RedirectResponse:
 
 
 @router.get("/", response_class=HTMLResponse)
-def pipeline(request: Request):
+def pipeline(request: Request, track: str | None = None):
     conn = db.connect()
     rows = [r for r in db.rows(conn)
             if r.application.status not in ("rejected", "withdrawn")
             and not digest_mod.screened_out(r)]
+    by_track = {t.value: sum(1 for r in rows if r.posting.track == t.value) for t in Track}
+    current = track if track in by_track else None     # an unknown track shows everything
+    if current:
+        rows = [r for r in rows if r.posting.track == current]
     return templates.TemplateResponse(
         request,
         "web/pipeline.html",
-        _context("pipeline", rows=rows, counts=digest_mod.headline(conn)),
+        _context("pipeline", rows=rows, counts=digest_mod.headline(conn),
+                 tracks=by_track, current_track=current),
     )
 
 

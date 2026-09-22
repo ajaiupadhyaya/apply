@@ -709,13 +709,23 @@ def mark(slug: str, status: str, note: Optional[str] = typer.Option(None, "--not
 
 
 @app.command()
-def status(all_rows: bool = typer.Option(False, "--all", help="Include closed applications.")) -> None:
+def status(
+    all_rows: bool = typer.Option(False, "--all", help="Include closed applications."),
+    track: Optional[str] = typer.Option(
+        None, "--track", help="Only one track: quant, banking, allocator or corporate."),
+) -> None:
     """The pipeline, deadline first."""
     conn = _conn()
     rows = db.rows(conn)
     if not all_rows:
         rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")
                 and not digest_mod.screened_out(r)]
+    if track:
+        try:
+            wanted = Track.parse(track).value
+        except ValueError as exc:
+            _fail(str(exc))
+        rows = [r for r in rows if r.posting.track == wanted]
     if not rows:
         console.print("[dim]nothing in the pipeline. `apply add --clipboard` to start.[/]")
         return

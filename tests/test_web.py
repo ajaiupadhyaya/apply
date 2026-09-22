@@ -77,3 +77,35 @@ def test_files_outside_out_are_not_served(client):
                               follow_redirects=False)
         assert response.status_code in (303, 404)
         assert "legal_first" not in response.text
+
+
+# ------------------------------------------------------------ by track
+
+
+def test_the_pipeline_filters_by_track(client):
+    body = client.get("/?track=corporate").text
+    assert "Undated" in body                                  # the corporate posting
+    assert 'href="/?track=corporate" aria-current="page"' in body
+
+
+def test_an_empty_track_says_so(client, conn):
+    tracks = {r.posting.track for r in db.rows(conn)}
+    empty = next(t for t in ("quant", "banking", "allocator", "corporate") if t not in tracks)
+    body = client.get(f"/?track={empty}").text
+    assert f"Nothing on the {empty} track" in body
+
+
+def test_an_unknown_track_shows_everything(client):
+    body = client.get("/?track=nonsense").text
+    assert 'href="/" aria-current="page"' in body and "Undated" in body
+
+
+def test_status_filters_by_track(client):
+    from typer.testing import CliRunner
+
+    from apply.cli import app
+
+    result = CliRunner().invoke(app, ["status", "--track", "corporate"])
+    assert result.exit_code == 0 and "Undated" in result.output
+    bad = CliRunner().invoke(app, ["status", "--track", "hedge"])
+    assert bad.exit_code != 0 and "unknown track" in bad.output

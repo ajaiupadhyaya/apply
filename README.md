@@ -323,8 +323,8 @@ audit found, and your portal answers as a column of copy buttons.
 |---|---|
 | **Daily** | |
 | `apply digest` | deadlines, follow-ups due, stale drafts |
-| `apply status [--all]` | the pipeline, deadline first |
-| `apply serve` | the dashboard |
+| `apply status [--all] [--track T]` | the pipeline, deadline first; one track with `--track` |
+| `apply serve` | the dashboard, at localhost:8787; `/?track=quant` filters it |
 | **Finding** | |
 | `apply discover [--dry-run] [--show-rejects]` | poll every registered firm |
 | `apply ingest [--imap \| --file F] [--days N]` | read Handshake and LinkedIn alert mail |
