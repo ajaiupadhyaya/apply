@@ -105,6 +105,27 @@ def test_oracle_pages_through_the_whole_board(monkeypatch):
     assert "locationId=42" in finder
 
 
+def test_oracle_asks_for_no_more_than_max_results(monkeypatch):
+    """A page is 200 rows; a 20-row probe must not come back with 200."""
+    seen = mock(monkeypatch, oracle_list([requisition(n) for n in range(500)]))
+
+    got = ADAPTERS["oracle"].fetch({**ORACLE, "max_results": 20})
+
+    assert len(got) == 20
+    assert len(seen) == 1 and "limit=20," in seen[0].url.params["finder"]
+
+
+def test_oracle_trims_the_last_page_to_max_results(monkeypatch):
+    monkeypatch.setattr(ats.Oracle, "PAGE", 2)
+    seen = mock(monkeypatch, oracle_list([requisition(n) for n in range(10)]))
+
+    got = ADAPTERS["oracle"].fetch({**ORACLE, "max_results": 5})
+
+    assert [p.external_id for p in got] == ["0", "1", "2", "3", "4"]
+    assert [r.url.params["finder"].split("limit=")[1].split(",")[0] for r in seen] == \
+        ["2", "2", "1"]
+
+
 def test_oracle_maps_a_requisition(monkeypatch):
     reqs = [requisition(7, secondaryLocations=[{"Name": "Chicago, IL, United States"}])]
     mock(monkeypatch, oracle_list(reqs))
@@ -273,6 +294,37 @@ def test_a_renamed_list_fails_loudly():
 def test_a_page_without_usable_data_is_a_source_error(html, match):
     with pytest.raises(SourceError, match=match):
         pages.NextData().parse(html, PAGE)
+
+
+def test_a_dropped_connection_does_not_lose_the_careers_page(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda _s: None)
+    calls = {"n": 0}
+
+    def flaky(request):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx.ReadTimeout("dropped", request=request)
+        return httpx.Response(200, text=page_with(
+            regularJobs=[listing(1, "Quantitative Analyst")], internships=[]))
+    seen = mock(monkeypatch, flaky)
+
+    [got] = pages.NextData().fetch(PAGE)
+
+    assert got.title == "Quantitative Analyst" and calls["n"] == 2
+    assert seen[-1].headers["Accept"] == "text/html"
+
+
+def test_a_careers_page_that_refuses_is_not_retried(monkeypatch):
+    calls = {"n": 0}
+
+    def forbidden(request):
+        calls["n"] += 1
+        return httpx.Response(403)
+    mock(monkeypatch, forbidden)
+
+    with pytest.raises(SourceError, match="nextdata/"):
+        pages.NextData().fetch(PAGE)
+    assert calls["n"] == 1
 
 
 def test_page_postings_arrive_hydrated():

@@ -310,8 +310,8 @@ class Oracle:
         return (f"https://{config['host'].rstrip('/')}/hcmUI/CandidateExperience/en/"
                 f"sites/{config['site']}/job/{req_id}")
 
-    def _finder(self, config: dict, offset: int, term: str) -> str:
-        parts = [f"siteNumber={config['site']}", f"limit={self.PAGE}", f"offset={offset}",
+    def _finder(self, config: dict, offset: int, term: str, size: int) -> str:
+        parts = [f"siteNumber={config['site']}", f"limit={size}", f"offset={offset}",
                  "sortBy=POSTING_DATES_DESC"]
         if config.get("location_id"):
             parts.append(f"locationId={config['location_id']}")
@@ -328,18 +328,20 @@ class Oracle:
                 for term in config.get("search") or [""]:
                     offset = 0
                     while offset < limit:
+                        # The last request asks only for what is left under the cap.
+                        size = min(self.PAGE, limit - offset)
                         response = _get(client, url, params={
                             "onlyData": "true",
                             "expand": "requisitionList.secondaryLocations",
-                            "finder": self._finder(config, offset, term),
+                            "finder": self._finder(config, offset, term, size),
                         })
                         items = response.json().get("items") or [{}]
                         page = items[0].get("requisitionList") or []
-                        for job in page:
+                        for job in page[:size]:
                             req_id = str(job.get("Id", ""))
                             if req_id and req_id not in seen:
                                 seen[req_id] = self._posting(job, config)
-                        offset += self.PAGE
+                        offset += size
                         if not page or offset >= int(items[0].get("TotalJobsCount") or 0):
                             break
         except (httpx.HTTPError, ValueError) as exc:

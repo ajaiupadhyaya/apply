@@ -23,7 +23,8 @@ import re
 
 import httpx
 
-from .ats import HEADERS, TIMEOUT, _common
+from . import ats
+from .ats import _common, _get
 from .base import RawPosting, SourceError, parse_local_date, strip_html
 
 _BLOB = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
@@ -37,11 +38,9 @@ class NextData:
     def fetch(self, config: dict) -> list[RawPosting]:
         url = config["url"]
         try:
-            with httpx.Client(timeout=TIMEOUT, follow_redirects=True,
-                              headers={**HEADERS, "Accept": "text/html"}) as client:
-                response = client.get(url)
-                response.raise_for_status()
-                page = response.text
+            with ats._client() as client:
+                client.headers["Accept"] = "text/html"
+                page = _get(client, url).text
         except httpx.HTTPError as exc:
             raise SourceError(f"nextdata/{url}: {exc}") from exc
         return self.parse(page, config)
