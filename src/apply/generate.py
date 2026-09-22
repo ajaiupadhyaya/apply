@@ -295,6 +295,13 @@ def lint(body: str, profile: Profile, posting: Posting) -> LintResult:
     """
     result = LintResult()
 
+    # A structured response occasionally carries JSON escapes through as text:
+    # "—" where an em dash was meant. Found by the paid audit in a live
+    # draft; a regex catches it for free.
+    for escape in sorted(set(re.findall(r"\\u[0-9a-fA-F]{4}", body))):
+        result.errors.append(
+            f'literal escape "{escape}" in the text — write the character itself')
+
     for phrase, pattern in _PROHIBITED_RE:
         if pattern.search(body):
             result.errors.append(f'prohibited phrase: "{phrase}"')
