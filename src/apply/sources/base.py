@@ -31,6 +31,9 @@ class RawPosting:
     deadline: _dt.date | None = None  # rarely present; never invented
     employer_priority: int = 3
     employer_tracks: tuple[str, ...] = ()
+    #: Words that mark a senior grade at this employer specifically. A bank's
+    #: "Associate" is a post-MBA grade; a fund's often is not.
+    employer_senior_grades: tuple[str, ...] = ()
     raw: dict = field(default_factory=dict, repr=False)
 
     @property

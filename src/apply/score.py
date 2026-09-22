@@ -244,6 +244,9 @@ def score(posting: RawPosting, preferences: dict | None = None,
     # --- hard gates, cheapest first -------------------------------------
     if SENIORITY.search(title):
         return reject(f"title is senior: {SENIORITY.search(title).group(0)!r}", "seniority")
+    for grade in posting.employer_senior_grades:
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(grade)}(?![A-Za-z0-9])", title, re.I):
+            return reject(f"{grade!r} is a senior grade at {posting.employer}", "seniority")
     if OFF_FUNCTION.search(title):
         return reject(f"off-function: {OFF_FUNCTION.search(title).group(0)!r}", "function")
     if TOO_TECHNICAL.search(title):

@@ -25,6 +25,10 @@
 # Morgan" finds "JPMorgan" on its own; aliases are for real differences. A
 # matched alert posting takes the firm's priority and collapses with the copy
 # from the firm's own board.
+#
+# `senior_grades` lists words that mean a senior grade at this firm only — a
+# bank's "Associate" is post-MBA, a fund's often is not. Titles containing one
+# are rejected for this firm and no other. After changing it, `apply rescore`.
 
 employers:
   - name: Airbnb

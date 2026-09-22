@@ -151,6 +151,15 @@ experience, a required advanced degree or a title naming one ("Ph.D. Intern",
 other than yours. That last one is derived from your graduation date rather than
 stored, because a stored class year is wrong within a year.
 
+Some seniority is a firm's own vocabulary: at a bank "Associate" is the grade
+above analyst, at a fund it is often the graduate hire. A registry entry's
+`senior_grades: ["associate"]` rejects that word in that firm's titles only.
+
+When the gate or the registry changes, `apply rescore` runs it again over the
+discovered postings still in draft. One it now rejects leaves the pipeline but
+stays in the database with its reason; postings you added by hand and anything
+with a letter written are never touched.
+
 Verdicts: `pursue` (70+, worth a letter), `maybe` (45–69, filed for you to look
 at), `reject` (dropped, with the reason). On one live pass across four
 employers: 555 fetched, 497 unique, 447 rejected before any model was called.
@@ -314,6 +323,7 @@ audit found, and your portal answers as a column of copy buttons.
 | `apply ingest [--imap \| --file F] [--days N]` | read Handshake and LinkedIn alert mail |
 | `apply add --clipboard \| --file \| --url` | add one posting by hand |
 | `apply describe <slug> --clipboard` | attach the full posting to a title-only one |
+| `apply rescore [--dry-run]` | run the gate again over filed drafts after it changes |
 | `apply resolve <careers-url> --name N` | find a firm's job board and print its registry entry |
 | `apply targets` | the registry |
 | **Writing** | |

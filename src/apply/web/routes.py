@@ -48,7 +48,9 @@ def _flash(slug: str, message: str, ok: bool = True) -> RedirectResponse:
 @router.get("/", response_class=HTMLResponse)
 def pipeline(request: Request):
     conn = db.connect()
-    rows = [r for r in db.rows(conn) if r.application.status not in ("rejected", "withdrawn")]
+    rows = [r for r in db.rows(conn)
+            if r.application.status not in ("rejected", "withdrawn")
+            and not digest_mod.screened_out(r)]
     return templates.TemplateResponse(
         request,
         "web/pipeline.html",

@@ -714,7 +714,8 @@ def status(all_rows: bool = typer.Option(False, "--all", help="Include closed ap
     conn = _conn()
     rows = db.rows(conn)
     if not all_rows:
-        rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")]
+        rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")
+                and not digest_mod.screened_out(r)]
     if not rows:
         console.print("[dim]nothing in the pipeline. `apply add --clipboard` to start.[/]")
         return
@@ -887,6 +888,40 @@ def discover(
         f"posting{'' if len(result.created) == 1 else 's'}. "
         f"Next: [bold]apply status[/], then [bold]apply gen <slug>[/]."
     )
+
+
+@app.command()
+def rescore(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would change; write nothing."),
+) -> None:
+    """Run the free gate again over discovered postings still in draft.
+
+    For after the gate or the registry changes. A draft it now rejects leaves
+    the pipeline but stays in the database with its reason (`apply status
+    --all` shows it). Postings you added by hand, and anything with a letter
+    already written, are never touched.
+    """
+    conn = _conn()
+    changes = discover_mod.rescore(conn, preferences=_profile().search_preferences,
+                                   dry_run=dry_run)
+    if not changes:
+        console.print("[dim]nothing changed.[/]")
+        return
+    table = Table(box=None, header_style="dim", padding=(0, 2))
+    for column in ("before", "after", "company", "role", "why"):
+        table.add_column(column)
+    for c in sorted(changes, key=lambda c: (c.after.verdict.value != "reject", c.company, c.role)):
+        colour = {"pursue": "green", "maybe": "yellow"}.get(c.after.verdict.value, "red")
+        table.add_row(
+            f"{c.before[1] or '—'} {c.before[0] if c.before[0] is not None else ''}",
+            Text(f"{c.after.verdict.value} {c.after.value}", style=colour),
+            c.company, Text(c.role[:44], overflow="ellipsis"),
+            Text("; ".join(c.after.reasons)[:60], style="dim"),
+        )
+    console.print(table)
+    dropped = sum(1 for c in changes if c.after.verdict.value == "reject")
+    verb = "would change" if dry_run else "changed"
+    console.print(f"\n{len(changes)} {verb} · {dropped} screened out of the pipeline")
 
 
 @app.command()
@@ -1215,11 +1250,13 @@ def describe(
     posting.location = posting.location or find_location(text)
 
     before = (posting.score, posting.score_verdict)
-    verdict = score_posting(RawPosting(
+    raw = RawPosting(
         employer=posting.company, title=posting.role, url=posting.source_url or "",
         source=posting.source or "manual", location=posting.location,
         description=text, employer_priority=posting.priority,
-    ), profile.search_preferences)
+    )
+    discover_mod.Aliases(discover_mod.load_employers()).adopt(raw)   # the firm's own rules
+    verdict = score_posting(raw, profile.search_preferences)
     posting.score, posting.score_verdict = verdict.value, verdict.verdict.value
     posting.score_reasons = "; ".join(verdict.reasons)
     posting.track = verdict.track

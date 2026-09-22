@@ -59,6 +59,7 @@ def _common(config: dict) -> dict:
     return {
         "employer_priority": int(config.get("priority", 3)),
         "employer_tracks": tuple(config.get("tracks") or ()),
+        "employer_senior_grades": tuple(config.get("senior_grades") or ()),
     }
 
 
