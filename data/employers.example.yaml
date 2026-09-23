@@ -14,7 +14,7 @@
 #   ats: oracle                       -> needs `host`, `site`; optional `location_id`
 #   ats: nextdata                     -> needs `url`, `lists`
 #
-# `search` applies to Workday and Oracle. Workday has no "list everything" mode
+# `search` applies to Workday, Oracle and Eightfold. Workday has no "list everything" mode
 # worth using, so give it the terms you care about. Oracle does: leave `search`
 # out and it reads the whole board, 200 postings a request, up to `max_results`.
 # `location_id` is the id of one of its location filters (a country, say); find
@@ -66,6 +66,19 @@ employers:
     site: CX_45001
     search: ["analyst", "intern"]
     max_results: 400
+    tracks: [corporate]
+    priority: 3
+
+  # Eightfold runs the careers site for several large firms. The list endpoint
+  # returns ten at a time whatever you ask for, so `max_results` is the real
+  # cost control. Some Eightfold boards answer a non-browser client with 403;
+  # those are not pollable, and `apply resolve` says so rather than guessing.
+  - name: Example Partners
+    ats: eightfold
+    host: example.eightfold.ai
+    domain: example.com          # optional; the API validates it when present
+    search: ["analyst", "intern", "2027"]
+    max_results: 300
     tracks: [corporate]
     priority: 3
 
