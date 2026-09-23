@@ -11,15 +11,24 @@
 #
 #   ats: greenhouse | lever | ashby   -> needs `board` (the slug in their careers URL)
 #   ats: workday                      -> needs `host`, `tenant`, `site`
+#   ats: oracle                       -> needs `host`, `site`; optional `location_id`
+#   ats: nextdata                     -> needs `url`, `lists`
 #
-# `search` applies to Workday only: it has no "list everything" mode worth
-# using, so give it the terms you care about.
+# `search` applies to Workday, Oracle and Eightfold. Workday has no "list everything" mode
+# worth using, so give it the terms you care about. Oracle does: leave `search`
+# out and it reads the whole board, 200 postings a request, up to `max_results`.
+# `location_id` is the id of one of its location filters (a country, say); find
+# it in the `locationsFacet` of any search response.
 #
 # `aliases` lists other spellings — what LinkedIn or Handshake call the firm.
 # Punctuation, case and suffixes like "Inc." are already ignored, so "J.P.
 # Morgan" finds "JPMorgan" on its own; aliases are for real differences. A
 # matched alert posting takes the firm's priority and collapses with the copy
 # from the firm's own board.
+#
+# `senior_grades` lists words that mean a senior grade at this firm only — a
+# bank's "Associate" is post-MBA, a fund's often is not. Titles containing one
+# are rejected for this firm and no other. After changing it, `apply rescore`.
 
 employers:
   - name: Airbnb
@@ -50,3 +59,37 @@ employers:
     max_results: 120
     tracks: [corporate]
     priority: 3
+
+  - name: Oracle
+    ats: oracle
+    host: eeho.fa.us2.oraclecloud.com
+    site: CX_45001
+    search: ["analyst", "intern"]
+    max_results: 400
+    tracks: [corporate]
+    priority: 3
+
+  # Eightfold runs the careers site for several large firms. The list endpoint
+  # returns ten at a time whatever you ask for, so `max_results` is the real
+  # cost control. Some Eightfold boards answer a non-browser client with 403;
+  # those are not pollable, and `apply resolve` says so rather than guessing.
+  - name: Example Partners
+    ats: eightfold
+    host: example.eightfold.ai
+    domain: example.com          # optional; the API validates it when present
+    search: ["analyst", "intern", "2027"]
+    max_results: 300
+    tracks: [corporate]
+    priority: 3
+
+  # A careers page with no board API, which renders from the JSON it embeds as
+  # __NEXT_DATA__. The record shape is one firm's, so this is a template rather
+  # than a working example — check the firm's robots.txt allows the page first.
+  # A list whose name contains "internal" is never read.
+  #
+  # - name: Example Capital
+  #   ats: nextdata
+  #   url: https://www.example.com/careers
+  #   lists: [regularJobs, internships]
+  #   tracks: [quant]
+  #   priority: 2

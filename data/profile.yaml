@@ -37,8 +37,8 @@ education:
 # about a start date while these are ASK. Worth filling in: the auditor refused
 # a live draft for inventing "starting in May" because this did not exist.
 availability:
-  full_time: ASK               # e.g. "from June 2027, after graduating"
-  internship: ASK              # e.g. "summer 2027" — see the note in README
+  full_time: "from June 2027, after graduating"   # confirmed by the owner, 2026-09-21
+  internship: "summer 2027"                       # confirmed by the owner, 2026-09-21
 
 authorization:
   # Confirmed by the owner, 2026-09-20.
@@ -51,7 +51,7 @@ authorization:
 experience:
   - org: University of Virginia
     title: Student Consultant
-    start: ASK                  # month the role began, YYYY-MM
+    start: 2023-10              # confirmed by the owner, 2026-09-21
     end: present
     location: Charlottesville, VA
     bullets:

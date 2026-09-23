@@ -105,6 +105,20 @@ def test_every_prohibited_phrase_is_caught(profile, vcimco_jd, phrase):
     assert any(phrase in e for e in result.errors)
 
 
+def test_a_literal_json_escape_is_caught(profile, vcimco_jd):
+    """Found in a live draft: "\\u2014" printed where an em dash was meant."""
+    result = lint("The engine is incremental \\u2014 only what changed recomputes.",
+                  profile, posting_from(vcimco_jd))
+    assert not result.ok
+    assert any("\\u2014" in e for e in result.errors)
+
+
+def test_the_character_itself_is_fine(profile, vcimco_jd):
+    result = lint("The engine is incremental — only what changed recomputes.",
+                  profile, posting_from(vcimco_jd))
+    assert not any("escape" in e for e in result.errors)
+
+
 def test_a_clean_grounded_draft_passes(profile, vcimco_jd, fake_claude):
     from apply import writer
 

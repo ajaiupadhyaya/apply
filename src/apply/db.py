@@ -283,6 +283,15 @@ def update_description(conn: sqlite3.Connection, p: Posting) -> None:
         )
 
 
+def update_score(conn: sqlite3.Connection, p: Posting) -> None:
+    """The gate's verdict and nothing else. Used by `apply rescore`."""
+    with conn:
+        conn.execute(
+            "UPDATE posting SET score=?, score_verdict=?, score_reasons=? WHERE id=?",
+            (p.score, p.score_verdict, p.score_reasons, p.id),
+        )
+
+
 def delete_posting(conn: sqlite3.Connection, slug: str) -> bool:
     with conn:
         cur = conn.execute("DELETE FROM posting WHERE slug = ?", (slug,))

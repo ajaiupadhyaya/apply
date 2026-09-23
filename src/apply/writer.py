@@ -289,8 +289,13 @@ def write(
         chars = sum(len(b["text"]) for b in system) + len(message)
         if budget is not None:
             budget.check(llm.estimate(chars, model=model), f"{purpose}:{posting.slug}")
-        result, usage = caller(system=system, user=message, schema=schema,
-                               model=model, effort=effort)
+        try:
+            result, usage = caller(system=system, user=message, schema=schema,
+                                   model=model, effort=effort)
+        except llm.Truncated as exc:
+            if budget is not None:          # billed, even though nothing came back
+                budget.record(exc.usage, f"{purpose}-truncated", posting.slug)
+            raise
         if budget is not None:
             budget.record(usage, purpose, posting.slug)
         total = usage if total is None else total + usage

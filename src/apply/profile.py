@@ -296,6 +296,7 @@ class Profile:
         year, and nobody remembers to update it.
         """
         return {"class_standing": self.class_standing,
+                "graduation": self.grad_expected,
                 **(self.raw.get("search") or {})}
 
     @property

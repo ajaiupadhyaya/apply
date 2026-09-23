@@ -81,6 +81,14 @@ API behind its careers page. It calls no model, so it costs nothing.
 | Lever | `api.lever.co/v0/postings` | one request per firm |
 | Ashby | `api.ashbyhq.com/posting-api` | one request per firm |
 | Workday | the `/wday/cxs/` endpoint its own careers page calls | list, then one request per posting; carries real deadlines |
+| Oracle Recruiting Cloud | the REST resource its careers page calls | 200 postings a request, then one per posting; carries real close times |
+| Embedded page data | the `__NEXT_DATA__` blob a Next.js careers page renders from | one request per firm, descriptions included; for firms with no board API |
+| Eightfold | the requisition API its careers page reads | ten postings a request, then one per posting; some boards are bot-protected |
+
+A firm whose careers site sits behind bot protection (a Cloudflare challenge,
+say) is not polled. Getting past that would mean pretending to be a browser,
+which is the line this project doesn't cross; those firms arrive through alert
+mail instead.
 
 Adding a firm doesn't mean reading devtools:
 
@@ -131,16 +139,34 @@ a week, so the gate runs first, and free:
 fetch     one request per employer
 dedupe    by fingerprint, across sources and against what is already stored
 score     titles and locations
-hydrate   fetch the full description — only for postings still standing
+hydrate   fetch the full description — only for postings still standing,
+          best first, up to --hydrate (60); the rest wait for the next run
 re-score  with the description, where the disqualifiers live
 record    pursue and maybe are filed; reject never is
 ```
 
 Hard rejects, each of which names itself: senior titles, engineering roles,
 off-function roles, anywhere outside the US, three or more years of required
-experience, a required advanced degree, and programmes aimed at a class year
+experience, a required advanced degree or a title naming one ("Ph.D. Intern",
+"MBA Associate" — pre-doctoral roles pass), and programmes aimed at a class year
 other than yours. That last one is derived from your graduation date rather than
 stored, because a stored class year is wrong within a year.
+
+A posting that states a graduation window ("expected graduation date of
+December 2027 – June 2028") is rejected when your `grad_expected` falls outside
+it. That is the real eligibility line for campus programmes: a May 2027
+graduate is outside every 2027 summer analyst window and inside every 2027
+full-time one. Only a window with a month on both ends counts; "the 2026–2027
+academic year" and "June 2028 or earlier" are left for you to judge.
+
+Some seniority is a firm's own vocabulary: at a bank "Associate" is the grade
+above analyst, at a fund it is often the graduate hire. A registry entry's
+`senior_grades: ["associate"]` rejects that word in that firm's titles only.
+
+When the gate or the registry changes, `apply rescore` runs it again over the
+discovered postings still in draft. One it now rejects leaves the pipeline but
+stays in the database with its reason; postings you added by hand and anything
+with a letter written are never touched.
 
 Verdicts: `pursue` (70+, worth a letter), `maybe` (45–69, filed for you to look
 at), `reject` (dropped, with the reason). On one live pass across four
@@ -299,13 +325,14 @@ audit found, and your portal answers as a column of copy buttons.
 |---|---|
 | **Daily** | |
 | `apply digest` | deadlines, follow-ups due, stale drafts |
-| `apply status [--all]` | the pipeline, deadline first |
-| `apply serve` | the dashboard |
+| `apply status [--all] [--track T]` | the pipeline, deadline first; one track with `--track` |
+| `apply serve` | the dashboard, at localhost:8787; `/?track=quant` filters it |
 | **Finding** | |
 | `apply discover [--dry-run] [--show-rejects]` | poll every registered firm |
 | `apply ingest [--imap \| --file F] [--days N]` | read Handshake and LinkedIn alert mail |
 | `apply add --clipboard \| --file \| --url` | add one posting by hand |
 | `apply describe <slug> --clipboard` | attach the full posting to a title-only one |
+| `apply rescore [--dry-run]` | run the gate again over filed drafts after it changes |
 | `apply resolve <careers-url> --name N` | find a firm's job board and print its registry entry |
 | `apply targets` | the registry |
 | **Writing** | |

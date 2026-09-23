@@ -27,6 +27,22 @@ OPEN_STATUSES = {
 }
 
 
+def screened_out(row: Row) -> bool:
+    """A draft the free gate now rejects. Kept, with its reason, but not work.
+
+    `apply rescore` produces these when the gate learns something new about
+    postings already filed. Nothing was written for them, so there is nothing
+    to withdraw; they simply leave the pipeline.
+    """
+    return (row.application.status == Status.DRAFT.value
+            and bool(row.posting.discovered_at)          # never one you added by hand
+            and row.posting.score_verdict == "reject")
+
+
+def in_pipeline(row: Row) -> bool:
+    return row.application.status in OPEN_STATUSES and not screened_out(row)
+
+
 def _age_days(timestamp: str | None) -> int | None:
     if not timestamp:
         return None
@@ -39,7 +55,7 @@ def _age_days(timestamp: str | None) -> int | None:
 
 def headline(conn: sqlite3.Connection) -> dict[str, int]:
     """The four numbers across the top of the dashboard."""
-    rows = [r for r in db.rows(conn) if r.application.status in OPEN_STATUSES]
+    rows = [r for r in db.rows(conn) if in_pipeline(r)]
     week_ago = _dt.datetime.now() - _dt.timedelta(days=7)
 
     submitted_week = 0
@@ -82,7 +98,7 @@ class Digest:
 def build(conn: sqlite3.Connection, horizon: int = HORIZON_DAYS) -> Digest:
     today = _dt.date.today()
     rows = db.rows(conn)
-    open_rows = [r for r in rows if r.application.status in OPEN_STATUSES]
+    open_rows = [r for r in rows if in_pipeline(r)]
     result = Digest()
 
     for row in open_rows:

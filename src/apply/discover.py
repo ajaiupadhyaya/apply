@@ -104,6 +104,7 @@ class Aliases:
         posting.employer = entry["name"]
         posting.employer_priority = int(entry.get("priority", 3))
         posting.employer_tracks = tuple(entry.get("tracks") or ())
+        posting.employer_senior_grades = tuple(entry.get("senior_grades") or ())
         return True
 
 
@@ -114,6 +115,9 @@ class Result:
     already_known: int = 0
     rejected: int = 0
     hydrated: int = 0
+    #: Survivors the hydration budget did not reach. Not filed this run, so the
+    #: next run finds them again and fetches their description then.
+    deferred: int = 0
     pursue: list[tuple[RawPosting, Score]] = field(default_factory=list)
     maybe: list[tuple[RawPosting, Score]] = field(default_factory=list)
     created: list[str] = field(default_factory=list)
@@ -213,6 +217,14 @@ def run(
     # after hydration.
     survivors.sort(key=lambda pair: -pair[1].value)
     needs_body = [pair for pair in survivors if not pair[0].hydrated]
+    # Whatever the budget does not reach waits for the next run rather than
+    # being filed on its title alone. Filed thin, it would be "already known"
+    # forever and never get its description or its deadline; left unfiled, the
+    # next run meets it as new and fetches both. A big board converges over a
+    # few nights, best-scoring first.
+    waiting = {id(posting) for posting, _ in needs_body[hydrate_limit:]}
+    result.deferred = len(waiting)
+    survivors = [pair for pair in survivors if id(pair[0]) not in waiting]
     for posting, _ in needs_body[:hydrate_limit]:
         adapter = ADAPTERS.get(posting.source)
         config = by_name.get(posting.employer)
@@ -241,6 +253,73 @@ def run(
             if slug:
                 result.created.append(slug)
     return result
+
+
+# ------------------------------------------------------------ re-scoring
+
+
+@dataclass(slots=True)
+class Rescored:
+    slug: str
+    company: str
+    role: str
+    before: tuple[int | None, str | None]
+    after: Score
+
+
+def _scoring_body(jd_raw: str) -> str:
+    """The description as the gate first saw it: without the header `_store`
+    adds, and without the placeholder an alert posting carries."""
+    text = jd_raw or ""
+    if text.startswith("[discovered "):
+        text = text.split("\n", 4)[-1] if text.count("\n") >= 4 else ""
+    return text.replace(_NO_DESCRIPTION, "").strip()
+
+
+def rescore(
+    conn,
+    *,
+    employers: list[dict] | None = None,
+    preferences: dict | None = None,
+    dry_run: bool = False,
+) -> list[Rescored]:
+    """Run the free gate again over every discovered posting still in draft.
+
+    The gate learns. A title pattern added today never saw what was filed last
+    week, and a registry change (a firm's `senior_grades`, say) applies only to
+    what is scored after it. This closes that gap.
+
+    Only drafts are touched — once a letter exists the posting is the owner's
+    call, not the gate's — and only postings discovery filed, never one added by
+    hand. Only the score changes; the track and the text are left alone. Each
+    change is logged on the application.
+    """
+    aliases = Aliases(employers if employers is not None else load_employers())
+    changed: list[Rescored] = []
+    for row in db.rows(conn):
+        posting = row.posting
+        if row.application.status != "draft" or not posting.discovered_at:
+            continue
+        raw = RawPosting(
+            employer=posting.company, title=posting.role, url=posting.source_url or "",
+            source=posting.source or "manual", location=posting.location,
+            description=_scoring_body(posting.jd_raw), employer_priority=posting.priority,
+        )
+        aliases.adopt(raw)
+        verdict = score_posting(raw, preferences or {})
+        before = (posting.score, posting.score_verdict)
+        if before == (verdict.value, verdict.verdict.value):
+            continue
+        changed.append(Rescored(posting.slug, posting.company, posting.role, before, verdict))
+        if dry_run:
+            continue
+        posting.score, posting.score_verdict = verdict.value, verdict.verdict.value
+        posting.score_reasons = "; ".join(verdict.reasons)
+        db.update_score(conn, posting)
+        db.add_event(conn, row.application.id, "note",
+                     f"rescored {before[1]} {before[0]} -> {verdict.verdict.value} "
+                     f"{verdict.value}: {'; '.join(verdict.reasons)[:160]}")
+    return changed
 
 
 #: The placeholder a title-only posting carries until `apply describe` replaces it.

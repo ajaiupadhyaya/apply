@@ -17,7 +17,16 @@
   </div>
 </div>
 
-{% if not rows %}
+<nav class="tracks" aria-label="Filter by track">
+  <a href="/" {% if not current_track %}aria-current="page"{% endif %}>All</a>
+  {% for name, n in tracks.items() %}
+    <a href="/?track={{ name }}" {% if current_track == name %}aria-current="page"{% endif %}>{{ name }} <span>{{ n }}</span></a>
+  {% endfor %}
+</nav>
+
+{% if not rows and current_track %}
+  <p class="notice quiet">Nothing on the {{ current_track }} track. <a href="/">Show all</a></p>
+{% elif not rows %}
   <div class="empty">
     <p>Nothing in the pipeline yet.</p>
     <p>Paste a job description and this will hold the letter, the resume variant,
