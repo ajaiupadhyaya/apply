@@ -17,7 +17,7 @@ from __future__ import annotations
 ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
     "apply.sources.ats": (
         ("boards-api.greenhouse.io", "api.lever.co", "api.ashbyhq.com",
-         "*.myworkdayjobs.com", "*.oraclecloud.com"),
+         "*.myworkdayjobs.com", "*.myworkdaysite.com", "*.oraclecloud.com"),
         "Public job-board APIs. Workday's /wday/cxs/ endpoint takes a POST "
         "because it is a search query, not a submission — it is the same call "
         "the employer's own careers page makes to render itself. Oracle's "
