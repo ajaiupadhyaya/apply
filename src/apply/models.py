@@ -174,18 +174,6 @@ class Event:
 
 
 @dataclass(slots=True)
-class Contact:
-    name: str
-    id: int | None = None
-    posting_id: int | None = None
-    title: str | None = None
-    email: str | None = None
-    linkedin: str | None = None
-    last_touch: _dt.date | None = None
-    notes: str | None = None
-
-
-@dataclass(slots=True)
 class Followup:
     application_id: int
     due_on: _dt.date

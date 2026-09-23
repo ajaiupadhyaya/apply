@@ -217,7 +217,6 @@ def test_no_employer_facing_host_is_allowed():
 
 def test_no_credential_is_ever_written_to_disk():
     import re
-    from pathlib import Path
 
     for path in (generate.repo_root() / "src").rglob("*.py"):
         text = path.read_text()

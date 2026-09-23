@@ -295,6 +295,13 @@ def lint(body: str, profile: Profile, posting: Posting) -> LintResult:
     """
     result = LintResult()
 
+    # A structured response occasionally carries JSON escapes through as text:
+    # "—" where an em dash was meant. Found by the paid audit in a live
+    # draft; a regex catches it for free.
+    for escape in sorted(set(re.findall(r"\\u[0-9a-fA-F]{4}", body))):
+        result.errors.append(
+            f'literal escape "{escape}" in the text — write the character itself')
+
     for phrase, pattern in _PROHIBITED_RE:
         if pattern.search(body):
             result.errors.append(f'prohibited phrase: "{phrase}"')
@@ -311,7 +318,7 @@ def lint(body: str, profile: Profile, posting: Posting) -> LintResult:
     # documents, or the posting itself; a number from none of them was invented.
     #
     # The company and role count as part of the posting. Without them a firm
-    # whose name contains a digit — Point72, 3M, 7-Eleven — gets its own name
+    # whose name contains a digit — 3M, 7-Eleven, 1-800-Flowers — gets its own name
     # reported as an invented figure whenever the description does not happen
     # to repeat it.
     from .context import sourced_text
@@ -710,8 +717,8 @@ def _sweep(directory: Path, *, keep: Path, kind: str) -> None:
     """Delete this folder's older PDFs of the same kind.
 
     A renamed document leaves its predecessor behind, and a folder holding both
-    AJ_Upadhyaya_Cover_Letter_Point72.pdf and
-    AJ_Upadhyaya_Cover_Letter_Point72_Quantitative_Research.pdf is a folder you
+    Cover_Letter_Acme.pdf and
+    Cover_Letter_Acme_Quantitative_Research.pdf is a folder you
     will eventually upload the wrong file from. Scoped to one slug's directory
     and one document kind; nothing else is ever removed.
     """

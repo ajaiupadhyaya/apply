@@ -8,13 +8,14 @@ Setup takes about fifteen minutes, once.
 
 ---
 
-## 0. Where the mail goes — already sorted
+## 0. Where the mail goes
 
-Your LinkedIn account emails **upadhyayaak2@vcu.edu**, the same inbox APPLY
-reads and the one Handshake alerts already land in. Nothing to forward.
+LinkedIn sends alerts to your account's primary email address. APPLY reads one
+inbox, so make sure that's the same inbox your Handshake alerts land in — if it
+isn't, either change LinkedIn's primary address or forward its job mail there.
 
-One thing to check: no LinkedIn email has reached that inbox since October
-2025, so LinkedIn's email notifications are probably switched off or throttled.
+If LinkedIn hasn't emailed you in a while, its email notifications are
+probably switched off or throttled — step 1 fixes that.
 
 ## 1. Turn job-alert email on
 
@@ -37,6 +38,10 @@ For each search below:
    levels shown; *Job type* as shown.
 4. Flip the **Set alert** switch at the top of the results.
 5. In the alert's settings, choose **Daily** and **Email and notification**.
+
+These are the searches this was built with — a finance job hunt centred on New
+York for 2027 roles. Swap in your own city, year and field; the shape is what
+matters.
 
 | # | Keywords | Location | Experience level |
 |---|---|---|---|

@@ -42,10 +42,6 @@ LINKEDIN_JOB_SENDERS = (
     "jobs-noreply@linkedin.com",
 )
 
-#: Kept for callers that only needed "is this Handshake".
-SENDERS = HANDSHAKE_SENDERS
-
-
 def source_of(sender: str = "", body: str = "") -> str | None:
     """"handshake", "linkedin", or None for mail this module does not read."""
     sender = (sender or "").lower()

@@ -15,7 +15,7 @@ import pytest
 from apply.score import Verdict, score
 from apply.sources.base import RawPosting
 
-FIXTURES = pathlib.Path(__file__).parent / "fixtures"
+FIXTURES = pathlib.Path(__file__).parents[1] / "data" / "examples"
 
 
 def make(title="Investment Analyst", location="New York, NY", body="", priority=1):
@@ -126,7 +126,7 @@ def test_thresholds_are_configurable():
     "Freshman Insight Programme",
 ])
 def test_roles_scoped_to_another_class_year_are_rejected(title):
-    """The Federal Reserve alone runs nine separate sophomore programmes."""
+    """One employer can run a dozen separate sophomore programmes."""
     result = score(make(title=title), standing="senior")
     assert result.verdict is Verdict.REJECT
     assert result.rejected_by == "class year"

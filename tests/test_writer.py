@@ -205,3 +205,46 @@ def test_no_hardcoded_letter_prose_remains(profile):
     """The whole point of this change: the profile carries instructions, not sentences."""
     assert "letters" not in profile.raw
     assert "writing" in profile.raw
+
+
+# ------------------------------------------------------------- truncation
+
+_REAL_CALL = llm.call      # captured at import, before the autouse tripwire replaces it
+
+
+def test_output_cut_off_mid_json_is_truncated_not_a_crash(monkeypatch):
+    """The SDK parses while building the response, so hitting max_tokens
+    surfaces as a pydantic ValidationError. It must become an ordinary
+    unavailable result, with a cost attached."""
+    import pydantic
+
+    class Messages:
+        def parse(self, **kw):
+            pydantic.TypeAdapter(int).validate_json('"cut off mid-str')
+
+    class Client:
+        beta = type("Beta", (), {"messages": Messages()})()
+
+    monkeypatch.setattr(llm, "_client", lambda: Client())
+    with pytest.raises(llm.Truncated) as caught:
+        _REAL_CALL(system=[{"type": "text", "text": "s" * 320}], user="u" * 320,
+                   schema=llm.Package, max_tokens=1000)
+    assert isinstance(caught.value, llm.LLMUnavailable)
+    assert caught.value.usage.output_tokens == 1000
+    assert caught.value.usage.input_tokens == 200
+    assert caught.value.usage.cost > 0
+
+
+def test_a_truncated_call_is_charged_and_the_letter_is_unavailable(
+        profile, vcimco_jd, conn):
+    budget = Budget(conn)
+
+    def truncating(**kw):
+        raise llm.Truncated("cut off", llm.Usage(model=llm.DEFAULT_MODEL,
+                                                 input_tokens=5000, output_tokens=20000))
+
+    written = run(profile, posting_from(vcimco_jd), truncating, budget=budget)
+    assert written.status == "unavailable" and not written.ok
+    purposes = {purpose: calls for purpose, _, calls in budget.by_purpose()}
+    assert purposes == {"write-truncated": 1}
+    assert budget.month_to_date() > 0

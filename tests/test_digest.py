@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import datetime as _dt
+import io
 
-import pytest
 
 from apply import db, digest as digest_mod
 from apply.models import Posting, Status
@@ -94,8 +94,7 @@ def test_the_digest_renders_at_every_urgency(conn):
 
     for days in (-2, 1, 3, 5, 7, 9, 13, 40, None):
         _add(conn, f"row{days}", days_out=days)
-    Console(file=open("/dev/null", "w"), width=100).print  # noqa: B018
-    digest_mod.render(conn, Console(file=open("/dev/null", "w"), width=100))
+    digest_mod.render(conn, Console(file=io.StringIO(), width=100))
 
 
 def test_brackets_in_a_job_title_do_not_break_rendering(conn):
@@ -106,4 +105,4 @@ def test_brackets_in_a_job_title_do_not_break_rendering(conn):
         slug="acme-analyst-2027", company="Acme [US]", role="Analyst [Summer 2027] (NY)",
         track="corporate", jd_raw="x",
         deadline=_dt.date.today() + _dt.timedelta(days=9)))
-    digest_mod.render(conn, Console(file=open("/dev/null", "w"), width=100))
+    digest_mod.render(conn, Console(file=io.StringIO(), width=100))

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
-import os
 import subprocess
 import sys
 import webbrowser
@@ -27,9 +26,9 @@ from rich.text import Text
 from . import (budget as budget_mod, db, digest as digest_mod,
                discover as discover_mod, generate, notify as notify_mod,
                resolve as resolve_mod, run as run_mod, schedule as schedule_mod)
-from .models import Posting, Status, Track, TransitionError, slugify
+from .models import Status, Track, TransitionError
 from .parse import parse as parse_jd
-from .profile import ASK, Profile, ProfileError, data_dir
+from .profile import Profile, ProfileError, data_dir
 
 app = typer.Typer(
     add_completion=False,
@@ -97,13 +96,6 @@ def _deadline_text(row) -> Text:
     style = "bold red" if left <= 3 else "yellow" if left <= 7 else ""
     suffix = f"  {left}d" if left >= 0 else f"  {-left}d ago"
     return Text(f"{d.isoformat()}{suffix}", style=style)
-
-
-def _print_lint(artifacts) -> None:
-    for error in artifacts.lint.errors:
-        console.print(f"  [bold red]lint[/] {error}")
-    for warning in artifacts.lint.warnings + artifacts.warnings:
-        console.print(f"  [yellow]note[/] {warning}")
 
 
 def _open_path(path: Path) -> None:
@@ -717,12 +709,23 @@ def mark(slug: str, status: str, note: Optional[str] = typer.Option(None, "--not
 
 
 @app.command()
-def status(all_rows: bool = typer.Option(False, "--all", help="Include closed applications.")) -> None:
+def status(
+    all_rows: bool = typer.Option(False, "--all", help="Include closed applications."),
+    track: Optional[str] = typer.Option(
+        None, "--track", help="Only one track: quant, banking, allocator or corporate."),
+) -> None:
     """The pipeline, deadline first."""
     conn = _conn()
     rows = db.rows(conn)
     if not all_rows:
-        rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")]
+        rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")
+                and not digest_mod.screened_out(r)]
+    if track:
+        try:
+            wanted = Track.parse(track).value
+        except ValueError as exc:
+            _fail(str(exc))
+        rows = [r for r in rows if r.posting.track == wanted]
     if not rows:
         console.print("[dim]nothing in the pipeline. `apply add --clipboard` to start.[/]")
         return
@@ -794,12 +797,32 @@ def fields(slug: str, plain: bool = typer.Option(False, "--plain", help="label=v
 @app.command()
 def followup(
     slug: str,
-    action: str = typer.Argument(..., help="What to do."),
+    action: Optional[str] = typer.Argument(None, help="What to do, e.g. 'email the recruiter'."),
     days: int = typer.Option(7, "--in", help="Days from today."),
+    done: bool = typer.Option(False, "--done", help="Mark this posting's open follow-ups done."),
 ) -> None:
-    """Queue a follow-up."""
+    """Queue a follow-up, or mark one done.
+
+    `apply submit` queues one automatically for 14 days out. Without --done a
+    reminder stays in the digest until it is dealt with, which is the point —
+    but it has to be possible to deal with it.
+    """
     conn = _conn()
     row = _row(conn, slug)
+    if done:
+        pending = db.followups(conn, row.application.id)
+        if not pending:
+            console.print(f"[dim]no open follow-ups for `{slug}`.[/]")
+            return
+        for item in pending:
+            db.complete_followup(conn, item.id)
+            console.print(f"[green]✓[/] done: {item.due_on}  {item.action}")
+        db.add_event(conn, row.application.id, "note",
+                     f"{len(pending)} follow-up(s) marked done")
+        return
+    if not action:
+        _fail("say what the follow-up is, e.g. apply followup <slug> \"email the recruiter\" "
+              "— or pass --done to clear the open ones.")
     due = _dt.date.today() + _dt.timedelta(days=days)
     db.add_followup(conn, row.application.id, due, action)
     console.print(f"[green]✓[/] {due}: {action}")
@@ -831,7 +854,10 @@ def discover(
     console.print(
         f"\n[dim]{result.fetched} fetched · {result.unique} unique · "
         f"{result.already_known} already known · {result.hydrated} hydrated · "
-        f"{result.rejected} rejected[/]\n"
+        f"{result.rejected} rejected"
+        + (f" · {result.deferred} waiting for a later run (--hydrate raises the budget)"
+           if result.deferred else "")
+        + "[/]\n"
     )
 
     if show_rejects and result.rejections:
@@ -872,6 +898,40 @@ def discover(
         f"posting{'' if len(result.created) == 1 else 's'}. "
         f"Next: [bold]apply status[/], then [bold]apply gen <slug>[/]."
     )
+
+
+@app.command()
+def rescore(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would change; write nothing."),
+) -> None:
+    """Run the free gate again over discovered postings still in draft.
+
+    For after the gate or the registry changes. A draft it now rejects leaves
+    the pipeline but stays in the database with its reason (`apply status
+    --all` shows it). Postings you added by hand, and anything with a letter
+    already written, are never touched.
+    """
+    conn = _conn()
+    changes = discover_mod.rescore(conn, preferences=_profile().search_preferences,
+                                   dry_run=dry_run)
+    if not changes:
+        console.print("[dim]nothing changed.[/]")
+        return
+    table = Table(box=None, header_style="dim", padding=(0, 2))
+    for column in ("before", "after", "company", "role", "why"):
+        table.add_column(column)
+    for c in sorted(changes, key=lambda c: (c.after.verdict.value != "reject", c.company, c.role)):
+        colour = {"pursue": "green", "maybe": "yellow"}.get(c.after.verdict.value, "red")
+        table.add_row(
+            f"{c.before[1] or '—'} {c.before[0] if c.before[0] is not None else ''}",
+            Text(f"{c.after.verdict.value} {c.after.value}", style=colour),
+            c.company, Text(c.role[:44], overflow="ellipsis"),
+            Text("; ".join(c.after.reasons)[:60], style="dim"),
+        )
+    console.print(table)
+    dropped = sum(1 for c in changes if c.after.verdict.value == "reject")
+    verb = "would change" if dry_run else "changed"
+    console.print(f"\n{len(changes)} {verb} · {dropped} screened out of the pipeline")
 
 
 @app.command()
@@ -1200,11 +1260,13 @@ def describe(
     posting.location = posting.location or find_location(text)
 
     before = (posting.score, posting.score_verdict)
-    verdict = score_posting(RawPosting(
+    raw = RawPosting(
         employer=posting.company, title=posting.role, url=posting.source_url or "",
         source=posting.source or "manual", location=posting.location,
         description=text, employer_priority=posting.priority,
-    ), profile.search_preferences)
+    )
+    discover_mod.Aliases(discover_mod.load_employers()).adopt(raw)   # the firm's own rules
+    verdict = score_posting(raw, profile.search_preferences)
     posting.score, posting.score_verdict = verdict.value, verdict.verdict.value
     posting.score_reasons = "; ".join(verdict.reasons)
     posting.track = verdict.track
@@ -1291,17 +1353,29 @@ def targets() -> None:
     for e in sorted(employers, key=lambda x: (x.get("priority", 3), x["name"])):
         table.add_row(
             str(e.get("priority", 3)), e["name"], e.get("ats", "?"),
-            e.get("board") or f"{e.get('tenant','?')}/{e.get('site','?')}",
+            _board_label(e),
             ", ".join(e.get("tracks") or []) or "—",
         )
     console.print(table)
+
+
+def _board_label(e: dict) -> str:
+    if e.get("board"):
+        return e["board"]
+    if e.get("url"):
+        return e["url"].split("://", 1)[-1]
+    if e.get("tenant"):
+        return f"{e['tenant']}/{e.get('site', '?')}"
+    if e.get("host"):
+        return f"{e['host'].split('.', 1)[0]}/{e.get('site', '?')}"
+    return "?"
 
 
 @app.command()
 def seed() -> None:
     """Load the two seed postings so the pipeline has real data on day one."""
     conn = _conn()
-    fixtures = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+    fixtures = Path(__file__).resolve().parents[2] / "data" / "examples"
     wanted = {
         "blackrock.txt": ("blackrock-analyst-2027", 1),
         "vcimco.txt": ("vcimco-investment-intern-2027", 1),

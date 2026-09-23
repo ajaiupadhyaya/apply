@@ -46,6 +46,19 @@ class Refused(LLMUnavailable):
     """The request was declined even after the server-side fallback."""
 
 
+class Truncated(LLMUnavailable):
+    """The response stopped before its structure closed, and was billed anyway.
+
+    Carries a pessimistic `usage` — the whole output allowance — so the budget
+    ledger records a cost for a call that returned nothing usable, rather than
+    none at all.
+    """
+
+    def __init__(self, message: str, usage: "Usage"):
+        super().__init__(message)
+        self.usage = usage
+
+
 # ------------------------------------------------------------------ schemas
 
 
@@ -238,11 +251,14 @@ def call(
     schema: type[T],
     model: str = DEFAULT_MODEL,
     effort: str = "high",
-    max_tokens: int = 16000,
+    # Thinking bills against this too. 16,000 cut a long package off mid-JSON;
+    # much past 21,000 the SDK insists on streaming for a request this size.
+    max_tokens: int = 20000,
 ) -> tuple[T, Usage]:
     """One structured request. Raises LLMUnavailable or Refused; never returns
     a half-parsed result."""
     import anthropic
+    import pydantic
 
     client = _client()
     try:
@@ -266,6 +282,15 @@ def call(
         raise LLMUnavailable("could not reach the API (network).") from exc
     except anthropic.APIStatusError as exc:
         raise LLMUnavailable(f"API error {exc.status_code}: {exc.message}") from exc
+    except pydantic.ValidationError as exc:
+        # The SDK parses while it builds the response, so output cut off at
+        # max_tokens surfaces here as invalid JSON, before stop_reason can be read.
+        chars = sum(len(b.get("text", "")) for b in system) + len(user)
+        raise Truncated(
+            "the response was cut off before it finished (it ran out of tokens); "
+            "try again, or lower --effort.",
+            Usage(model=model, input_tokens=int(chars / 3.2), output_tokens=max_tokens),
+        ) from exc
 
     # A refusal is HTTP 200 with no usable content — check before reading it.
     if response.stop_reason == "refusal":

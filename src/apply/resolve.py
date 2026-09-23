@@ -10,9 +10,9 @@ either link to their board directly or embed its host in a script tag. The ones
 that render entirely in JavaScript defeat this, and those are reported honestly
 rather than guessed at.
 
-Resolved live on 2026-09-20: Capital One (Workday, capitalone/Capital_One),
-Harris Williams (Workday, on PNC's tenant — pnc/HarrisWilliams), and the Federal
-Reserve (Workday, rb/FRS).
+Worth knowing when a guess fails: a subsidiary often sits on its parent's
+Workday tenant rather than its own, so the tenant in the URL is the parent's
+name. The careers page carries the right one; guessing does not.
 """
 
 from __future__ import annotations
@@ -34,6 +34,8 @@ FINGERPRINTS: list[tuple[str, str]] = [
     ("greenhouse", r"boards-api\.greenhouse\.io/v1/boards/([a-z0-9_-]+)"),
     ("lever", r"jobs\.lever\.co/([a-z0-9-]+)"),
     ("ashby", r"jobs\.ashbyhq\.com/([a-z0-9-]+)"),
+    ("oracle", r"([a-z0-9-]+\.fa(?:\.[a-z0-9-]+)?\.oraclecloud\.com)/hcmUI/CandidateExperience/(?:[a-z-]+/)?sites/(CX_\d+)"),
+    ("eightfold", r"([a-z0-9-]+)\.eightfold\.ai"),
     # Recognised but not supported: reporting them beats silently finding nothing.
     ("icims", r"([a-z0-9-]+)\.icims\.com"),
     ("smartrecruiters", r"careers\.smartrecruiters\.com/([A-Za-z0-9]+)"),
@@ -42,7 +44,10 @@ FINGERPRINTS: list[tuple[str, str]] = [
     ("taleo", r"([a-z0-9-]+)\.taleo\.net"),
 ]
 
-SUPPORTED = {"workday", "greenhouse", "lever", "ashby"}
+SUPPORTED = {"workday", "greenhouse", "lever", "ashby", "oracle", "eightfold"}
+
+#: Subdomains an Eightfold careers page loads that are not a firm's board.
+NOT_A_BOARD = {"static", "cdn", "assets", "app", "www", "api", "help", "docs", "media"}
 
 
 @dataclass(slots=True)
@@ -60,6 +65,11 @@ class Candidate:
         if self.ats == "workday":
             lines.append('    search: ["analyst", "intern", "2027"]')
             lines.append("    max_results: 120")
+        elif self.ats == "oracle":
+            lines.append("    max_results: 1000")
+        elif self.ats == "eightfold":
+            lines.append('    search: ["analyst", "intern", "2027"]')
+            lines.append("    max_results: 300")
         lines.append(f"    priority: {priority}")
         return "\n".join(lines)
 
@@ -82,6 +92,15 @@ def candidates(html: str) -> list[Candidate]:
                     continue
                 config = {"host": f"{tenant}.{wd}.myworkdayjobs.com",
                           "tenant": tenant, "site": site}
+            elif ats == "oracle":
+                host, site = match.groups()
+                config = {"host": host, "site": site}
+            elif ats == "eightfold":
+                # A careers page also loads Eightfold's own assets; those
+                # subdomains are the vendor's, not this firm's board.
+                if match.group(1) in NOT_A_BOARD:
+                    continue
+                config = {"host": f"{match.group(1)}.eightfold.ai"}
             else:
                 config = {"board": match.group(1)}
             key = f"{ats}:{'/'.join(str(v) for v in config.values())}"

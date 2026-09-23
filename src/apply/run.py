@@ -113,7 +113,8 @@ def run(
             report.steps.append(Step(
                 "discover", True,
                 f"{found.fetched} fetched, {found.rejected} rejected, "
-                f"{len(found.created)} filed"))
+                f"{len(found.created)} filed"
+                + (f", {found.deferred} deferred to the next run" if found.deferred else "")))
         except Exception as exc:                        # noqa: BLE001
             report.steps.append(Step("discover", False, f"{type(exc).__name__}: {exc}"))
             report.errors.append(traceback.format_exc(limit=2))

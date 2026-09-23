@@ -34,3 +34,6 @@ data/employers.yaml
 # Context documents may hold personal material (notes, a bio, drafts).
 data/context/*
 !data/context/README.md
+
+# The alert-mail drop file holds real email content. Local only.
+data/alerts.json

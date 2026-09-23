@@ -1,9 +1,10 @@
 """Adapters for the public job-board APIs.
 
 Greenhouse, Lever and Ashby publish documented, unauthenticated endpoints that
-serve exactly the data their public careers pages show. Workday does not
-document one, but every Workday careers site is a single-page app that calls its
-own `/wday/cxs/` JSON endpoint — the same public data, one layer down.
+serve exactly the data their public careers pages show. Workday and Oracle
+Recruiting Cloud do not document one, but each of their careers sites is a
+single-page app that calls its own JSON endpoint — the same public data, one
+layer down.
 
 Measured coverage across the target list (2026-09-20): Jane Street, IMC and
 Optiver answer on Greenhouse; BlackRock answers on Workday. The banks and
@@ -16,7 +17,9 @@ from __future__ import annotations
 
 import httpx
 
-from .base import RawPosting, SourceError, parse_date, parse_relative, strip_html
+from .base import (
+    RawPosting, SourceError, parse_date, parse_local_date, parse_relative, strip_html,
+)
 
 TIMEOUT = httpx.Timeout(20.0, connect=10.0)
 HEADERS = {
@@ -30,10 +33,33 @@ def _client() -> httpx.Client:
     return httpx.Client(timeout=TIMEOUT, headers=HEADERS, follow_redirects=True)
 
 
+def _get(client: httpx.Client, url: str, *, params: dict | None = None,
+         attempts: int = 3, backoff: float = 2.0) -> httpx.Response:
+    """A GET that survives one dropped connection.
+
+    A board fetched 200 postings at a time is two dozen requests, and one
+    transient timeout in the middle should not cost the other twenty-five. Only
+    transport failures are retried; an HTTP error status is an answer.
+    """
+    import time
+
+    for attempt in range(attempts):
+        try:
+            response = client.get(url, params=params)
+            response.raise_for_status()
+            return response
+        except httpx.TransportError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(backoff * (attempt + 1))
+    raise AssertionError("unreachable")
+
+
 def _common(config: dict) -> dict:
     return {
         "employer_priority": int(config.get("priority", 3)),
         "employer_tracks": tuple(config.get("tracks") or ()),
+        "employer_senior_grades": tuple(config.get("senior_grades") or ()),
     }
 
 
@@ -171,6 +197,21 @@ class Ashby:
 # ---------------------------------------------------------------- workday
 
 
+def _is_a_place(value: str) -> bool:
+    """Whether a Workday bullet is a location rather than a requisition id.
+
+    A tenant decides for itself what goes in `bulletFields`, and they do not
+    agree: one sends the req id alone, one sends the id and a department, and
+    one — Raymond James — omits `locationsText` entirely and puts the place
+    first. Read positionally, that place became the posting's id, so every row
+    deduplicated against the wrong key and the geography gate saw nothing.
+
+    A place has a separator with spaces around it; a req id ("JR-0000122333",
+    "R-0012229", "45027") never does.
+    """
+    return ", " in value or " - " in value
+
+
 class Workday:
     """The endpoint a Workday careers page calls to render itself.
 
@@ -214,6 +255,9 @@ class Workday:
                             path = job.get("externalPath", "")
                             if not path or path in seen:
                                 continue
+                            bullets = [str(b) for b in (job.get("bulletFields") or []) if b]
+                            places = [b for b in bullets if _is_a_place(b)]
+                            ids = [b for b in bullets if not _is_a_place(b)]
                             seen[path] = RawPosting(
                                 employer=config["name"],
                                 title=job.get("title", ""),
@@ -221,8 +265,8 @@ class Workday:
                                     if config.get("site_url")
                                     else f"https://{config['host']}{path}",
                                 source=self.name,
-                                external_id=job.get("bulletFields", [path])[0] or path,
-                                location=job.get("locationsText"),
+                                external_id=ids[0] if ids else path,
+                                location=job.get("locationsText") or (places[0] if places else None),
                                 # "Posted 30+ Days Ago" is a bucket, not a date.
                                 posted_at=parse_relative(job.get("postedOn")),
                                 raw={**job, "_path": path},
@@ -255,6 +299,119 @@ class Workday:
         return posting
 
 
+# ----------------------------------------------------------------- oracle
+
+
+class Oracle:
+    """Oracle Recruiting Cloud: the REST resource its Candidate Experience
+    site calls to render itself.
+
+    One firm's whole board, 200 postings a request. The listing carries a title,
+    locations and a one-line summary; the description and the application
+    deadline (`ExternalPostedEndDate`, a real close time) need a second request
+    per posting, so they wait for hydration like Workday's.
+
+    Config: `host` (<tenant>.fa.<region>.oraclecloud.com), `site` (CX_1001 or
+    similar), and optionally `location_id` (a location facet id, to skip
+    whole countries the scorer would reject anyway), `search` (keywords; empty
+    means everything) and `max_results`.
+    """
+
+    name = "oracle"
+    PAGE = 200
+    RESOURCE = "hcmRestApi/resources/latest"
+
+    def _base(self, config: dict) -> str:
+        return f"https://{config['host'].rstrip('/')}/{self.RESOURCE}"
+
+    def job_url(self, config: dict, req_id: str) -> str:
+        return (f"https://{config['host'].rstrip('/')}/hcmUI/CandidateExperience/en/"
+                f"sites/{config['site']}/job/{req_id}")
+
+    def _finder(self, config: dict, offset: int, term: str, size: int) -> str:
+        parts = [f"siteNumber={config['site']}", f"limit={size}", f"offset={offset}",
+                 "sortBy=POSTING_DATES_DESC"]
+        if config.get("location_id"):
+            parts.append(f"locationId={config['location_id']}")
+        if term:
+            parts.append(f'keyword="{term}"')
+        return "findReqs;" + ",".join(parts)
+
+    def fetch(self, config: dict) -> list[RawPosting]:
+        url = f"{self._base(config)}/recruitingCEJobRequisitions"
+        limit = int(config.get("max_results", 100))
+        seen: dict[str, RawPosting] = {}
+        try:
+            with _client() as client:
+                for term in config.get("search") or [""]:
+                    offset = 0
+                    while offset < limit:
+                        # The last request asks only for what is left under the cap.
+                        size = min(self.PAGE, limit - offset)
+                        response = _get(client, url, params={
+                            "onlyData": "true",
+                            "expand": "requisitionList.secondaryLocations",
+                            "finder": self._finder(config, offset, term, size),
+                        })
+                        items = response.json().get("items") or [{}]
+                        page = items[0].get("requisitionList") or []
+                        for job in page[:size]:
+                            req_id = str(job.get("Id", ""))
+                            if req_id and req_id not in seen:
+                                seen[req_id] = self._posting(job, config)
+                        offset += size
+                        if not page or offset >= int(items[0].get("TotalJobsCount") or 0):
+                            break
+        except (httpx.HTTPError, ValueError) as exc:
+            raise SourceError(f"oracle/{config.get('host')}: {exc}") from exc
+        return list(seen.values())
+
+    def _posting(self, job: dict, config: dict) -> RawPosting:
+        req_id = str(job.get("Id", ""))
+        places = [job.get("PrimaryLocation")] + [
+            s.get("Name") for s in (job.get("secondaryLocations") or [])]
+        summary = "\n\n".join(strip_html(job.get(k) or "") for k in (
+            "ShortDescriptionStr", "ExternalResponsibilitiesStr", "ExternalQualificationsStr"))
+        return RawPosting(
+            employer=config["name"],
+            title=job.get("Title", ""),
+            url=self.job_url(config, req_id),
+            source=self.name,
+            external_id=req_id,
+            location="; ".join(p for p in places if p) or None,
+            description=summary.strip(),
+            posted_at=parse_date(job.get("PostedDate")),
+            deadline=parse_local_date(job.get("PostingEndDate")),
+            raw=job,
+            **_common(config),
+        )
+
+    def hydrate(self, posting: RawPosting, config: dict) -> RawPosting:
+        try:
+            with _client() as client:
+                response = _get(
+                    client, f"{self._base(config)}/recruitingCEJobRequisitionDetails",
+                    params={"onlyData": "true", "expand": "all",
+                            "finder": f'ById;Id="{posting.external_id}",siteNumber={config["site"]}'},
+                )
+                info = (response.json().get("items") or [{}])[0]
+        except (httpx.HTTPError, ValueError) as exc:
+            raise SourceError(f"oracle hydrate {posting.external_id}: {exc}") from exc
+
+        # Every section, in the order the page shows them. The firm-wide "about
+        # us" goes last: it is boilerplate, but it is the source text.
+        sections = [strip_html(info.get(k) or "") for k in (
+            "ExternalDescriptionStr", "ExternalResponsibilitiesStr",
+            "ExternalQualificationsStr", "OrganizationDescriptionStr",
+            "CorporateDescriptionStr")]
+        body = "\n\n".join(s for s in sections if s)
+        if body:
+            posting.description = body
+        posting.posted_at = parse_date(info.get("ExternalPostedStartDate")) or posting.posted_at
+        posting.deadline = parse_local_date(info.get("ExternalPostedEndDate")) or posting.deadline
+        return posting
+
+
 ADAPTERS: dict[str, object] = {
-    a.name: a() for a in (Greenhouse, Lever, Ashby, Workday)
+    a.name: a() for a in (Greenhouse, Lever, Ashby, Workday, Oracle)
 }

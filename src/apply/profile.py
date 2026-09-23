@@ -225,12 +225,17 @@ class Profile:
 
     @property
     def class_standing(self) -> str:
-        """freshman | sophomore | junior | senior | graduated.
+        """freshman | sophomore | junior | senior | graduated, as of today.
 
         Derived from the graduation date rather than stored, because the stored
         version is wrong within a year and nobody remembers to update it.
         """
-        left = self.years_to_graduation()
+        return self.standing_on()
+
+    def standing_on(self, today: _dt.date | None = None) -> str:
+        """Class standing on a given date. Tests pin the date, so the suite does
+        not start failing the day the profile's owner graduates."""
+        left = self.years_to_graduation(today)
         if left <= 0:
             return "graduated"
         if left <= 1:
@@ -291,6 +296,7 @@ class Profile:
         year, and nobody remembers to update it.
         """
         return {"class_standing": self.class_standing,
+                "graduation": self.grad_expected,
                 **(self.raw.get("search") or {})}
 
     @property
