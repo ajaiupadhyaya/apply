@@ -187,9 +187,10 @@ def _commands(help_text: str) -> set[str]:
     A command name starts its row; a wrapped description line is indented under
     the description column, so the leading-space count tells them apart.
     """
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", help_text)      # CI colours it; a laptop does not
     names = {match.group(1)
              for match in (re.match(r"^[│|]?\s{1,3}([a-z][a-z0-9-]*)\s{2,}\S", line)
-                           for line in help_text.splitlines())
+                           for line in plain.splitlines())
              if match}
     assert len(names) > 20, f"parsed only {sorted(names)} out of --help"
     return names

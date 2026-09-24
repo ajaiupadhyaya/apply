@@ -10,10 +10,22 @@ for it.
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
+import os
 
-import pytest
+# Before anything imports apply.cli, which builds its rich Console at import
+# time and reads the environment exactly once. CI is not a terminal, but it sets
+# CI=true, which rich reads as "colour is fine" — so a test that parses CLI
+# output sees ANSI escapes on the runner and none on a laptop, and fails only
+# there. A fixture cannot fix this: by then the Console exists.
+os.environ["NO_COLOR"] = "1"
+os.environ["TERM"] = "dumb"
+os.environ["COLUMNS"] = "200"
+os.environ.pop("FORCE_COLOR", None)
+
+import shutil                                                        # noqa: E402
+from pathlib import Path                                             # noqa: E402
+
+import pytest                                                        # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURES = Path(__file__).parent / "fixtures"
