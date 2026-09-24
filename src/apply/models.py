@@ -213,7 +213,7 @@ def slugify(company: str, role: str, year: int | str | None = None) -> str:
         if word.strip(".,()") not in filler
         and (slugged := _SLUG_STRIP.sub("-", word).strip("-"))
     ]
-    # Don't say the year twice: "blackrock-2027-analyst-2027" reads like a bug.
+    # Don't say the year twice: "quillon-2027-analyst-2027" reads like a bug.
     year_s = str(year) if year else None
     if year_s:
         words = [w for w in words if w != year_s]

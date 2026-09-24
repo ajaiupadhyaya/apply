@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,6 +37,20 @@ def out_dir() -> Path:
     """Where generated artifacts land. Overridable so tests never touch out/."""
     env = os.environ.get("APPLY_OUT_DIR")
     return Path(env).expanduser() if env else repo_root() / "out"
+
+
+def tex_hint() -> str:
+    """How to get pdflatex, on the platform the reader is actually on.
+
+    One string, so `apply doctor` and a failed compile agree, and so neither
+    tells a Linux user to run Homebrew.
+    """
+    if sys.platform == "darwin":
+        return "brew install --cask mactex-no-gui        # or BasicTeX"
+    if sys.platform.startswith("linux"):
+        return ("sudo apt install texlive-latex-recommended texlive-fonts-recommended"
+                "   # or your distribution's texlive")
+    return "install a TeX distribution that provides pdflatex"
 
 
 # ------------------------------------------------------------- latex escape
@@ -168,7 +183,7 @@ class Anchor:
     def with_article(self) -> str:
         """The form that reads as English inside a sentence.
 
-        "Aladdin Engineering" is a name and stands alone. "Investment Committee"
+        "Sextant Engineering" is a name and stands alone. "Investment Committee"
         is a department, and "because of Investment Committee" is not a sentence
         anyone writes, so it gets its article back.
         """
@@ -650,8 +665,8 @@ def compile_pdf(tex_path: Path, *, max_pages: int | None = 1) -> Path:
     """
     if shutil.which("pdflatex") is None:
         raise CompileError(
-            "pdflatex is not on PATH. Install MacTeX (`brew install --cask mactex-no-gui`) "
-            "or BasicTeX, then reopen the shell."
+            f"pdflatex is not on PATH. Install a TeX distribution, then reopen the "
+            f"shell:\n      {tex_hint()}"
         )
     tex_path = Path(tex_path)
     with tempfile.TemporaryDirectory(prefix="apply-tex-") as tmp:
@@ -855,6 +870,22 @@ def build(
     from . import fieldpack as fieldpack_mod
     from . import llm as llm_mod
     from . import writer
+
+    # Before anything is written, let alone paid for. The lint catches an ASK
+    # that reaches the *letter*, because the letter is prose Claude wrote; this
+    # catches one that reaches the resume, which is rendered straight out of the
+    # profile and so cannot be caught by reading the draft. A wizard that never
+    # asked about your last job leaves experience[0] as four ASKs, and the PDF
+    # printed them: "ASK, ASK — Present" under EXPERIENCE.
+    gaps = profile.document_gaps()
+    if gaps:
+        raise ValueError(
+            "these profile values are still ASK and a document would print the "
+            "word: " + ", ".join(gaps) + ".\n"
+            "  Write them into data/profile.yaml, or delete the entry that "
+            "holds them — an experience block you have not written yet is "
+            "better absent than printed as ASK. `apply doctor` lists them."
+        )
 
     directory = out_dir() / posting.slug
     directory.mkdir(parents=True, exist_ok=True)

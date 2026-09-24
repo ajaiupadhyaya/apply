@@ -20,6 +20,46 @@ import yaml
 #: Sentinel for a value the owner still has to supply.
 ASK = "ASK"
 
+#: Dotted paths, with every list index written `[]`, for the values a command
+#: cannot run without. Only one qualifies: class standing and the eligibility
+#: window a posting states are both derived from the graduation month, so a gate
+#: run raises without it rather than scoring anything wrong.
+BLOCKING = ("education[].grad_expected",)
+
+#: …and the values a *document* prints verbatim. One of these left as ASK does
+#: not stop a command; it puts the literal word ASK in front of an employer, so
+#: `apply gen` refuses to build rather than shipping it. Everything outside both
+#: lists is a gap with somewhere else to go: a missing start date is dropped from
+#: the resume line rather than printed, and phone, address and GPA never leave
+#: this machine at all.
+REACHES_A_DOCUMENT = (
+    "identity.legal_first", "identity.legal_last", "identity.preferred_name",
+    "identity.email", "identity.location",
+    "education[].institution", "education[].degree", "education[].grad_expected",
+    "experience[].org", "experience[].title", "experience[].location",
+    "experience[].bullets",
+    "projects", "skills",
+)
+
+#: How a written graduation month has to look, and the sentence that says so.
+GRAD_FORMAT = re.compile(r"^(\d{4})-(\d{1,2})$")
+GRAD_SHAPE = "a four-digit year and a month, like 2027-05"
+
+_INDEX = re.compile(r"\[\d+\]")
+
+
+def _generalise(path: str) -> str:
+    """`education[0].grad_expected` → `education[].grad_expected`."""
+    return _INDEX.sub("[]", path)
+
+
+def _under(path: str, roots: tuple[str, ...]) -> bool:
+    """True if this dotted path is one of `roots`, or sits inside one."""
+    general = _generalise(path)
+    return any(general == root or general.startswith(root + ".")
+               or general.startswith(root + "[")
+               for root in roots)
+
 _MONTHS = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
@@ -103,7 +143,7 @@ class Profile:
         private = directory / "profile.private.yaml"
         if not public.exists():
             raise ProfileError(
-                f"no profile at {public}. Run `apply init` to scaffold one."
+                f"no profile at {public}. Run `apply setup` to write one."
             )
         sources = [public]
         raw = yaml.safe_load(public.read_text()) or {}
@@ -117,6 +157,15 @@ class Profile:
     def unresolved(self) -> list[str]:
         """Dotted paths still holding the literal ASK."""
         return sorted(_walk_ask(self.raw))
+
+    def blocking(self) -> list[str]:
+        """Unresolved values that stop a command, not just a document."""
+        return [p for p in self.unresolved() if _under(p, BLOCKING)]
+
+    def document_gaps(self) -> list[str]:
+        """Unresolved values a letter or a resume would print as the word ASK."""
+        return [p for p in self.unresolved()
+                if _under(p, REACHES_A_DOCUMENT) and not _under(p, BLOCKING)]
 
     def require_resolved(self, *paths: str) -> None:
         missing = [p for p in self.unresolved() if any(p.startswith(w) for w in paths)]
@@ -144,7 +193,7 @@ class Profile:
 
     @property
     def file_name(self) -> str:
-        """Underscored form for PDF filenames: AJ_Upadhyaya."""
+        """Underscored form for PDF filenames: Rae_Mercer."""
         return re.sub(r"\s+", "_", self.display_name)
 
     @property
@@ -188,17 +237,32 @@ class Profile:
         v = (self.raw.get("education_private") or {}).get("gpa")
         return None if v in (None, ASK) else str(v)
 
+    def _grad_error(self, problem: str) -> ProfileError:
+        """One sentence that names the file, the key, and why it matters.
+
+        This value is load-bearing in a way none of the other ASKs are — the
+        class-standing check and the graduation-window check both read it — so
+        the failure has to say what to write, not just that something is wrong.
+        """
+        where = self.sources[0].name if self.sources else "profile.yaml"
+        return ProfileError(
+            f"{problem} Write it in {where} as education[0].grad_expected: "
+            f"{GRAD_SHAPE}. The gate derives your class standing and the "
+            f"graduation window a posting asks for from that one value, so it "
+            f"cannot run without it. `apply setup --force` will ask again."
+        )
+
     @cached_property
     def grad_expected(self) -> tuple[int, int]:
         """(year, month) from the authoritative grad_expected field."""
         raw = self.current_education.get("grad_expected")
         if raw is None:
-            raise ProfileError("education.grad_expected is missing; it is authoritative")
+            raise self._grad_error("No graduation month on file.")
         if isinstance(raw, _dt.date):
             return raw.year, raw.month
         m = re.match(r"^(\d{4})-(\d{1,2})", str(raw))
         if not m:
-            raise ProfileError(f"cannot read grad_expected {raw!r}; expected YYYY-MM")
+            raise self._grad_error(f"Cannot read the graduation month {raw!r}.")
         return int(m.group(1)), int(m.group(2))
 
     @property

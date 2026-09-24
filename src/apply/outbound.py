@@ -61,7 +61,7 @@ ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
     "apply.cli": (
         ("*",),
         "`apply add --url` fetches one careers page the owner named. Refuses "
-        "Handshake hosts outright.",
+        "Handshake, LinkedIn and Indeed hosts outright.",
     ),
 }
 

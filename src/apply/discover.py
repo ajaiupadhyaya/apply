@@ -489,9 +489,9 @@ def fetch_imap(
 ) -> list[Message]:
     """Read alert mail over IMAP, for runs with no human and no connector.
 
-    Gmail needs an app password here, not the account password. If VCU's
-    Workspace forbids app passwords this raises, and the file-drop path is the
-    fallback.
+    Gmail needs an app password here, not the account password. A university
+    Workspace that forbids app passwords makes this raise, and the file-drop
+    path is the fallback.
     """
     import email
     import imaplib

@@ -1,6 +1,17 @@
 # Private facts. Never commit.
 data/profile.private.yaml
 
+# Your profile is yours. The repository ships data/profile.example.yaml — a
+# person who does not exist — and `apply setup` writes this file from it.
+data/profile.yaml
+
+# Your overrides of the relevance gate's vocabulary. The defaults ship inside
+# the package; this file is one person's search, so it stays on their machine.
+data/search.yaml
+
+# The pause switch: `touch data/HALT` stops tonight's run.
+data/HALT
+
 # Local state and generated artifacts.
 data/apply.db
 data/apply.db-journal
@@ -37,3 +48,14 @@ data/context/*
 
 # The alert-mail drop file holds real email content. Local only.
 data/alerts.json
+
+# Real postings: the employer wrote them, and which firms they came from is the
+# owner's search strategy. Both files are written by tools/freeze_scores.py from
+# a live database and stay on the machine that has one. The committed corpus is
+# tests/fixtures/gate_corpus.json, which is synthesised from the gate's own
+# vocabulary and has nothing in it to keep out.
+tests/fixtures/score_corpus.local.json
+tests/fixtures/score_corpus.json
+
+# Review reports quote real values while they are being fixed; they stay local.
+.reviews/

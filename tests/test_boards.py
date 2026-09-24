@@ -457,7 +457,7 @@ def test_a_tenant_that_states_its_locations_is_read_as_before(monkeypatch):
 
 
 def test_a_tenant_that_hides_the_location_in_its_bullets_is_still_placed(monkeypatch):
-    """Raymond James omits locationsText and puts the place in bulletFields.
+    """Some tenants omit locationsText and put the place in bulletFields.
 
     Read positionally, the place became the posting's id — so every row
     deduplicated against the wrong key and the geography gate saw nothing.
@@ -472,7 +472,7 @@ def test_a_tenant_that_hides_the_location_in_its_bullets_is_still_placed(monkeyp
 
 
 def test_a_bullet_that_is_neither_a_place_nor_an_id_is_not_mistaken_for_one(monkeypatch):
-    """Blackstone's second bullet is a department."""
+    """On some tenants the second bullet is a department, not a place."""
     mock(monkeypatch, workday_list([posting(locationsText="New York",
                                             bulletFields=["45027", "Finance"])]))
 
@@ -482,7 +482,7 @@ def test_a_bullet_that_is_neither_a_place_nor_an_id_is_not_mistaken_for_one(monk
 
 
 def test_a_tenant_with_no_bullets_at_all_falls_back_to_the_path(monkeypatch):
-    """Golub Capital sends no bulletFields; the path is the only stable id."""
+    """A tenant that sends no bulletFields: the path is the only stable id."""
     mock(monkeypatch, workday_list([posting(locationsText="2 Locations")]))
 
     [got] = ADAPTERS["workday"].fetch(WORKDAY)

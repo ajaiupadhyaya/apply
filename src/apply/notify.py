@@ -3,7 +3,8 @@
 Three channels, in order of how much they intrude:
 
   file    out/LATEST_RUN.md, always written — the morning read
-  banner  a macOS notification, when something actually needs hands
+  banner  a desktop notification (osascript, or notify-send on Linux), when
+          something actually needs hands
   push    ntfy.sh, if a topic is configured, for when the laptop is shut
 
 A quiet run notifies nothing. A system that pings every morning to say it found
@@ -27,16 +28,27 @@ def write_summary(text: str, out_dir: Path) -> Path:
 
 
 def banner(title: str, message: str, *, sound: bool = False) -> bool:
-    """A macOS notification. Returns whether it was delivered."""
-    if sys.platform != "darwin" or not shutil.which("osascript"):
-        return False
+    """A desktop notification, on whichever desktop this is. Returns whether it
+    was delivered — a headless box has none, and that is not an error."""
     safe = message.replace('"', "'").replace("\\", "")[:240]
     safe_title = title.replace('"', "'")[:60]
-    script = f'display notification "{safe}" with title "{safe_title}"'
-    if sound:
-        script += ' sound name "Submarine"'
-    result = subprocess.run(["osascript", "-e", script], capture_output=True)
-    return result.returncode == 0
+
+    if sys.platform == "darwin" and shutil.which("osascript"):
+        script = f'display notification "{safe}" with title "{safe_title}"'
+        if sound:
+            script += ' sound name "Submarine"'
+        return subprocess.run(["osascript", "-e", script], capture_output=True).returncode == 0
+
+    # libnotify, the thing every Linux desktop environment listens to. The
+    # arguments are passed as a list, so nothing here goes through a shell.
+    if sys.platform.startswith("linux") and shutil.which("notify-send"):
+        argv = ["notify-send", "--app-name=apply"]
+        if sound:
+            argv.append("--urgency=critical")
+        result = subprocess.run([*argv, safe_title, safe], capture_output=True)
+        return result.returncode == 0
+
+    return False
 
 
 def push(topic: str, title: str, message: str, *, priority: str = "default") -> bool:

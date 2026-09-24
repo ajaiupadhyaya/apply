@@ -6,25 +6,31 @@ Recruiting Cloud do not document one, but each of their careers sites is a
 single-page app that calls its own JSON endpoint — the same public data, one
 layer down.
 
-Measured coverage across the target list (2026-09-20): Jane Street, IMC and
-Optiver answer on Greenhouse; BlackRock answers on Workday. The banks and
-insurers each need their tenant and site slug looked up once, by hand, and
+Which adapter a firm needs is a property of the firm, not of this module.
+Greenhouse, Lever and Ashby want one slug — the one already in their careers
+URL — and `apply resolve` reads it off the page. Workday and Oracle want a
+tenant and a site slug, which usually have to be looked up once, by hand, and
 written into employers.yaml. That is the whole maintenance burden: a line per
-employer, set once.
+employer, set once, and no credential anywhere.
 """
 
 from __future__ import annotations
 
 import httpx
 
+from .. import __version__
 from .base import (
     RawPosting, SourceError, parse_date, parse_local_date, parse_relative, strip_html,
 )
 
 TIMEOUT = httpx.Timeout(20.0, connect=10.0)
+#: Honest identification, and nobody's name. This reads public job boards on one
+#: person's behalf — but which person depends on who is running the clone, so
+#: the string says what the software is and how much traffic to expect, and
+#: leaves the operator out of it rather than claiming to be its author.
+USER_AGENT = f"apply/{__version__} (personal job-application tracker; one user)"
 HEADERS = {
-    # Honest identification. This reads public job boards on one person's behalf.
-    "User-Agent": "apply/0.2 (personal job tracker; one user; +https://github.com/ajaiupadhyaya)",
+    "User-Agent": USER_AGENT,
     "Accept": "application/json",
 }
 
@@ -202,9 +208,9 @@ def _is_a_place(value: str) -> bool:
 
     A tenant decides for itself what goes in `bulletFields`, and they do not
     agree: one sends the req id alone, one sends the id and a department, and
-    one — Raymond James — omits `locationsText` entirely and puts the place
-    first. Read positionally, that place became the posting's id, so every row
-    deduplicated against the wrong key and the geography gate saw nothing.
+    one omits `locationsText` entirely and puts the place first. Read
+    positionally, that place became the posting's id, so every row deduplicated
+    against the wrong key and the geography gate saw nothing.
 
     A place has a separator with spaces around it; a req id ("JR-0000122333",
     "R-0012229", "45027") never does.

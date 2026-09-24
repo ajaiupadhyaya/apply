@@ -1,13 +1,28 @@
 # APPLY — agent instructions
 
 ## This repository is public
-- Never commit personal data or strategy. These stay local and gitignored:
-  `data/profile.private.yaml`, `data/employers.yaml`, `data/alerts.json`,
-  `data/context/*`, `data/apply.db`, `out/`.
+- Never commit personal data or strategy. Everything a user writes for
+  themselves is gitignored and stays that way: `data/profile.yaml`,
+  `data/profile.private.yaml`, `data/employers.yaml`, `data/search.yaml`,
+  `data/alerts.json`, `data/context/*`, `data/apply.db`, `data/HALT`, `out/`.
+  `tests/test_fresh_clone.py` asserts the list; add to both or neither.
+- `data/profile.example.yaml` is the scaffold a fresh clone starts from. The
+  persona in it — Rae Mercer — is fictional and must stay fictional: no real
+  person's name, school, employer or link ever goes in that file, and
+  `tests/test_setup.py` checks it does not.
 - Example files (`*.example.yaml`) show the shape of a file, never its real
   contents. Use placeholder or clearly illustrative values.
+- `tests/fixtures/gate_corpus.json` is synthesised from
+  `src/apply/search.defaults.yaml` — invented firms, titles assembled from the
+  gate's own patterns — and frozen. Never edit it by hand and never derive it
+  from a real pipeline: rerun `tools/synthesize_corpus.py` and read the diff,
+  which is the list of verdicts your change moved. Anything made from real
+  postings (`tools/freeze_scores.py`) is gitignored and stays local.
 - A fixture made from real mail has every tracking parameter redacted —
   LinkedIn's links carry one-time sign-in tokens — and no third party's name.
+- The author's live `data/` and `out/` are not the repository's to change.
+  Read them if a figure needs recomputing (`tools/numbers.py` opens the
+  database read-only); never write to them.
 - Before committing, check the staged diff for all of the above.
 
 ## Never
@@ -16,8 +31,9 @@
   hosts are not employers, and the test suite fails on an undeclared one.
 - Scrape or authenticate against Handshake, LinkedIn or Indeed. Their postings
   arrive by email alert or by paste.
-- Store credentials, SSN, DOB, or bank details anywhere in this repo. Keys live
-  in the macOS Keychain and are read at call time.
+- Store credentials, SSN, DOB, or bank details anywhere in this repo. Keys are
+  looked up at call time by `apply.secrets.lookup` — the environment, then the
+  macOS Keychain, then a `keyring` backend — and nothing here writes one.
 - Promote an application to `ready` or `submitted` without an explicit human action.
 - Write a fact into a generated document that is not in the profile, the
   context documents, or the posting.

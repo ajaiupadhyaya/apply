@@ -70,14 +70,6 @@ CREATE TABLE IF NOT EXISTS event (
   detail         TEXT
 );
 
--- Reserved by the original data model; nothing reads or writes it yet.
-CREATE TABLE IF NOT EXISTS contact (
-  id         INTEGER PRIMARY KEY,
-  posting_id INTEGER REFERENCES posting(id) ON DELETE SET NULL,
-  name       TEXT, title TEXT, email TEXT, linkedin TEXT,
-  last_touch DATE, notes TEXT
-);
-
 CREATE TABLE IF NOT EXISTS followup (
   id             INTEGER PRIMARY KEY,
   application_id INTEGER REFERENCES application(id) ON DELETE CASCADE,
@@ -452,9 +444,6 @@ def followups(
 def complete_followup(conn: sqlite3.Connection, followup_id: int) -> None:
     with conn:
         conn.execute("UPDATE followup SET done = 1 WHERE id = ?", (followup_id,))
-
-
-# ---------------------------------------------------------------- contacts
 
 
 # -------------------------------------------------------------- pipeline

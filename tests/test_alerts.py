@@ -1,9 +1,12 @@
 """Job-alert email parsing.
 
-The fixtures are real Handshake emails read on 2026-09-20. Handshake will change
-the layout eventually; when it does, `is_job_email` will keep returning True and
-`parse_alert` will start returning nothing, so the count assertions below are the
-canary.
+The fixtures are invented mail — no firm in them exists and no inbox they came
+from — written to the layout Handshake's round-up and "about to close" alerts
+use: employer and role on consecutive lines, a blank line, then a bullet-
+separated line of pay, job type and location. Handshake will change that layout
+eventually; when it does, `is_job_email` will keep returning True and
+`parse_alert` will start returning nothing, so the count assertions below are
+the canary.
 """
 
 from __future__ import annotations
@@ -28,10 +31,10 @@ def load(name: str) -> str:
 # ------------------------------------------------------- which mail matters
 
 @pytest.mark.parametrize("subject", [
-    "AJ, Deutsche Bank sees you as a top applicant for ... and more",
-    '"Search on 8/29/2026": Robinhood - Software Engineering Intern and more',
-    "Your saved job at Garda Capital Partners is about to close",
-    "New items from Citi and more added to collections you follow",
+    "Rae, Fenwold Securities sees you as a top applicant for ... and more",
+    '"Search on 8/29/2026": Vantress - Software Engineering Intern and more',
+    "Your saved job at Calderwell Advisors is about to close",
+    "New items from Fenwold Securities and more added to collections you follow",
     "Flexible jobs near you this week",
 ])
 def test_job_bearing_subjects_are_recognised(subject):
@@ -39,7 +42,7 @@ def test_job_bearing_subjects_are_recognised(subject):
 
 
 @pytest.mark.parametrize("subject", [
-    "Application sent to VCU Investment Management Company — here's what's next",
+    "Application sent to Example Partners — here's what's next",
     "Reminder: Upcoming Appointment",
     "You have a new notification on Handshake",
     "Reactivation Request Approved",
@@ -61,21 +64,21 @@ def test_a_round_up_yields_every_listing():
     postings = parse_alert("round-up", load("roundup.txt"), _dt.date(2026, 9, 18))
     assert len(postings) == 5
     first = postings[0]
-    assert first.employer == "Deutsche Bank"
-    assert first.title.startswith("Deutsche Bank Graduate Program")
+    assert first.employer == "Fenwold Securities"
+    assert first.title.startswith("Fenwold Graduate Program")
     assert first.location == "New York City, NY"
 
 
 def test_sponsored_rows_are_read_like_any_other():
     postings = parse_alert("round-up", load("roundup.txt"), _dt.date(2026, 9, 18))
-    promoted = next(p for p in postings if p.employer.startswith("Success Academy"))
+    promoted = next(p for p in postings if p.employer.startswith("Harrowgate"))
     assert promoted.title == "Operations Coordinator"
 
 
 def test_location_decoration_is_stripped():
     postings = parse_alert("round-up", load("roundup.txt"), _dt.date(2026, 9, 18))
-    richmond = next(p for p in postings if "Financial Growth" in p.employer)
-    assert richmond.location == "Richmond, VA"          # from "Richmond, VA +3 (Hybrid)"
+    decorated = next(p for p in postings if "Brindlemere" in p.employer)
+    assert decorated.location == "Hartford, CT"         # from "Hartford, CT +3 (Hybrid)"
 
 
 def test_alerts_carry_no_description():
@@ -119,7 +122,7 @@ def test_a_round_up_does_not_inherit_one_posting_s_deadline():
 
 def test_ingestion_files_the_relevant_and_drops_the_rest(conn):
     messages = [
-        discover.Message(subject="AJ, Deutsche Bank sees you as a top applicant",
+        discover.Message(subject="Rae, Fenwold Securities sees you as a top applicant",
                          body=load("roundup.txt"), received=_dt.date(2026, 9, 18),
                          sender=HANDSHAKE),
         discover.Message(subject="Reminder: Upcoming Appointment",
@@ -131,12 +134,12 @@ def test_ingestion_files_the_relevant_and_drops_the_rest(conn):
     assert result.unique == 5
     assert result.rejected >= 3                   # the coordinator and the district manager
     filed = {db.get_posting(conn, slug).company for slug in result.created}
-    assert "Deutsche Bank" in filed
-    assert "ALDI USA" not in filed
+    assert "Fenwold Securities" in filed
+    assert "Fairwick Grocers" not in filed
 
 
 def test_ingested_postings_dedupe_against_the_registry(conn):
-    message = discover.Message(subject="AJ, Deutsche Bank sees you as a top applicant",
+    message = discover.Message(subject="Rae, Fenwold Securities sees you as a top applicant",
                                body=load("roundup.txt"),
                                received=_dt.date(2026, 9, 18), sender=HANDSHAKE)
     first = discover.ingest_alerts(conn, [message])
@@ -151,5 +154,5 @@ def test_ingested_postings_dedupe_against_the_registry(conn):
 def test_a_2027_graduate_programme_in_new_york_survives_the_gate():
     """The case that exposed the scorer being overfit to ATS-style titles."""
     postings = parse_alert("round-up", load("roundup.txt"), _dt.date(2026, 9, 18))
-    deutsche = next(p for p in postings if p.employer == "Deutsche Bank")
-    assert score(deutsche).verdict is not Verdict.REJECT
+    bank = next(p for p in postings if p.employer == "Fenwold Securities")
+    assert score(bank).verdict is not Verdict.REJECT

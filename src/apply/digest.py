@@ -160,9 +160,23 @@ def render(conn: sqlite3.Connection, console, horizon: int = HORIZON_DAYS) -> No
             console.print(f"  {formatter(item)}")
         console.print()
 
+    def named(row, tail: str = "") -> str:
+        """Company, role, whatever trails them, and then the slug on its own line.
+
+        The slug goes under the row rather than at the end of it: the digest is
+        read in a narrow terminal, and a slug tacked onto a line that already
+        carries a date, a company, a role and a status wraps into porridge. It
+        is also the thing the reader retypes into `apply gen`, so it gets a
+        whole line and is never abbreviated. `tail` stays up on the first line,
+        where it belongs — it describes the row, not the slug.
+        """
+        head = f"{esc(row.posting.company)} — {esc(row.posting.role)}"
+        return (f"{head}{tail}\n       [dim]{row.posting.slug}[/]")
+
     section("Past due, not submitted", d.overdue,
-            lambda r: f"[bold red]{r.posting.deadline}[/]  {esc(r.posting.company)} — "
-                      f"{esc(r.posting.role)}  [dim]({-r.days_left}d ago, {esc(r.application.status)})[/]")
+            lambda r: f"[bold red]{r.posting.deadline}[/]  "
+                      + named(r, f"  [dim]({-r.days_left}d ago, "
+                                 f"{esc(r.application.status)})[/]"))
 
     def urgency(row) -> str:
         """A style name, or the empty string. Never an empty [] tag: Rich reads
@@ -174,27 +188,29 @@ def render(conn: sqlite3.Connection, console, horizon: int = HORIZON_DAYS) -> No
     def deadline_line(row) -> str:
         style = urgency(row)
         when = f"[{style}]{row.posting.deadline}[/]" if style else str(row.posting.deadline)
-        return (f"{when}  {esc(row.posting.company)} — {esc(row.posting.role)}  "
-                f"[dim]({row.days_left}d, {esc(row.application.status)})[/]")
+        return f"{when}  " + named(
+            row, f"  [dim]({row.days_left}d, {esc(row.application.status)})[/]")
 
     section(f"Deadlines in the next {horizon} days", d.deadlines, deadline_line)
 
     section("Follow-ups due", d.followups,
-            lambda pair: f"[dim]{pair[0].due_on}[/]  {esc(pair[1].posting.company)}: {esc(pair[0].action)}")
+            lambda pair: f"[dim]{pair[0].due_on}[/]  {esc(pair[1].posting.company)}: "
+                         f"{esc(pair[0].action)}\n       [dim]{pair[1].posting.slug}[/]")
 
     section(f"Drafts untouched for {STALE_DAYS}+ days", d.stale,
-            lambda r: f"{esc(r.posting.company)} — {esc(r.posting.role)}  [dim]({esc(r.application.status)})[/]")
+            lambda r: named(r, f"  [dim]({esc(r.application.status)})[/]"))
 
     section(f"Submitted {SILENT_DAYS}+ days ago, no reply", d.silent,
-            lambda r: f"{esc(r.posting.company)} — {esc(r.posting.role)}  "
-                      f"[dim]sent {(r.application.submitted_at or '')[:10]}[/]")
+            lambda r: named(r, "  [dim]sent "
+                               f"{(r.application.submitted_at or '')[:10]}[/]"))
 
     section("Further out, not yet submitted", d.beyond,
-            lambda r: f"[dim]{r.posting.deadline}[/]  {esc(r.posting.company)} — "
-                      f"{esc(r.posting.role)}  [dim]({r.days_left}d, {esc(r.application.status)})[/]")
+            lambda r: f"[dim]{r.posting.deadline}[/]  "
+                      + named(r, f"  [dim]({r.days_left}d, "
+                                 f"{esc(r.application.status)})[/]"))
 
     section("No deadline on file — verify manually", d.unverified,
-            lambda r: f"[yellow]⚠[/]  {esc(r.posting.company)} — {esc(r.posting.role)}")
+            lambda r: f"[yellow]⚠[/]  {named(r)}")
 
     if d.tracks:
         console.print("[bold]Open pipeline by track[/]")

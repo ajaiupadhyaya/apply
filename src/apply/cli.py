@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import shutil
 import subprocess
 import sys
 import webbrowser
@@ -30,22 +31,104 @@ from .models import Status, Track, TransitionError
 from .parse import parse as parse_jd
 from .profile import Profile, ProfileError, data_dir
 
+console = Console()
+
+
+class Sentences(typer.core.TyperGroup):
+    """One doorway out for a profile that cannot be read.
+
+    `Profile.load` fails early and is caught by `_profile()`, but the values it
+    derives — the graduation month above all — are computed lazily, so the
+    failure surfaces halfway through a command, in whichever of the twenty-odd
+    of them asked for it. Catching it here means none of them has to remember
+    to, and a stranger who left an answer blank gets the sentence that names the
+    fix instead of a forty-line rich traceback.
+    """
+
+    def invoke(self, ctx):
+        try:
+            return super().invoke(ctx)
+        except ProfileError as exc:
+            console.print(f"[bold red]✗[/] {exc}")
+            raise typer.Exit(1) from None
+
+
 app = typer.Typer(
+    cls=Sentences,
     add_completion=False,
     no_args_is_help=True,
     help="Everything up to the submit button. APPLY never submits an application.",
 )
-console = Console()
 
-#: Handshake is off limits, by the owner's rule. The account is provisioned by
-#: VCU Career Services and automated access risks losing it mid-cycle.
-BLOCKED_HOSTS = {"joinhandshake.com", "app.joinhandshake.com", "www.joinhandshake.com"}
+#: Sites `apply add --url` will not fetch, mapped to the name used in the
+#: refusal. Handshake is off limits by the owner's rule — the account is
+#: provisioned by a university career service and automated access risks losing
+#: it mid-cycle — and LinkedIn and Indeed prohibit it in their terms. Their
+#: postings reach this system the way they were meant to: through the alert mail
+#: they send, or by paste. Matched on the registrable domain, so uk.linkedin.com
+#: and app.joinhandshake.com are covered without listing every subdomain.
+BLOCKED_HOSTS = {
+    "joinhandshake.com": "Handshake",
+    "linkedin.com": "LinkedIn",
+    "indeed.com": "Indeed",
+}
 
-HANDSHAKE_MESSAGE = (
-    "Handshake postings must be pasted manually — APPLY never logs into or "
-    "scrapes Handshake.\n"
-    "  Open the posting, select all, copy, then:  apply add --clipboard"
+
+def blocked_site(url: str) -> str | None:
+    """The site's name if this URL is one we refuse to fetch, else None."""
+    host = (urlparse(url).hostname or "").lower().rstrip(".")
+    for domain, site in BLOCKED_HOSTS.items():
+        if host == domain or host.endswith("." + domain):
+            return site
+    return None
+
+
+#: How to read the clipboard, in the order the readers are tried. macOS ships
+#: pbpaste; a Linux desktop has one of the other three depending on whether the
+#: session is Wayland or X11, and a server has none of them. Whichever is on PATH
+#: wins, so `--clipboard` is one instruction on every machine that has a
+#: clipboard at all — and none of them is a dependency of this package, because
+#: a headless box is told to use --stdin instead.
+CLIPBOARD_READERS = (
+    ("pbpaste", ["pbpaste"]),                                    # macOS
+    ("wl-paste", ["wl-paste", "--no-newline"]),                  # Wayland
+    ("xclip", ["xclip", "-selection", "clipboard", "-o"]),       # X11
+    ("xsel", ["xsel", "--clipboard", "--output"]),               # X11
 )
+
+#: What to do instead, named in every refusal, because `--stdin` is the route
+#: that works on a machine with no clipboard at all.
+USE_STDIN = "Pipe the posting in instead:  apply add --stdin < posting.txt"
+
+
+class ClipboardUnavailable(RuntimeError):
+    """No clipboard reader on PATH, or the one that is there could not read."""
+
+
+def read_clipboard() -> str:
+    """The clipboard's text, from whichever reader this machine has."""
+    for name, command in CLIPBOARD_READERS:
+        if shutil.which(name) is None:
+            continue
+        done = subprocess.run(command, capture_output=True, text=True)
+        if done.returncode != 0:
+            raise ClipboardUnavailable(
+                f"{name} could not read the clipboard: "
+                f"{(done.stderr or '').strip() or f'exit {done.returncode}'}")
+        return done.stdout
+    raise ClipboardUnavailable(
+        "no clipboard reader on this machine — looked for "
+        + ", ".join(name for name, _ in CLIPBOARD_READERS) + " on PATH")
+
+
+def blocked_message(site: str) -> str:
+    """The refusal: what will not happen, and the way in that still works."""
+    return (
+        f"{site} postings must be pasted by hand — APPLY never logs into or "
+        f"scrapes {site}.\n"
+        "  Open the posting, select all, copy, then:  apply add --clipboard\n"
+        "  …or pipe the text in:                      apply add --stdin < posting.txt"
+    )
 
 
 # ----------------------------------------------------------------- helpers
@@ -107,7 +190,58 @@ def _open_path(path: Path) -> None:
         webbrowser.open(path.as_uri())
 
 
-# -------------------------------------------------------------------- init
+# ------------------------------------------------------------ setup / init
+
+
+@app.command()
+def setup(
+    persona: bool = typer.Option(False, "--persona", help="Write the example persona, unchanged."),
+    force: bool = typer.Option(False, "--force", help="Replace an existing profile."),
+    non_interactive: bool = typer.Option(False, "--non-interactive", help="Persona, no questions."),
+) -> None:
+    """Make this checkout yours: write a profile, then check the toolchain."""
+    from . import setup as setup_mod
+
+    target = data_dir() / "profile.yaml"
+    try:
+        if persona or non_interactive:
+            # Copied rather than loaded and dumped, so the comments survive —
+            # the first of them is the line that says this person is invented.
+            setup_mod.copy_persona(target, force=force)
+            answers = setup_mod.Answers(city=setup_mod.city_of(setup_mod.persona()))
+        else:
+            console.print("[dim]Nine questions. Everything is editable afterwards in "
+                          "data/profile.yaml.[/]\n")
+            answers = setup_mod.ask(
+                lambda question, default: typer.prompt(question, default=default))
+            setup_mod.write_profile(setup_mod.profile_from(answers), target, force=force)
+    except FileExistsError:
+        _fail(f"{target} already exists. Pass --force to replace it.")
+    except ValueError as exc:
+        _fail(str(exc))
+    console.print(f"[green]✓[/] wrote [bold]{target}[/]")
+    # The city answer is the gate's, not the letter's: written here or it is
+    # collected and ignored, which is what it used to be. Never overwritten,
+    # even under --force: a tuned search is work, and --force is about the
+    # profile. `apply search` is where you go to see what is in force.
+    #
+    # Before copy_examples, not after, so that the answer wins. Should this
+    # repository ever ship a data/search.example.yaml — the other half of the
+    # fix a reviewer asked for — copying it first would leave a search.yaml on
+    # disk, and this would then politely decline to overwrite the very file it
+    # was asked to write.
+    search_yaml = data_dir() / "search.yaml"
+    written = setup_mod.write_search(answers, search_yaml)
+    if written is not None:
+        console.print(f"[green]✓[/] wrote [bold]{written.name}[/]"
+                      + (f" — the gate now looks for {answers.city}"
+                         if answers.city else ""))
+    else:
+        console.print(f"[dim]•[/] kept your [bold]{search_yaml.name}[/] as it is. "
+                      f"`apply search` prints what the gate is looking for.")
+    for created in setup_mod.copy_examples(data_dir(), setup_mod.EXAMPLE_PROFILE.parent):
+        console.print(f"[green]✓[/] created [bold]{created.name}[/] from its example")
+    init()
 
 
 @app.command()
@@ -118,9 +252,13 @@ def init(
     path = db.init_db()
     console.print(f"[green]✓[/] database at [bold]{path}[/]")
 
+    from . import setup as setup_mod
+
     public = data_dir() / "profile.yaml"
     if not public.exists():
-        template = Path(__file__).resolve().parents[2] / "data" / "profile.yaml"
+        # The persona, never the author: `apply init` on a fresh clone has to
+        # scaffold a profile nobody has to delete a biography out of.
+        template = setup_mod.EXAMPLE_PROFILE
         if not template.exists():
             _fail(f"no profile at {public}, and no template to scaffold from.")
         public.parent.mkdir(parents=True, exist_ok=True)
@@ -143,31 +281,53 @@ def init(
 
 @app.command()
 def doctor() -> None:
-    """List every profile value still marked ASK, and check the toolchain."""
+    """List every profile value still marked ASK, and check the toolchain.
+
+    Not as one flat list. An unfilled phone number waits for you; an unfilled
+    graduation month stops the next command dead, and one that would be printed
+    into a letter stops `apply gen`. A reader pressing Enter through the wizard
+    has to be able to tell those apart.
+    """
     profile = _profile()
     unresolved = profile.unresolved()
-    if unresolved:
-        console.print("\n[bold]Profile values still marked ASK:[/]")
-        for path in unresolved:
+    blocking = profile.blocking()
+    in_documents = profile.document_gaps()
+    waiting = [p for p in unresolved if p not in blocking and p not in in_documents]
+
+    if blocking:
+        console.print("\n[bold red]Blocking — commands will refuse until these are set:[/]")
+        for path in blocking:
+            console.print(f"  [bold red]✗[/] {path}")
+        console.print("  [dim]Write it into data/profile.yaml, or run "
+                      "`apply setup --force` to be asked again.[/]")
+    if in_documents:
+        console.print("\n[bold]Still ASK, and a document would print it:[/]")
+        for path in in_documents:
             console.print(f"  [yellow]•[/] {path}")
-    else:
+        console.print("  [dim]`apply gen` refuses rather than send the word ASK "
+                      "to an employer.[/]")
+    if waiting:
+        console.print("\n[bold]Still ASK, and nothing is waiting on it:[/]")
+        for path in waiting:
+            console.print(f"  [dim]•[/] {path}")
+    if not unresolved:
         console.print("[green]✓[/] no ASK values left in the profile")
 
-    import shutil as _shutil
-
-    if _shutil.which("pdflatex"):
+    if shutil.which("pdflatex"):
         console.print("[green]✓[/] pdflatex found")
     else:
         console.print("[bold red]✗[/] pdflatex not on PATH — no PDFs can be built.\n"
-                      "    brew install --cask mactex-no-gui")
+                      f"    {generate.tex_hint()}")
 
     from . import llm as llm_mod
+    from . import secrets as secrets_mod
 
     if llm_mod.available():
         console.print("[green]✓[/] Anthropic credential present — Claude writes and audits")
     else:
+        # The instruction is per-platform: a Keychain command is no use on Linux.
         console.print("[bold red]✗[/] no Anthropic credential — letters cannot be written.\n"
-                      "    security add-generic-password -U -a \"$USER\" -s ANTHROPIC_API_KEY -w")
+                      f"    {secrets_mod.how_to_store('ANTHROPIC_API_KEY')}")
 
     from . import context as context_mod
 
@@ -189,8 +349,11 @@ def doctor() -> None:
 @app.command()
 def add(
     file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read the JD from a file."),
-    stdin: bool = typer.Option(False, "--stdin", help="Read the JD from standard input."),
-    clipboard: bool = typer.Option(False, "--clipboard", "-c", help="Read the JD from the clipboard."),
+    stdin: bool = typer.Option(False, "--stdin",
+                               help="Read the JD from standard input, on any machine."),
+    clipboard: bool = typer.Option(False, "--clipboard", "-c",
+                                   help="Read the JD from the clipboard "
+                                        "(pbpaste, wl-paste, xclip or xsel)."),
     url: Optional[str] = typer.Option(None, "--url", help="Fetch a company careers page."),
     company: Optional[str] = typer.Option(None, "--company"),
     role: Optional[str] = typer.Option(None, "--role"),
@@ -255,19 +418,19 @@ def add(
 
 def _read_jd(file, stdin, clipboard, url) -> tuple[str, str | None]:
     if url:
-        host = (urlparse(url).hostname or "").lower()
-        if host in BLOCKED_HOSTS or host.endswith(".joinhandshake.com"):
-            _fail(HANDSHAKE_MESSAGE)
+        site = blocked_site(url)
+        if site:
+            _fail(blocked_message(site))
         return _fetch(url), url
     if file:
         if not file.exists():
             _fail(f"no such file: {file}")
         return file.read_text(), None
     if clipboard:
-        if sys.platform != "darwin":
-            _fail("--clipboard is macOS only. Pipe the text in with --stdin instead.")
-        out = subprocess.run(["pbpaste"], capture_output=True, text=True)
-        return out.stdout, None
+        try:
+            return read_clipboard(), None
+        except ClipboardUnavailable as exc:
+            _fail(f"{exc}.\n  {USE_STDIN}")
     if stdin or not sys.stdin.isatty():
         return sys.stdin.read(), None
     _fail("give me the posting: --file, --stdin, --clipboard, or --url.")
@@ -304,7 +467,9 @@ def _fetch(url: str) -> str:
                              headers={"User-Agent": "apply/0.1 (personal job tracker)"})
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        _fail(f"could not fetch {url}: {exc}\n  Paste the text instead: apply add --clipboard")
+        _fail(f"could not fetch {url}: {exc}\n"
+              f"  Paste the text instead:  apply add --clipboard\n"
+              f"  {USE_STDIN}")
     stripper = Strip()
     stripper.feed(response.text)
     return re.sub(r"\n{3,}", "\n\n", " ".join(stripper.parts).replace(" \n ", "\n"))
@@ -520,7 +685,7 @@ def context_list(ctx: typer.Context) -> None:
     if not docs:
         console.print(
             f"[dim]no context documents in {directory}.[/]\n\n"
-            f"  Pull a project README:  [bold]apply context pull ajaiupadhyaya/OhCamel[/]\n"
+            f"  Pull a project README:  [bold]apply context pull <owner>/<repo>[/]\n"
             f"  Or drop any .md file in that folder — notes, a bio, a writeup.")
         return
     total = sum(len(t) for _, t in docs)
@@ -535,7 +700,7 @@ def context_list(ctx: typer.Context) -> None:
 
 @context_app.command("pull")
 def context_pull(
-    repo: str = typer.Argument(..., help="owner/name, e.g. ajaiupadhyaya/OhCamel"),
+    repo: str = typer.Argument(..., help="owner/name of a GitHub repository you wrote."),
     name: Optional[str] = typer.Option(None, "--name", help="File name to save as."),
 ) -> None:
     """Fetch a GitHub README, keep its shape in its own words, and file it.
@@ -749,6 +914,17 @@ def status(
             Text(row.application.status, style=STATUS_STYLE.get(row.application.status, "")),
         )
     console.print(table)
+    # Under the table rather than in it. Every write command takes a slug and
+    # until this existed the only way to learn one was to guess wrong and read
+    # the "did you mean" hint — but a slug is typed, so half of one is no use,
+    # and a column narrow enough to fit beside five others ends in an ellipsis
+    # on any terminal under 120 columns. Down here each one gets a whole line,
+    # in the table's order, and each begins with its company, so no counting is
+    # needed to tell which row it belongs to.
+    console.print("\n[dim]by slug, in the order above — `apply gen <slug>`, "
+                  "`apply show <slug>`:[/]")
+    for row in rows:
+        console.print(f"  [dim]{row.posting.slug}[/]")
 
 
 @app.command()
@@ -895,9 +1071,16 @@ def discover(
         return
     console.print(
         f"\n[green]✓[/] filed {len(result.created)} new "
-        f"posting{'' if len(result.created) == 1 else 's'}. "
-        f"Next: [bold]apply status[/], then [bold]apply gen <slug>[/]."
+        f"posting{'' if len(result.created) == 1 else 's'}"
+        + (":" if result.created else ".")
     )
+    # By name, because `apply gen <slug>` is the next thing the reader types and
+    # the slug appears nowhere in the table above.
+    for slug in result.created:
+        console.print(f"    [bold]{slug}[/]")
+    if result.created:
+        console.print("\nNext: [bold]apply gen <slug>[/], or [bold]apply status[/] "
+                      "for the whole pipeline.")
 
 
 @app.command()
@@ -1037,17 +1220,20 @@ def run_once(
 
 @app.command()
 def schedule(
-    install: bool = typer.Option(False, "--install", help="Write and load the LaunchAgent."),
+    install: bool = typer.Option(False, "--install",
+                                 help="Install the job with this machine's supervisor."),
     remove: bool = typer.Option(False, "--remove"),
-    show: bool = typer.Option(False, "--show", help="Print the plist without writing it."),
+    show: bool = typer.Option(False, "--show", help="Print what would be written, and write nothing."),
     at: str = typer.Option("06:30", "--at", help="Local time, HH:MM."),
     llm: str = typer.Option("api", "--llm", help="What the scheduled run uses."),
 ) -> None:
-    """Run the pass every morning, via launchd.
+    """Run the pass every morning, through whatever supervises this machine.
 
-    With no flags this reports what is currently scheduled. `--show` prints the
-    file that would be written; `--install` is a separate, explicit act, because
-    it is persistent configuration on your machine.
+    macOS gets a launchd agent; Linux gets a systemd user timer, or a cron line
+    on a box without systemd. With no flags this reports what is currently
+    scheduled. `--show` prints the file that would be written; `--install` is a
+    separate, explicit act, because it is persistent configuration on your
+    machine.
     """
     try:
         hour, minute = (int(part) for part in at.split(":", 1))
@@ -1059,12 +1245,20 @@ def schedule(
         command=f"uv run apply run --notify --llm {llm}",
     )
 
+    # A platform with no supervisor APPLY knows raises, and the error carries
+    # the advice. Resolved once, here, so every branch below gets the sentence
+    # instead of a traceback.
+    try:
+        supervisor = schedule_mod.backend()
+    except RuntimeError as exc:
+        _fail(str(exc))
+
     if show:
-        console.print(plan.render())
+        console.print(supervisor.render(plan))
         return
 
     if remove:
-        if schedule_mod.remove():
+        if supervisor.remove():
             console.print("[green]✓[/] unloaded and removed.")
         else:
             console.print("[dim]nothing was installed.[/]")
@@ -1072,7 +1266,7 @@ def schedule(
 
     if install:
         try:
-            path = schedule_mod.install(plan)
+            path = supervisor.install(plan)
         except Exception as exc:                        # noqa: BLE001
             _fail(str(exc))
         console.print(Panel.fit(
@@ -1085,7 +1279,7 @@ def schedule(
                       "pause a single night with `touch data/HALT`.[/]")
         return
 
-    state = schedule_mod.status()
+    state = supervisor.status()
     if not state["installed"]:
         console.print(
             "[dim]nothing scheduled.[/]\n\n"
@@ -1130,8 +1324,8 @@ def ingest(
     """File the postings out of Handshake and LinkedIn job-alert emails.
 
     APPLY never fetches a page from Handshake. It reads the mail Handshake
-    already sends you, which is a different thing and carries no risk to a
-    VCU-provisioned account.
+    already sends you, which is a different thing and carries no risk to an
+    account your university provisioned.
 
     Two ways in. `--imap` reads the mailbox directly and needs a Gmail app
     password in the ANTHROPIC-style keychain slot APPLY_IMAP_PASSWORD; that is
@@ -1143,21 +1337,18 @@ def ingest(
     preferences = profile.search_preferences
 
     if imap:
-        import os
-
-        from .llm import _keychain_key
+        from . import secrets
 
         address = user or profile.email
-        password = (os.environ.get("APPLY_IMAP_PASSWORD", "")
-                    or _keychain_key("APPLY_IMAP_PASSWORD") or "")
+        password = secrets.lookup("APPLY_IMAP_PASSWORD") or ""
         if not password:
             _fail(
                 "no IMAP password. Gmail needs an app password, not your account "
                 "password:\n"
                 "  1. myaccount.google.com → Security → 2-Step Verification → App passwords\n"
-                "  2. security add-generic-password -U -a \"$USER\" -s APPLY_IMAP_PASSWORD -w\n"
-                "APPLY reads it from the Keychain, so the scheduled run finds it too.\n"
-                "If VCU's Workspace forbids app passwords, ask Claude to export the "
+                f"  2. {secrets.how_to_store('APPLY_IMAP_PASSWORD')}\n"
+                "APPLY reads it from there, so the scheduled run finds it too.\n"
+                "If your Workspace forbids app passwords, ask Claude to export the "
                 "alerts instead and use --file."
             )
         try:
@@ -1167,7 +1358,16 @@ def ingest(
     elif file:
         if not file.exists():
             _fail(f"no such file: {file}")
-        messages = discover_mod.load_messages(file)
+        try:
+            messages = discover_mod.load_messages(file)
+        except Exception as exc:                         # noqa: BLE001
+            # A path to the wrong file is the likeliest mistake here, and a
+            # JSONDecodeError traceback does not tell anyone what was expected.
+            _fail(f"{file} is not an alert export ({exc}).\n"
+                  "  It is JSON: a list of messages, or {\"messages\": [...]}, each "
+                  "with a subject, a sender and a body.\n"
+                  "  docs/handshake-alerts.md and docs/linkedin-alerts.md show how "
+                  "to have Claude write one.")
     else:
         _fail("give me the mail: --imap, or --file <export.json>.")
 
@@ -1210,7 +1410,7 @@ def ingest(
     console.print(
         "\n[dim]Alerts carry only the title, so nothing from this channel is written "
         "up automatically. When one is worth pursuing, open its link, copy the whole "
-        "posting, and run `apply describe <slug> --clipboard`.[/]"
+        "posting, and run `apply describe <slug> --clipboard` (or --stdin).[/]"
     )
     if dry_run:
         console.print("[dim]--dry-run: nothing was written.[/]")
@@ -1222,8 +1422,11 @@ def ingest(
 def describe(
     slug: str,
     file: Optional[Path] = typer.Option(None, "--file", "-f"),
-    clipboard: bool = typer.Option(False, "--clipboard", "-c"),
-    stdin: bool = typer.Option(False, "--stdin"),
+    clipboard: bool = typer.Option(False, "--clipboard", "-c",
+                                   help="Read the posting from the clipboard "
+                                        "(pbpaste, wl-paste, xclip or xsel)."),
+    stdin: bool = typer.Option(False, "--stdin",
+                               help="Read the posting from standard input."),
 ) -> None:
     """Attach the full posting to one that arrived as a title only.
 
@@ -1341,6 +1544,78 @@ def resolve(
 
 
 @app.command()
+def search() -> None:
+    """The relevance gate's vocabulary, and where each block came from.
+
+    Everything the gate is looking for — the titles it refuses, the places it
+    pays for, what a role is worth — ships as YAML inside the package. Copy any
+    block into data/search.yaml to make it yours; what you leave out keeps the
+    shipped value. This prints what is in force, which includes the thresholds
+    your profile sets: they are what an unattended run spends money on, and this
+    command used to print the shipped ones whatever the profile said.
+    """
+    from . import search as search_mod
+
+    config = search_mod.load()
+    thresholds, from_profile = _thresholds_in_force(config)
+    table = Table(box=None, header_style="dim", padding=(0, 2))
+    for column in ("block", "entries", "from"):
+        table.add_column(column, justify="right" if column == "entries" else "left")
+    for name in ("thresholds", "rejects", "class_scoped", "geography", "non_us",
+                 "role_fit", "timing", "title_timing"):
+        source = config.sources.get(name, "defaults")
+        if name == "thresholds" and from_profile:
+            source = from_profile
+        table.add_row(name, str(config.sizes.get(name, 0)),
+                      source if source == "defaults" else f"[bold]{source}[/]")
+    console.print(table)
+    console.print("\n[dim]places, first match wins: "
+                  + ", ".join(f"{label} +{weight}"
+                              for _, label, weight, _, _ in config.geography)
+                  + "[/]")
+    if not config.assume_us:
+        console.print(f"[dim]country: {config.country} — nothing is refused for being "
+                      f"outside the US.[/]")
+    override = data_dir() / "search.yaml"
+    try:
+        shown = f"~/{override.relative_to(Path.home())}"
+    except ValueError:
+        shown = str(override)
+    console.print(f"[dim]thresholds: pursue ≥ {thresholds['pursue']}, "
+                  f"maybe ≥ {thresholds['maybe']}"
+                  + (f", from {from_profile}." if from_profile else ".") + "[/]")
+    console.print(f"[dim]Override any block in {shown}.[/]\n")
+
+
+def _thresholds_in_force(config) -> tuple[dict, str | None]:
+    """The bars the gate will use, and which profile file set them, if one did.
+
+    The profile's `search.thresholds` beats the search config's — that is what
+    score.py does — and profile.private.example.yaml, the file `apply setup`
+    copies onto your disk, ships a block that sets them. So the honest answer to
+    "what is in force" cannot be read out of the search config alone.
+    """
+    import yaml
+
+    from . import score as score_mod
+    from .profile import Profile, ProfileError
+
+    try:
+        profile = Profile.load()
+    except ProfileError:
+        return dict(config.thresholds), None       # no profile yet: the shipped bars
+    preferences = profile.raw.get("search") or {}
+    thresholds = score_mod.thresholds_in_force(config, preferences)
+    if not preferences.get("thresholds"):
+        return thresholds, None
+    for path in reversed(profile.sources):
+        block = ((yaml.safe_load(path.read_text()) or {}).get("search") or {})
+        if block.get("thresholds"):
+            return thresholds, path.name
+    return thresholds, "your profile"
+
+
+@app.command()
 def targets() -> None:
     """The employer registry: who gets polled, and how."""
     employers = discover_mod.load_employers()
@@ -1373,12 +1648,12 @@ def _board_label(e: dict) -> str:
 
 @app.command()
 def seed() -> None:
-    """Load the two seed postings so the pipeline has real data on day one."""
+    """Load the two invented example postings so the pipeline has data on day one."""
     conn = _conn()
     fixtures = Path(__file__).resolve().parents[2] / "data" / "examples"
     wanted = {
-        "blackrock.txt": ("blackrock-analyst-2027", 1),
-        "vcimco.txt": ("vcimco-investment-intern-2027", 1),
+        "quillon.txt": ("quillon-analyst-2027", 1),
+        "ashcombe.txt": ("ashcombe-investment-intern-2027", 1),
     }
     for name, (slug, priority) in wanted.items():
         path = fixtures / name
@@ -1392,8 +1667,9 @@ def seed() -> None:
         posting.priority = priority
         db.create_posting(conn, posting)
         console.print(f"[green]✓[/] {slug}  [dim]{parsed.classification.why}[/]")
-    console.print("\n[dim]Seed postings use representative text, not the live postings. "
-                  "Verify against the real listing before applying.[/]")
+    console.print("\n[dim]Both seed postings are invented — the firms, the roles and the "
+                  "deadlines do not exist. They are here so the pipeline has something "
+                  "to run on before you add a real one.[/]")
 
 
 @app.command()

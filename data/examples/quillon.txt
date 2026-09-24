@@ -1,0 +1,38 @@
+[SEED FIXTURE — an invented posting for a firm that does not exist, written for
+ this repository so a fresh clone has something to run against. No such job exists.]
+
+Quillon Asset Management
+2027 Full-Time Analyst Program (Americas)
+New York, NY | Boston, MA | Austin, TX
+
+About this role
+
+Quillon's Analyst Program is a two-year program for graduating students,
+beginning full time in the summer after graduation. Analysts join one of
+several groups across the Americas: Sextant Engineering, Risk and Quantitative
+Analysis, Portfolio Construction, and Client Solutions.
+
+Sextant is the platform the firm runs its investment process on, bringing risk
+analytics, portfolio construction and order execution onto a single system.
+Analysts placed in Risk and Quantitative Analysis work alongside portfolio
+managers on risk measurement, scenario analysis, and the factor model that sits
+behind position sizing.
+
+Responsibilities
+- Support portfolio managers with risk measurement and exposure reporting
+- Contribute to quantitative research on systematic strategies and signal decay
+- Build and maintain tooling in Python; exposure to C++ is a plus
+- Communicate analytical results clearly to investment professionals
+
+Qualifications
+- Bachelor's degree expected between December 2026 and June 2027
+- Coursework in finance, economics, mathematics, statistics, or computer science
+- Demonstrated quantitative ability and comfort working with data
+- Strong written and verbal communication
+
+Compensation: $105,000 base salary
+
+Application deadline: November 14, 2026
+Program begins: July 2027
+
+Quillon Asset Management is an Equal Opportunity Employer.

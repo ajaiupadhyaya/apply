@@ -6,8 +6,8 @@ usage accounting. Modules above this one decide *what* to ask; this one decides
 how asking works, so that policy cannot drift between the writer and the
 verifier.
 
-The key is read from the environment (which ~/.zshrc fills from the macOS
-Keychain) and never written anywhere.
+The key is read through `apply.secrets` — environment, then the platform's own
+store — and never written anywhere.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from typing import Literal, TypeVar
 
 from pydantic import BaseModel, Field
+
+from . import secrets
 
 DEFAULT_MODEL = "claude-opus-5"
 
@@ -165,9 +167,10 @@ def estimate(input_chars: int, *, output_tokens: int = 3500,
 
 NO_CREDENTIAL = (
     "no Anthropic credential found.\n"
-    "  Add the key to the Keychain (it prompts, so the key never enters history):\n"
-    "      security add-generic-password -U -a \"$USER\" -s ANTHROPIC_API_KEY -w\n"
-    "  then open a new terminal. ~/.zshrc reads it from there on every login."
+    "  Store it where an unattended run can find it too (this prompts, so the\n"
+    "  key never enters your shell history):\n"
+    f"      {secrets.how_to_store('ANTHROPIC_API_KEY')}\n"
+    "  An exported ANTHROPIC_API_KEY works for a run you start yourself."
 )
 
 
@@ -184,32 +187,18 @@ KEYCHAIN_SERVICE = "ANTHROPIC_API_KEY"
 def _keychain_key(service: str = KEYCHAIN_SERVICE) -> str | None:
     """The key from the macOS login Keychain, if it is there.
 
-    This is what makes the scheduled run work. launchd starts a non-interactive
-    shell, which never reads ~/.zshrc, so the environment variable the terminal
-    sees is simply absent at 06:30. Reading the Keychain directly works from
-    launchd, cron, an IDE or a terminal alike, and keeps the key out of every
-    file and every command line.
+    One line of `apply.secrets` kept under its old name: the test suite blocks
+    the Keychain by patching this, and the platform-agnostic order now lives in
+    that module.
     """
-    import shutil
-    import subprocess
-    import sys
-
-    if sys.platform != "darwin" or not shutil.which("security"):
-        return None
-    result = subprocess.run(
-        ["security", "find-generic-password", "-a", os.environ.get("USER", ""),
-         "-s", service, "-w"],
-        capture_output=True, text=True,
-    )
-    key = result.stdout.strip() if result.returncode == 0 else ""
-    return key or None
+    return secrets._from_keychain(service)
 
 
 def available() -> bool:
     """True when a call would have something to authenticate with."""
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+    if os.environ.get("ANTHROPIC_AUTH_TOKEN"):
         return True
-    return _profile_dir().exists() or _keychain_key() is not None
+    return _profile_dir().exists() or secrets.lookup(KEYCHAIN_SERVICE) is not None
 
 
 def _client():
@@ -218,8 +207,8 @@ def _client():
     except ImportError as exc:
         raise LLMUnavailable("the anthropic SDK is not installed. Run `uv sync`.") from exc
     options = {}
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
-        key = _keychain_key()
+    if not os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        key = secrets.lookup(KEYCHAIN_SERVICE)
         if key:
             options["api_key"] = key
     try:
@@ -274,8 +263,9 @@ def call(
             messages=[{"role": "user", "content": user}],
         )
     except anthropic.AuthenticationError as exc:
-        raise LLMUnavailable("the API key was rejected. Rotate it in the Console and "
-                             "re-run the `security add-generic-password -U` command.") from exc
+        raise LLMUnavailable("the API key was rejected. Rotate it in the Console, then "
+                             f"store the new one:\n      "
+                             f"{secrets.how_to_store('ANTHROPIC_API_KEY')}") from exc
     except anthropic.RateLimitError as exc:
         raise LLMUnavailable("rate limited by the API; the next run will retry.") from exc
     except anthropic.APIConnectionError as exc:

@@ -1,20 +1,14 @@
-# TEST FIXTURE — the persona from data/profile.example.yaml, frozen.
+# APPLY — the example profile. A person who does not exist.
 #
-# The suite runs against this file, never against data/profile.yaml, so a real
-# profile can change — or be replaced with someone else's — without breaking a
-# single test. The person described here is the same invented one the repository
-# ships as its example: Rachel "Rae" Mercer, of Example University. She does not
-# exist, none of this work was done, and no real biography belongs in this file.
+# This file is the scaffold `apply init` copies and the demo `apply setup
+# --persona` writes, so it is deliberately complete rather than a template of
+# empty keys: with this profile and nothing else, the pipeline runs end to end
+# and produces a real letter. Every fact below is invented. Rae Mercer is not a
+# person, Example University is not a university, and none of the work
+# described here was ever done.
 #
-# One deliberate difference from data/profile.example.yaml: experience[0].start
-# is left as ASK, so the ASK machinery — `apply doctor`, require_resolved, the
-# lint — is exercised by the profile the suite actually loads. Everything else
-# is the persona verbatim; if the two ever disagree about a fact, this file is
-# the copy to change.
-#
-# APPLY — public profile. The facts every generated document is allowed to use.
-#
-# Rules:
+# Run `apply setup` to replace it with a profile of your own. The rules that
+# file lives by:
 #   - Anything typed into an application form comes from here.
 #   - Private facts (phone, street address, GPA) live in profile.private.yaml,
 #     which is gitignored and deep-merged over this file at load time.
@@ -65,7 +59,7 @@ authorization:
 experience:
   - org: Example University, Department of Economics
     title: Research Assistant
-    start: ASK                  # month the role began, YYYY-MM
+    start: 2025-10
     end: present
     location: London
     bullets:
@@ -200,7 +194,7 @@ writing:
       # has to say why in its notes.
       quant: Vanilla — lead with what the library does and the design problems it forced.
       allocator: Rents and Transit, framed as the choice of comparison area and what it costs.
-      banking: The research assistant role and Rents and Transit, framed as analysis and written communication.
+      banking: The research assistant role and Rents and Transit, framed as analysis and written work.
       corporate: The research assistant role, framed as reporting that others can rerun and trust.
 
   answers:

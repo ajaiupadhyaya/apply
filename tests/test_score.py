@@ -83,8 +83,8 @@ def test_required_advanced_degrees_are_rejected():
 def test_both_seed_postings_clear_the_pursue_bar():
     """If either of these stops being `pursue`, the weights have drifted."""
     cases = [
-        ("vcimco.txt", "Investment Intern", "Richmond, Virginia"),
-        ("blackrock.txt", "2027 Full-Time Analyst Program (AMRS)", "New York, NY"),
+        ("ashcombe.txt", "Investment Intern", "Hudson, New York"),
+        ("quillon.txt", "2027 Full-Time Analyst Program (Americas)", "New York, NY"),
     ]
     for name, title, location in cases:
         body = (FIXTURES / name).read_text()

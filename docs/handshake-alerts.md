@@ -31,9 +31,9 @@ actually is:
 | `apply-allocator` | Keywords: investment, endowment, asset management, manager research |
 | `apply-corporate` | Keywords: financial analyst, FP&A, rotational, business analyst |
 
-Set **Location: New York** on the first three and leave `apply-corporate` open to
-Richmond and remote as well. That mirrors how the scorer weights geography, so
-what arrives is already close to what survives.
+Set the **Location** filter to the city you are actually looking in — the
+places above are the author's, and `apply search` prints the ones your own gate
+scores. Matching the two means what arrives is already close to what survives.
 
 **Set the frequency to daily, not instant.** An overnight run wants one digest
 per search, not forty separate emails. Instant alerts will work, they are just
@@ -101,6 +101,16 @@ behind it is on Handshake, which APPLY does not fetch. So these are filed for
 you to open. When one is worth pursuing, copy the full posting and run
 `apply describe <slug> --clipboard`, which attaches the text and re-scores it.
 
+`--clipboard` reads through `pbpaste` on macOS and `wl-paste`, `xclip` or
+`xsel` on Linux, whichever is on `PATH`. On a machine with none of them — a
+server, a container, an SSH session — pipe the text in instead:
+
+```bash
+apply describe <slug> --stdin < posting.txt
+```
+
+`--file posting.txt` does the same from a file.
+
 ---
 
 ## 5. Getting the mail to APPLY
@@ -108,10 +118,12 @@ you to open. When one is worth pursuing, copy the full posting and run
 Two ways in, and the parsing is the same either way:
 
 - **IMAP, for unattended runs.** Create a Gmail app password (myaccount.google.com
-  → Security → 2-Step Verification → App passwords) and store it in the Keychain:
+  → Security → 2-Step Verification → App passwords) and store it where an
+  unattended run can find it:
 
   ```bash
-  security add-generic-password -U -a "$USER" -s APPLY_IMAP_PASSWORD -w
+  security add-generic-password -U -a "$USER" -s APPLY_IMAP_PASSWORD -w   # macOS
+  keyring set apply APPLY_IMAP_PASSWORD                                   # Linux, if you have python-keyring
   ```
 
   `apply ingest --imap` and the scheduled run read it from there. If your

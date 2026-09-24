@@ -1,0 +1,319 @@
+# The gate's vocabulary.
+#
+# score.py holds the algorithm — reject on these patterns, weight a title
+# against those, add for a place. What it used to hold as well was one person's
+# vocabulary: their city, their field, their graduating year, written into the
+# source. That lives here.
+#
+# Copy any top-level block into data/search.yaml to override it; a block you
+# leave out keeps the value here. A block replaces whole, so an override of
+# `geography` is the whole of geography. `apply search` prints what is in force.
+#
+# Every entry is a Python regular expression, matched case-insensitively. In
+# `rejects`, `class_scoped`, `geography` and `non_us` each entry is wrapped in
+# non-alphanumeric boundaries before it is compiled, so "lead" does not match
+# "leadership". In `role_fit`, `timing` and `title_timing` the pattern is used
+# as written.
+
+thresholds: {pursue: 70, maybe: 45}
+
+
+# Which country's addresses the gate may assume it knows. `us` is the only value
+# with any knowledge behind it: the fifty states and their abbreviations, which
+# is how a location with no matching `geography` block below — "Boise, Idaho" —
+# is still recognised as somewhere this search covers, while "Kyiv, Ukraine" is
+# refused. Any other value switches that off, and the `non_us` list with it,
+# because a gate that has never been told where you are cannot honestly refuse a
+# place for being somewhere else. `apply setup` writes the right one for the city
+# you give it. Your own `geography` block does the work either way.
+country: us
+
+
+# ----------------------------------------------------------- hard rejects
+#
+# Checked against the title alone, in this order, before anything is scored.
+# The first block that matches ends it, and its name selects the rejection
+# reason score.py prints.
+
+rejects:
+
+  # Titles that are not open to someone still an undergraduate, whatever else
+  # they say. "Rising Senior Summer Analyst" and "junior or senior year"
+  # describe a student, not a job level: only the standalone rank disqualifies.
+  seniority:
+    - '(?<!rising\s)senior(?!\s+year)'
+    - 'sr\.?'
+    - 'vice\s+president'
+    - '\bvp\b'
+    - 'director'
+    - 'principal'
+    - 'staff'
+    - 'lead'
+    - 'head\s+of'
+    - 'chief'
+    - 'executive'
+    - 'managing\s+director'
+    - '\bmd\b'
+    - 'partner'
+    - 'manager'
+    - 'supervisor'
+    - 'president'
+
+  # Functions that are not what this person does, however junior.
+  off_function:
+    # "Sales and Trading" / "Sales & Trading" is a front-office markets track,
+    # not a sales job. Found by a real LinkedIn alert: a Global Markets
+    # (Sales and Trading) Summer Analyst Program was being rejected here.
+    - 'sales(?!\s*(?:and|&)\s*trading)'
+    - 'account\s+executive'
+    - 'recruit\w*'
+    - 'talent'
+    - 'marketing'
+    - 'human\s+resources'
+    - '\bhr\b'
+    - 'facilities'
+    - 'custodian'
+    - 'janitor'
+    - 'nurse'
+    - 'physician'
+    - 'paralegal'
+    - 'attorney'
+    - 'counsel'
+    - 'executive\s+assistant'
+    - 'receptionist'
+    - 'copywriter'
+    - 'designer'
+    - 'video'
+    - 'social\s+media'
+    - 'community\s+manager'
+    - 'support\s+specialist'
+    # Found by a live pass: "Workplace Services Rotational Coordinator" scored
+    # 61 on the strength of the word "rotational".
+    - 'coordinator'
+    - 'administrator'
+    - 'office\s+manager'
+    - 'workplace\s+services'
+    - 'recruiter'
+    - 'chef'
+    - 'barista'
+    - 'events?'
+    - 'recepti\w*'
+
+  # The line inside technology. Analysis of a business: yes. Building the
+  # product: no.
+  too_technical:
+    - 'software\s+engineer\w*'
+    - '\bswe\b'
+    - 'backend'
+    - 'back-end'
+    - 'frontend'
+    - 'front-end'
+    - 'full[\s-]?stack'
+    - 'mobile\s+engineer'
+    - '\bios\b'
+    - 'android'
+    - 'devops'
+    - '\bsre\b'
+    - 'site\s+reliability'
+    - 'security\s+engineer\w*'
+    - 'infrastructure\s+engineer\w*'
+    - 'platform\s+engineer\w*'
+    - 'systems\s+engineer\w*'
+    - 'network\s+engineer\w*'
+    - 'firmware'
+    - 'embedded'
+    - '\bqa\b'
+    - 'quality\s+assurance'
+    - 'data\s+engineer\w*'
+    - 'machine\s+learning\s+engineer\w*'
+    - 'computer\s+science\s+intern'
+    - '\bml\s+engineer\b'
+    - 'solutions\s+architect'
+    - 'web\s+developer'
+    # Found by a live pass: "Hardware Engineer (FPGA/ASIC)" scored 59.
+    - 'hardware\s+engineer\w*'
+    - '\bfpga\b'
+    - '\basic\b'
+    - 'electrical\s+engineer\w*'
+    - '\bsysadmin\b'
+    - 'database\s+administrator'
+    - 'compiler'
+    - 'kernel'
+    # Found by a live pass: "Systems Engineering Intern" slipped past the bare
+    # "systems engineer" (the boundary rejects "-ing"), and "Software Developer
+    # Intern" scored 75 because only "engineer" was listed.
+    - 'software\s+develop\w*'
+    - 'developers?'
+
+
+# A posting aimed explicitly at one class year. A single employer can run a
+# dozen separate "Sophomore Intern" programmes, none of them open to a junior
+# or a senior. Only consulted when the profile states a class standing; a
+# posting scoped to a year that is not yours is refused.
+class_scoped:
+  freshman:
+    - 'freshman'
+    - 'first[\s-]?year\s+(student|intern)'
+  sophomore:
+    - 'sophomore'
+  junior:
+    - 'rising\s+junior(?!\s+or)'
+    - 'junior\s+year'
+  senior:
+    - 'rising\s+senior(?!\s+or)'
+
+
+# ---------------------------------------------------------------- places
+#
+# Matched against the posting's location, in this order; the first block that
+# matches is the one that scores, and its label and weight become the reason
+# ("New York +25"). A posting matching none of them, whose location names a
+# city plainly abroad, is refused outright.
+#
+# `match_title: true` also looks in the title, which is where a posting that is
+# remote usually says so.
+
+geography:
+  primary: {weight: 25, label: New York, patterns: [
+    'new\s+york', '\bnyc\b', 'manhattan', '\bny\b', 'hudson\s+yards']}
+  # A placeholder, and the one block nobody else can write for you. The feature
+  # is real — a second place you would take a job in, where you already live or
+  # would commute from, scored below the city you are actually aiming at — but
+  # the places have to be yours. `apply setup` asks where you want to work and
+  # writes data/search.yaml from the answer; that file replaces this whole
+  # `geography` block, so what is here scores only on a clone that has not run
+  # it. The two patterns below match nothing any job board writes: put your own
+  # city, state and commuter towns in their place.
+  home: {weight: 15, label: your home city, patterns: [
+    'your\s+home\s+city', 'your\s+home\s+state']}
+  remote: {weight: 10, label: remote, match_title: true, patterns: [
+    'remote', 'work\s+from\s+home', 'virtual', 'anywhere']}
+  hub: {weight: 6, label: US finance hub, patterns: [
+    'boston', 'chicago', 'san\s+francisco', 'stamford', 'greenwich',
+    'jersey\s+city', 'philadelphia', 'charlotte', 'atlanta', 'dallas',
+    'houston', 'los\s+angeles', 'miami', 'austin', 'seattle', 'denver']}
+
+# A location string with none of the above and one of these is somewhere else.
+non_us:
+  - 'london'
+  - 'hong\s+kong'
+  - 'singapore'
+  - 'tokyo'
+  - 'shanghai'
+  - 'mumbai'
+  - 'bengaluru'
+  - 'bangalore'
+  - 'gurgaon'
+  - 'hyderabad'
+  - 'amsterdam'
+  - 'dublin'
+  - 'paris'
+  - 'frankfurt'
+  - 'munich'
+  - 'zurich'
+  - 'geneva'
+  - 'milan'
+  - 'madrid'
+  - 'toronto'
+  - 'montreal'
+  - 'vancouver'
+  - 'sydney'
+  - 'melbourne'
+  - 'sao\s+paulo'
+  - 'mexico\s+city'
+  - 'budapest'
+  - 'warsaw'
+  - 'tel\s+aviv'
+  - 'dubai'
+  - 'seoul'
+  - 'taipei'
+  - 'manila'
+  - 'kuala\s+lumpur'
+  - 'bucharest'
+  - 'edinburgh'
+  - 'glasgow'
+  - 'united\s+kingdom'
+  - 'india'
+  - 'china'
+  - 'japan'
+  - 'germany'
+  - 'france'
+  - 'netherlands'
+  - 'ireland'
+  - 'switzerland'
+  - 'canada'
+  - 'australia'
+  - 'brazil'
+
+
+# -------------------------------------------------------- positive signals
+#
+# Title patterns, best match wins. The ceiling is 25 so that a bullseye posting
+# — right role, right timing, right city, target firm — lands near 90 and
+# clears the pursue bar with room to spare.
+
+role_fit:
+  # Loose between "quantitative" and the noun: "Quantitative Finance
+  # Researcher" is the same job as "Quantitative Researcher".
+  - ['quantitative[\s\w]{0,18}(research\w*|analyst|trader|trading)', 25]
+  - ['quantitative\s+(research\w*|trad\w*|analyst)', 25]
+  # Graduate programmes are what the banks call an analyst programme, and they
+  # are exactly the thing worth catching.
+  - ['graduate\s+(program|programme|scheme|analyst)', 23]
+  - ['sales\s+and\s+trading', 22]
+  - ['analyst\s+program', 22]
+  - ['summer\s+analyst', 22]
+  - ['investment\s+bank\w*\s+(analyst|associate|intern)', 22]
+  - ['investment\s+(analyst|associate|intern)', 20]
+  - ['equity\s+research', 20]
+  - ['research\s+(analyst|associate|assistant)', 19]
+  - ['econometric\w*', 19]
+  - ['risk\s+(analyst|management|intern)', 18]
+  - ['portfolio\s+(analyst|management|operations)', 18]
+  - ['financial\s+analyst', 18]
+  - ['credit\s+analyst', 18]
+  - ['economist', 17]
+  - ['investment\s+management', 19]
+  - ['private\s+(equity|credit|bank\w*)', 19]
+  - ['\bm&a\b', 19]
+  - ['corporate\s+bank\w*', 18]
+  - ['capital\s+markets', 17]
+  - ['asset\s+management', 17]
+  - ['wealth\s+management', 14]
+  - ['treasury', 14]
+  - ['actuarial', 13]
+  - ['trading\s+(analyst|assistant|intern)', 17]
+  - ['\btrader\b', 16]
+  - ['corporate\s+development', 16]
+  - ['strategy\s+(analyst|associate|intern)', 14]
+  - ['business\s+analyst', 14]
+  - ['data\s+analyst', 13]
+  - ['financial\s+planning', 13]
+  - ['\banalyst\b', 12]
+  - ['\bassociate\b', 9]
+  - ['\bintern(ship)?\b', 8]
+
+# When the role is aimed at someone in this person's position. Read against the
+# title and the first 2000 characters of the description. Best match wins.
+timing:
+  - ['pre[\s-]?doctoral|predoc', 20]
+  - ['summer\s+20(26|27)', 18]
+  - ['20(26|27)\s+(summer|full[\s-]?time|analyst)', 18]
+  - ['class\s+of\s+20(27|28)', 18]
+  - ['full[\s-]?time\s+analyst', 17]
+  - ['campus|university\s+(hire|program|recruit)|early\s+career', 16]
+  - ['new\s+grad(uate)?', 16]
+  - ['rising\s+(junior|senior)', 16]
+  - ['research\s+assistant', 15]
+  - ['rotational\s+program', 14]
+  - ['undergraduate', 12]
+  - ['graduating\s+(student|in)', 12]
+  - ['\bjunior\s+or\s+senior\b', 12]
+  - ['part[\s-]?time', 8]
+  - ['\bintern(ship)?\b', 8]
+
+# Checked against the title alone. A year in a job title is a campus signal;
+# the same year buried in a description usually is not.
+title_timing:
+  - ['\b20(26|27)\b', 14]
+  - ['\bclass\s+of\b', 14]

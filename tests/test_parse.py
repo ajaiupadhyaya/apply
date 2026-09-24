@@ -57,7 +57,7 @@ def test_reads_comp(text, expected):
 @pytest.mark.parametrize("text,expected", [
     ("Location: Chicago, IL", "Chicago, IL"),
     ("Analyst\nAcme LP\nNew York, NY", "New York, NY"),
-    ("Analyst\nAcme LP\nRichmond, Virginia", "Richmond, Virginia"),
+    ("Analyst\nAcme LP\nHartford, Connecticut", "Hartford, Connecticut"),
 ])
 def test_reads_location(text, expected):
     assert find_location(text) == expected
@@ -65,9 +65,10 @@ def test_reads_location(text, expected):
 
 @pytest.mark.parametrize("text,company,role", [
     ("Company: Acme Capital\nJob Title: Investment Analyst", "Acme Capital", "Investment Analyst"),
-    ("Jane Street — Quantitative Trader Intern", "Jane Street", "Quantitative Trader Intern"),
+    ("Fenwold Securities — Quantitative Trader Intern",
+     "Fenwold Securities", "Quantitative Trader Intern"),
     ("Summer Analyst at Beacon Partners", "Beacon Partners", "Summer Analyst"),
-    ("Investment Intern\nVCIMCO\nRichmond, Virginia", "VCIMCO", "Investment Intern"),
+    ("Investment Intern\nQUILLON\nHartford, Connecticut", "QUILLON", "Investment Intern"),
     ("Analyst\nJPMorgan\nNYC", "JPMorgan", "Analyst"),
     ("Software Intern\neBay\nSan Jose, CA", "eBay", "Software Intern"),
 ])
@@ -80,8 +81,8 @@ def test_keeps_a_trailing_period_in_a_company_name():
     assert parse("Company: Smith & Co.\nJob Title: Analyst").company == "Smith & Co."
 
 
-def test_jd_raw_is_kept_verbatim(blackrock_jd):
-    assert parse(blackrock_jd).jd_raw == blackrock_jd
+def test_jd_raw_is_kept_verbatim(quillon_jd):
+    assert parse(quillon_jd).jd_raw == quillon_jd
 
 
 def test_incomplete_parse_refuses_to_make_a_posting():

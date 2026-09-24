@@ -1,8 +1,9 @@
 # The employer registry: which firms to poll, and how to reach their job board.
 #
 # Copy this to data/employers.yaml (gitignored) and replace these with the firms
-# you are targeting. The entries below are illustrative — one working example of
-# each supported job board, verified to answer — not recommendations.
+# you are targeting. The entries below are illustrative — one example of each
+# supported job board, to show the shape of an entry — not recommendations, and
+# not a promise that any particular board still answers today.
 #
 # The fast way to add a firm:
 #     apply resolve <the firm's careers page> --name "Firm" --priority 2
@@ -73,14 +74,21 @@ employers:
   # returns ten at a time whatever you ask for, so `max_results` is the real
   # cost control. Some Eightfold boards answer a non-browser client with 403;
   # those are not pollable, and `apply resolve` says so rather than guessing.
-  - name: Example Partners
-    ats: eightfold
-    host: example.eightfold.ai
-    domain: example.com          # optional; the API validates it when present
-    search: ["analyst", "intern", "2027"]
-    max_results: 300
-    tracks: [corporate]
-    priority: 3
+  #
+  # Commented out because `example.eightfold.ai` is a placeholder host that does
+  # not resolve: left enabled, the first `apply discover` on a fresh clone
+  # begins with a DNS error, and a newcomer cannot tell a bad example from a
+  # broken tool. Point it at a real Eightfold board — `apply resolve` prints the
+  # block — and uncomment.
+  #
+  # - name: Example Partners
+  #   ats: eightfold
+  #   host: example.eightfold.ai
+  #   domain: example.com        # optional; the API validates it when present
+  #   search: ["analyst", "intern", "2027"]
+  #   max_results: 300
+  #   tracks: [corporate]
+  #   priority: 3
 
   # A careers page with no board API, which renders from the JSON it embeds as
   # __NEXT_DATA__. The record shape is one firm's, so this is a template rather

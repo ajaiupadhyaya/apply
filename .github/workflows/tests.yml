@@ -7,10 +7,13 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        # The machine it is developed on, and the one a stranger is most likely
+        # to clone it onto. The scheduler and the secret lookup differ on each.
+        os: [ubuntu-latest, macos-latest]
         # The floor pyproject promises, and the version it is developed on.
         python: ["3.11", "3.13"]
     steps:
@@ -24,3 +27,44 @@ jobs:
       # Every test that could reach the Anthropic API is blocked in conftest.
       - name: Test
         run: uv run --python ${{ matrix.python }} pytest -q
+
+  # The quick start, run the way a stranger runs it: a checkout with no profile
+  # of its own, no API key, no TeX. Nothing here calls a model. It is a separate
+  # job from the suite because it proves a different thing — that the commands
+  # in the README work on a clone, not that the code is correct.
+  smoke:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: uv sync
+      - name: The quick start
+        run: |
+          uv run apply setup --non-interactive
+          uv run apply seed
+          uv run apply status
+          uv run apply digest
+          uv run apply search
+          uv run apply targets
+          uv run apply spend
+          uv run apply schedule --show
+      # The two jobs used to miss each other exactly: this one ran `setup` and
+      # never ran the suite, the other ran the suite on a checkout where `setup`
+      # had never run. So nothing covered the state a user is actually in after
+      # following the quick start — a data/search.yaml on disk, written for the
+      # city they gave. It used to move 753 frozen verdicts and redden the suite
+      # for anyone who does not live in New York. One leg is enough: a file in
+      # data/ reads the same on either operating system.
+      - name: The suite still passes after setup has written data/search.yaml
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          test -f data/search.yaml   # the step above really did write one
+          uv run pytest -q
+      - name: Nothing the run wrote is committable
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"
