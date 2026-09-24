@@ -531,6 +531,14 @@ state that needs you, so it's the only thing on the page in colour. Each
 posting's page carries the description verbatim, the letter as a PDF, what the
 audit found, and your portal answers as a column of copy buttons.
 
+![The pipeline, deadline first](docs/img/pipeline.png)
+
+![One posting: the description verbatim, the facts parsed out of it, and the
+log](docs/img/posting.png)
+
+Both are a fresh clone: `apply setup --persona && apply seed && apply serve`.
+The person is the invented Rae Mercer and the two firms do not exist.
+
 ---
 
 ## Commands
