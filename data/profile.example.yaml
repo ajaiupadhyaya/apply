@@ -1,0 +1,211 @@
+# APPLY — the example profile. A person who does not exist.
+#
+# This file is the scaffold `apply init` copies and the demo `apply setup
+# --persona` writes, so it is deliberately complete rather than a template of
+# empty keys: with this profile and nothing else, the pipeline runs end to end
+# and produces a real letter. Every fact below is invented. Rae Mercer is not a
+# person, Example University is not a university, and none of the work
+# described here was ever done.
+#
+# Run `apply setup` to replace it with a profile of your own. The rules that
+# file lives by:
+#   - Anything typed into an application form comes from here.
+#   - Private facts (phone, street address, GPA) live in profile.private.yaml,
+#     which is gitignored and deep-merged over this file at load time.
+#   - The literal string ASK marks a value the owner still has to supply.
+#     `apply doctor` lists them; generation refuses to render one into a document.
+
+identity:
+  legal_first: Rachel        # what a form asking for a legal name gets
+  legal_last: Mercer
+  preferred_name: Rae        # what the letterhead and the filenames use
+  email: rae.mercer@example.com
+  location:
+    city: London
+    country: United Kingdom
+
+links:
+  github: https://github.com/rae-mercer-example
+  portfolio: https://rae-mercer.example.com
+
+education:
+  - institution: Example University
+    degree: Bachelor of Science
+    major: Economics
+    start: 2024-09
+    grad_expected: 2027-06      # AUTHORITATIVE. Never restate from memory.
+    current: true
+  - institution: Example College
+    note: prior coursework in mathematics and statistics
+    current: false
+
+# When Rae can start. A letter states this only as written here, and says
+# nothing about a start date while a value is ASK or absent.
+availability:
+  full_time: "from July 2027, after graduating"
+  # Graduation is June 2027, so there is no summer before it to intern in.
+  # An absent value is said out loud to the writer rather than guessed at.
+  internship: null
+
+authorization:
+  # Rae is a US citizen finishing a degree in London and applying to US roles,
+  # which is why a London address and US work authorization sit together here.
+  us_work_authorized: true
+  requires_sponsorship_now: false
+  requires_sponsorship_future: false
+  felony: false
+  veteran: false
+
+experience:
+  - org: Example University, Department of Economics
+    title: Research Assistant
+    start: 2025-10
+    end: present
+    location: London
+    bullets:
+      - "Assemble and document panel datasets for two faculty housing studies;
+         reconcile series that three public sources report on different bases."
+      - "Write the cleaning and merge steps as scripts a supervisor can rerun,
+         so a table in a draft can be traced back to the file it came from."
+      - "Draft the data appendix for a working paper, stating each adjustment
+         and what it assumes."
+    tags: [data, research, economics]
+    # More detail on the same role, for the writer to draw on. Source material,
+    # not sentences to paste.
+    detail:
+      - "Most of the job is reconciliation. A housing series published by a
+         statistics agency, a listings aggregator and a local authority will
+         disagree about the same quarter, and the disagreement is usually a
+         definition rather than an error: one counts new lettings, one counts
+         asking prices, one counts every tenancy on the register. Someone has
+         to work out which is which and write it down before the number goes
+         into a paper."
+      - "The second half is reproducibility. I keep the pulls and the merges in
+         scripts with the source and the retrieval date recorded, so a table in
+         a draft can be traced to the file it came from months later."
+
+projects:
+  rents_and_transit:
+    name: Rents and Transit
+    url: https://github.com/rae-mercer-example/rents-and-transit
+    tracks: [allocator, banking, corporate]
+    # one_line, three_line and technical are descriptions for the writer to
+    # draw on. resume_line is printed verbatim on the resume.
+    one_line: "Rents and Transit is a study of what happened to advertised rents
+      along a rail line in the years around its opening."
+    resume_line: >-
+      Study of advertised rents along a new rail corridor; matched listings to
+      stations by walking distance and reported the estimate against several
+      definitions of the comparison area rather than the most favourable one.
+    stack: [Python, SQL, R]
+    three_line: |
+      Rents and Transit looks at advertised rents near the stations of a rail line
+      in the years around its opening. Listings are matched to stations by walking
+      distance rather than straight-line distance, and the result is reported
+      against several definitions of the comparison area, because the choice of
+      comparison area moves the answer more than anything else in the model.
+    technical: |
+      The interesting problem was not estimation, it was the comparison area. A
+      corridor that gets a station is not a random corridor, so the estimate is
+      only as honest as the counterfactual, and the obvious counterfactuals —
+      the next borough over, the rest of the city, the same corridor before
+      construction — each answer a different question. The study reports all of
+      them side by side with the sample each one rests on, so a reader can
+      disagree with a specific assumption rather than with the whole result.
+  vanilla:
+    name: Vanilla
+    url: https://github.com/rae-mercer-example/vanilla
+    tracks: [quant, banking]
+    one_line: "Vanilla is a small options-pricing library written to make the
+      assumptions behind a quoted price visible."
+    resume_line: >-
+      Options-pricing library in Python; European and American vanillas under
+      several models, with each price carrying the assumptions and the numerical
+      tolerance it was produced under.
+    stack: [Python, NumPy]
+    three_line: |
+      Vanilla prices European and American vanilla options under a handful of
+      models and returns the assumptions alongside the number: the rate and
+      dividend conventions used, the grid or path count, and the tolerance the
+      answer was produced to. It exists because a price with no stated
+      assumptions cannot be checked by the person receiving it.
+    technical: |
+      The library keeps the model, the numerical method and the market
+      conventions as separate objects, so the same instrument can be priced
+      analytically, on a tree and by simulation and the three answers compared
+      as a test rather than trusted one at a time. The design decisions that
+      mattered were where to put day-count and settlement conventions so that
+      they are stated once instead of re-derived in each model, and how to
+      report convergence: the tolerance travels with the price, so a result that
+      has not converged is visibly a result that has not converged.
+
+skills:
+  # Only what is evidenced elsewhere in this file. Add freely — the resume
+  # renders whatever is here and omits an empty group.
+  Languages: [Python, R, SQL]
+  Methods: [Panel data, Monte Carlo, Numerical methods]
+  Tools: [Git, LaTeX]
+
+essays:
+  # Canonical answers to the prompts every portal asks. Write once, adapt per
+  # app. why_this_firm is deliberately null: it is never reused verbatim.
+  why_this_firm_150w: null
+  why_finance_200w: null
+  greatest_challenge_300w: null
+  leadership_example_250w: null
+  strength_weakness_150w: null
+
+# targets: lives in profile.private.yaml — the firm list is strategy, not a fact
+# about you, and this file is public.
+
+# ---------------------------------------------------------------------------
+# Writing brief. Instructions for Claude, not sentences for a template: nothing
+# in this block is ever pasted into a letter. Claude writes every sentence from
+# the facts above, the files in data/context/, and the posting, and a second,
+# independent request audits the result before any PDF exists.
+#
+# Edit this to change how every future letter reads. The hard rules — nothing
+# unsourced, the banned phrases, one page, authorization stated exactly — live
+# in code (src/apply/writer.py) and cannot be loosened from here.
+# ---------------------------------------------------------------------------
+writing:
+  voice: >-
+    Plain, specific and a little understated: someone who does the work and
+    assumes the reader does too. Vary sentence length and shape. Prefer the
+    concrete noun to the abstract one and the verb to the adjective. It should
+    read like a person wrote it for this one employer rather than like a brief
+    being followed. No sentence should survive being moved into a letter to a
+    different firm.
+
+  letter:
+    length: 280 to 380 words across the body and closing. One page, always.
+    structure: >-
+      Four body paragraphs and a short closing. First: the role, when I
+      graduate, and in a single clause why this firm. Second: one piece of work
+      in operational detail — what it does and what building it forced me to
+      decide. This is the paragraph that gets the letter read, so it carries the
+      specifics. Third: two other pieces of work, a sentence or so each. Fourth:
+      why this firm, anchored to something concrete the posting names. The
+      closing states work authorization, gives availability only if the profile
+      states it, and ends plainly.
+    proof_asset:
+      # The default subject of paragraph 2 on each track. Claude may choose a
+      # different piece of work if the posting makes it clearly stronger, and
+      # has to say why in its notes.
+      quant: Vanilla — lead with what the library does and the design problems it forced.
+      allocator: Rents and Transit, framed as the choice of comparison area and what it costs.
+      banking: The research assistant role and Rents and Transit, framed as analysis and written work.
+      corporate: The research assistant role, framed as reporting that others can rerun and trust.
+
+  answers:
+    why_role: >-
+      The reasoning of paragraph 4, said directly: what in this posting matches
+      what I have actually done, and what I want to learn there. Specific to this
+      employer and useless anywhere else.
+
+  avoid:
+    - restating the resume line by line
+    - opening with "I am writing to express my interest"
+    - praising the firm in terms the posting does not use
+    - claiming a skill, outcome or responsibility the sources do not show
+    - hedging — "I believe", "I feel that", "I think I could"

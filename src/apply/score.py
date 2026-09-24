@@ -11,6 +11,12 @@ geography check, a function check, and a degree-requirement check.
 
 Every rejection carries its reason, because a gate you cannot argue with is a
 gate you will eventually route around.
+
+What this file holds is the algorithm. What it no longer holds is the
+vocabulary — which cities count, which titles are the wrong function, what a
+quantitative research role is worth. That is one person's search, not everyone's,
+so it lives in search.defaults.yaml and is overridable per block in
+data/search.yaml. See `apply search`.
 """
 
 from __future__ import annotations
@@ -20,6 +26,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .classify import classify
+from .search import SearchConfig
 from .sources.base import RawPosting
 
 
@@ -29,58 +36,30 @@ class Verdict(str, Enum):
     REJECT = "reject"     # never reaches a document
 
 
-def _any(patterns: list[str]) -> re.Pattern:
-    return re.compile("|".join(rf"(?<![A-Za-z0-9]){p}(?![A-Za-z0-9])" for p in patterns), re.I)
+#: How each configured reject block words itself. A block the configuration adds
+#: that is not named here falls back to its own name.
+_REJECT_REASON = {
+    "seniority": "title is senior",
+    "off_function": "off-function",
+    "too_technical": "engineering role",
+    "graduate_program": "for graduate students",
+}
+#: …and what it is filed under. These strings reach the database and the web UI.
+_REJECT_LABEL = {
+    "seniority": "seniority",
+    "off_function": "function",
+    "too_technical": "technical",
+    "graduate_program": "degree",
+}
 
 
-# ----------------------------------------------------------- hard rejects
+# --------------------------------------------------- algorithm, not vocabulary
+#
+# The rules below are not about one person's field or city, so they stay here:
+# an experience bar, a credential bar, and the eligibility window a campus
+# programme states in its own words.
 
-#: Titles that are not open to someone graduating in 2027, whatever else they say.
-SENIORITY = _any([
-    # "Rising Senior Summer Analyst" and "junior or senior year" describe a
-    # student, not a job level. Only the standalone rank is disqualifying.
-    r"(?<!rising\s)senior(?!\s+year)",
-    r"sr\.?", r"vice\s+president", r"\bvp\b", r"director", r"principal",
-    r"staff", r"lead", r"head\s+of", r"chief", r"executive", r"managing\s+director",
-    r"\bmd\b", r"partner", r"manager", r"supervisor", r"president",
-])
-
-#: Functions that are not what this person does, however senior.
-OFF_FUNCTION = _any([
-    # "Sales and Trading" / "Sales & Trading" is a front-office markets track,
-    # not a sales job. Found by a real LinkedIn alert: UBS's Global Markets
-    # (Sales and Trading) Summer Analyst Program was being rejected here.
-    r"sales(?!\s*(?:and|&)\s*trading)", r"account\s+executive", r"recruit\w*", r"talent", r"marketing",
-    r"human\s+resources", r"\bhr\b", r"facilities", r"custodian", r"janitor",
-    r"nurse", r"physician", r"paralegal", r"attorney", r"counsel",
-    r"executive\s+assistant", r"receptionist", r"copywriter", r"designer",
-    r"video", r"social\s+media", r"community\s+manager", r"support\s+specialist",
-    # Found by a live pass: "Workplace Services Rotational Coordinator" scored 61
-    # on the strength of the word "rotational".
-    r"coordinator", r"administrator", r"office\s+manager", r"workplace\s+services",
-    r"recruiter", r"chef", r"barista", r"events?", r"recepti\w*",
-])
-
-#: The line inside technology. Analysis of a business: yes. Building the product: no.
-TOO_TECHNICAL = _any([
-    r"software\s+engineer\w*", r"\bswe\b", r"backend", r"back-end", r"frontend",
-    r"front-end", r"full[\s-]?stack", r"mobile\s+engineer", r"\bios\b", r"android",
-    r"devops", r"\bsre\b", r"site\s+reliability", r"security\s+engineer\w*",
-    r"infrastructure\s+engineer\w*", r"platform\s+engineer\w*", r"systems\s+engineer\w*",
-    r"network\s+engineer\w*", r"firmware", r"embedded", r"\bqa\b",
-    r"quality\s+assurance", r"data\s+engineer\w*", r"machine\s+learning\s+engineer\w*",
-    r"computer\s+science\s+intern",
-    r"\bml\s+engineer\b", r"solutions\s+architect", r"web\s+developer",
-    # Found by a live pass: "Hardware Engineer (FPGA/ASIC)" scored 59.
-    r"hardware\s+engineer\w*", r"\bfpga\b", r"\basic\b", r"electrical\s+engineer\w*",
-    r"\bsysadmin\b", r"database\s+administrator", r"compiler", r"kernel",
-    # Found by a live pass: "Systems Engineering Intern" slipped past the bare
-    # "systems engineer" (the boundary rejects "-ing"), and "Software Developer
-    # Intern" scored 75 because only "engineer" was listed.
-    r"software\s+develop\w*", r"developers?",
-])
-
-#: Experience and credential bars a 2027 undergraduate cannot clear.
+#: Experience and credential bars an undergraduate cannot clear.
 YEARS = re.compile(r"(\d+)\s*\+?\s*(?:-\s*\d+\s*)?years?(?:\s+of)?\s+(?:relevant\s+|professional\s+|work\s+)?experience", re.I)
 ADVANCED_DEGREE = re.compile(
     r"(ph\.?d|doctorate|mba|master'?s|graduate\s+degree|advanced\s+degree)[^.]{0,40}"
@@ -88,6 +67,8 @@ ADVANCED_DEGREE = re.compile(
 #: A title naming a graduate programme is aimed at graduate students, whatever
 #: the body says: "Quantitative Analyst, Ph.D. Intern" scored 92 in a live pass.
 #: Pre-doctoral roles are the opposite — built for undergraduates — so they pass.
+#: This one is a hand-built alternation rather than a list of tokens, which is
+#: why it did not move into the configuration with the other rejects.
 GRADUATE_PROGRAM = re.compile(
     r"\bph\.?\s?d\b|\bmba\b|\bmaster'?s\s+(?:intern|student|program)"
     r"|\bpost[\s-]?doc\w*|\b(?<!pre\s)(?<!pre-)doctoral\b", re.I)
@@ -129,25 +110,6 @@ def graduation_window(body: str) -> tuple[tuple[int, int], tuple[int, int], str]
     return start, end, match.group(0)
 
 
-#: A posting aimed explicitly at one class year. A single employer can run a
-#: dozen separate "Sophomore Intern" programmes, none of them open to a junior
-#: or senior.
-CLASS_SCOPED = {
-    "freshman": _any([r"freshman", r"first[\s-]?year\s+(student|intern)"]),
-    "sophomore": _any([r"sophomore"]),
-    "junior": _any([r"rising\s+junior(?!\s+or)", r"junior\s+year"]),
-    "senior": _any([r"rising\s+senior(?!\s+or)"]),
-}
-
-#: Places. NYC is the stated goal, so it is the heaviest single signal here.
-NYC = _any([r"new\s+york", r"\bnyc\b", r"manhattan", r"\bny\b", r"hudson\s+yards"])
-HOME = _any([r"richmond", r"charlottesville", r"virginia", r"\bva\b",
-             r"washington,?\s*d\.?c", r"arlington", r"alexandria", r"mclean", r"reston"])
-HUB = _any([r"boston", r"chicago", r"san\s+francisco", r"stamford", r"greenwich",
-            r"jersey\s+city", r"philadelphia", r"charlotte", r"atlanta", r"dallas",
-            r"houston", r"los\s+angeles", r"miami", r"austin", r"seattle", r"denver"])
-REMOTE = _any([r"remote", r"work\s+from\s+home", r"virtual", r"anywhere"])
-
 def _us_location_pattern() -> re.Pattern:
     from .parse import _STATE_ALT
 
@@ -156,92 +118,14 @@ def _us_location_pattern() -> re.Pattern:
 
 _US_LOCATION = _us_location_pattern()
 
-#: A location string with none of the above and one of these is somewhere else.
-NON_US = _any([
-    r"london", r"hong\s+kong", r"singapore", r"tokyo", r"shanghai", r"mumbai",
-    r"bengaluru", r"bangalore", r"gurgaon", r"hyderabad", r"amsterdam", r"dublin",
-    r"paris", r"frankfurt", r"munich", r"zurich", r"geneva", r"milan", r"madrid",
-    r"toronto", r"montreal", r"vancouver", r"sydney", r"melbourne", r"sao\s+paulo",
-    r"mexico\s+city", r"budapest", r"warsaw", r"tel\s+aviv", r"dubai", r"seoul",
-    r"taipei", r"manila", r"kuala\s+lumpur", r"bucharest", r"edinburgh", r"glasgow",
-    r"united\s+kingdom", r"india", r"china", r"japan", r"germany", r"france",
-    r"netherlands", r"ireland", r"switzerland", r"canada", r"australia", r"brazil",
-])
 
-
-# -------------------------------------------------------- positive signals
-
-#: Title patterns, best match wins. The ceiling is 25 so that a bullseye posting
-#: — right role, right timing, right city, target firm — lands near 90 and clears
-#: the pursue bar with room to spare. Calibrated against the two seed postings.
-ROLE_FIT = [
-    # Loose between "quantitative" and the noun: "Quantitative Finance
-    # Researcher" is the same job as "Quantitative Researcher".
-    (r"quantitative[\s\w]{0,18}(research\w*|analyst|trader|trading)", 25),
-    (r"quantitative\s+(research\w*|trad\w*|analyst)", 25),
-    # Graduate programmes are what the banks call an analyst programme, and
-    # they are exactly the thing worth catching.
-    (r"graduate\s+(program|programme|scheme|analyst)", 23),
-    (r"sales\s+and\s+trading", 22),
-    (r"analyst\s+program", 22),
-    (r"summer\s+analyst", 22),
-    (r"investment\s+bank\w*\s+(analyst|associate|intern)", 22),
-    (r"investment\s+(analyst|associate|intern)", 20),
-    (r"equity\s+research", 20),
-    (r"research\s+(analyst|associate|assistant)", 19),
-    (r"econometric\w*", 19),
-    (r"risk\s+(analyst|management|intern)", 18),
-    (r"portfolio\s+(analyst|management|operations)", 18),
-    (r"financial\s+analyst", 18),
-    (r"credit\s+analyst", 18),
-    (r"economist", 17),
-    (r"investment\s+management", 19),
-    (r"private\s+(equity|credit|bank\w*)", 19),
-    (r"\bm&a\b", 19),
-    (r"corporate\s+bank\w*", 18),
-    (r"capital\s+markets", 17),
-    (r"asset\s+management", 17),
-    (r"wealth\s+management", 14),
-    (r"treasury", 14),
-    (r"actuarial", 13),
-    (r"trading\s+(analyst|assistant|intern)", 17),
-    (r"\btrader\b", 16),
-    (r"corporate\s+development", 16),
-    (r"strategy\s+(analyst|associate|intern)", 14),
-    (r"business\s+analyst", 14),
-    (r"data\s+analyst", 13),
-    (r"financial\s+planning", 13),
-    (r"\banalyst\b", 12),
-    (r"\bassociate\b", 9),
-    (r"\bintern(ship)?\b", 8),
-]
-
-#: When the role is aimed at someone in this person's position. Best match wins.
-TIMING = [
-    (r"pre[\s-]?doctoral|predoc", 20),
-    (r"summer\s+20(26|27)", 18),
-    (r"20(26|27)\s+(summer|full[\s-]?time|analyst)", 18),
-    (r"class\s+of\s+20(27|28)", 18),
-    (r"full[\s-]?time\s+analyst", 17),
-    (r"campus|university\s+(hire|program|recruit)|early\s+career", 16),
-    (r"new\s+grad(uate)?", 16),
-    (r"rising\s+(junior|senior)", 16),
-    (r"research\s+assistant", 15),
-    (r"rotational\s+program", 14),
-    (r"undergraduate", 12),
-    (r"graduating\s+(student|in)", 12),
-    (r"\bjunior\s+or\s+senior\b", 12),
-    (r"part[\s-]?time", 8),
-    (r"\bintern(ship)?\b", 8),
-]
-
-
-#: Checked against the title alone. A year in a job title is a campus signal;
-#: the same year buried in a description usually is not.
-TITLE_TIMING = [
-    (r"\b20(26|27)\b", 14),
-    (r"\bclass\s+of\b", 14),
-]
+def _senior_grade(posting: RawPosting, title: str) -> str | None:
+    """A rank this employer itself calls senior. "Analyst III" means nothing
+    without the registry entry that says what III is worth at this firm."""
+    for grade in posting.employer_senior_grades:
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(grade)}(?![A-Za-z0-9])", title, re.I):
+            return grade
+    return None
 
 
 @dataclass(slots=True)
@@ -261,15 +145,27 @@ class Score:
         return f"{head} — {'; '.join(self.reasons)}" if self.reasons else head
 
 
-DEFAULT_THRESHOLDS = {"pursue": 70, "maybe": 45}
+def thresholds_in_force(config: SearchConfig, preferences: dict | None = None) -> dict[str, int]:
+    """The pursue and maybe bars this run will actually use.
+
+    Two files can set them: search.defaults.yaml or its data/search.yaml
+    override, and the profile's own `search:` block — which is the one
+    profile.private.example.yaml documents, so it is the one most people edit.
+    The profile wins. Anything that wants to *print* the bar has to come through
+    here too, or it prints a number the gate is not using.
+    """
+    return {**config.thresholds, **((preferences or {}).get("thresholds") or {})}
 
 
 def score(posting: RawPosting, preferences: dict | None = None,
-          standing: str | None = None) -> Score:
+          standing: str | None = None, config: SearchConfig | None = None) -> Score:
     """Relevance only. Urgency is the digest's job, not this function's."""
+    from . import search as search_mod
+
+    config = config or search_mod.load()
     preferences = preferences or {}
     standing = standing or preferences.get("class_standing")
-    thresholds = {**DEFAULT_THRESHOLDS, **(preferences.get("thresholds") or {})}
+    thresholds = thresholds_in_force(config, preferences)
     title = posting.title or ""
     location = posting.location or ""
     body = posting.description or ""
@@ -279,35 +175,47 @@ def score(posting: RawPosting, preferences: dict | None = None,
         return Score(0, Verdict.REJECT, [why], rejected_by=by)
 
     # --- hard gates, cheapest first -------------------------------------
-    if SENIORITY.search(title):
-        return reject(f"title is senior: {SENIORITY.search(title).group(0)!r}", "seniority")
-    for grade in posting.employer_senior_grades:
-        if re.search(rf"(?<![A-Za-z0-9]){re.escape(grade)}(?![A-Za-z0-9])", title, re.I):
+    # The reject blocks run in the order the configuration lists them. The
+    # firm's own senior grades are part of the seniority check and run with it;
+    # a configuration that drops the seniority block has turned both off.
+    for name, pattern in config.rejects.items():
+        hit = pattern.search(title)
+        if hit:
+            reason = _REJECT_REASON.get(name, name.replace("_", " "))
+            return reject(f"{reason}: {hit.group(0)!r}", _REJECT_LABEL.get(name, name))
+        if name == "seniority" and (grade := _senior_grade(posting, title)):
             return reject(f"{grade!r} is a senior grade at {posting.employer}", "seniority")
-    if OFF_FUNCTION.search(title):
-        return reject(f"off-function: {OFF_FUNCTION.search(title).group(0)!r}", "function")
-    if TOO_TECHNICAL.search(title):
-        return reject(f"engineering role: {TOO_TECHNICAL.search(title).group(0)!r}", "technical")
     if GRADUATE_PROGRAM.search(title):
-        return reject(f"for graduate students: {GRADUATE_PROGRAM.search(title).group(0)!r}", "degree")
+        return reject(f"for graduate students: {GRADUATE_PROGRAM.search(title).group(0)!r}",
+                      "degree")
 
     if standing:
-        for year, pattern in CLASS_SCOPED.items():
+        for year, pattern in config.class_scoped.items():
             hit = pattern.search(title)
             if hit and year != standing:
                 return reject(
                     f"aimed at {year} students; you are a {standing}"
                     f" ({hit.group(0)!r})", "class year")
 
-    remote = bool(REMOTE.search(location) or REMOTE.search(title))
-    in_nyc = bool(NYC.search(location))
-    if not (in_nyc or remote or HOME.search(location) or HUB.search(location)):
-        if NON_US.search(location):
-            return reject(f"outside the US: {location!r}", "geography")
+    # Places, in the order the configuration lists them: the first match is the
+    # one that scores. A posting matching none of them may still be refused for
+    # being somewhere else entirely.
+    places = [(label, weight) for _, label, weight, pattern, in_title in config.geography
+              if pattern.search(location) or (in_title and pattern.search(title))]
+    if not places:
+        if config.non_us.search(location):
+            return reject(
+                f"outside the US: {location!r}" if config.assume_us
+                else f"somewhere this search does not cover: {location!r}", "geography")
         # LinkedIn writes bare cities ("Chantilly"), so an unrecognised name on
         # its own is neutral. Only a "City, Region" form whose region is plainly
         # not American is refused — "Boise, Idaho" passes, "Kyiv, Ukraine" does not.
-        if location and "," in location and not _US_LOCATION.search(location):
+        # That last step is the one piece of geography the gate knows by heart
+        # rather than from the configuration, so it runs only for a search that
+        # says it is in the United States. For any other country the shipped
+        # vocabulary has nothing true to say, and silence beats a wrong refusal.
+        if (config.assume_us and location and "," in location
+                and not _US_LOCATION.search(location)):
             return reject(f"location not recognised as US: {location!r}", "geography")
 
     if body:
@@ -328,7 +236,7 @@ def score(posting: RawPosting, preferences: dict | None = None,
     # --- positive signal -------------------------------------------------
     value = 0
     best_role = 0
-    for pattern, weight in ROLE_FIT:
+    for pattern, weight in config.role_fit:
         if re.search(pattern, title, re.I):
             best_role = max(best_role, weight)
     if best_role:
@@ -341,29 +249,22 @@ def score(posting: RawPosting, preferences: dict | None = None,
 
     haystack = f"{title}\n{body[:2000]}"
     timing_hit = 0
-    for pattern, weight in TIMING:
+    for pattern, weight in config.timing:
         if re.search(pattern, haystack, re.I):
             timing_hit = max(timing_hit, weight)
-    for pattern, weight in TITLE_TIMING:
+    for pattern, weight in config.title_timing:
         if re.search(pattern, title, re.I):
             timing_hit = max(timing_hit, weight)
     if timing_hit:
         value += timing_hit
         reasons.append(f"timing +{timing_hit}")
 
-    # New York is the stated goal, so it is the single heaviest signal here.
-    if in_nyc:
-        value += 25
-        reasons.append("New York +25")
-    elif HOME.search(location):
-        value += 15
-        reasons.append("local to Richmond +15")
-    elif remote:
-        value += 10
-        reasons.append("remote +10")
-    elif HUB.search(location):
-        value += 6
-        reasons.append("US finance hub +6")
+    # The first place that matched, and only that one: the stated goal is the
+    # heaviest single signal here, so it is listed first.
+    if places:
+        label, weight = places[0]
+        value += weight
+        reasons.append(f"{label} +{weight}")
 
     priority_bonus = {1: 12, 2: 8, 3: 4}.get(posting.employer_priority, 0)
     if priority_bonus:

@@ -1,6 +1,16 @@
-# TEST FIXTURE — a frozen copy of the owner's profile as of 2026-09-21.
-# The suite runs against this, not data/profile.yaml, so the live profile can
-# change — or be replaced with someone else's — without breaking a single test.
+# TEST FIXTURE — the persona from data/profile.example.yaml, frozen.
+#
+# The suite runs against this file, never against data/profile.yaml, so a real
+# profile can change — or be replaced with someone else's — without breaking a
+# single test. The person described here is the same invented one the repository
+# ships as its example: Rachel "Rae" Mercer, of Example University. She does not
+# exist, none of this work was done, and no real biography belongs in this file.
+#
+# One deliberate difference from data/profile.example.yaml: experience[0].start
+# is left as ASK, so the ASK machinery — `apply doctor`, require_resolved, the
+# lint — is exercised by the profile the suite actually loads. Everything else
+# is the persona verbatim; if the two ever disagree about a fact, this file is
+# the copy to change.
 #
 # APPLY — public profile. The facts every generated document is allowed to use.
 #
@@ -12,40 +22,40 @@
 #     `apply doctor` lists them; generation refuses to render one into a document.
 
 identity:
-  legal_first: Ajai
-  legal_last: Upadhyaya
-  preferred_name: AJ
-  email: upadhyayaak2@vcu.edu
+  legal_first: Rachel        # what a form asking for a legal name gets
+  legal_last: Mercer
+  preferred_name: Rae        # what the letterhead and the filenames use
+  email: rae.mercer@example.com
   location:
-    city: Richmond
-    state: VA
-    country: US
+    city: London
+    country: United Kingdom
 
 links:
-  linkedin: https://linkedin.com/in/ajai_u
-  github: https://github.com/ajaiupadhyaya
-  portfolio: https://ajaiupadhyaya.com
+  github: https://github.com/rae-mercer-example
+  portfolio: https://rae-mercer.example.com
 
 education:
-  - institution: Virginia Commonwealth University
+  - institution: Example University
     degree: Bachelor of Science
-    major: Finance
-    start: 2025-08
-    grad_expected: 2027-05      # AUTHORITATIVE. Never restate from memory.
+    major: Economics
+    start: 2024-09
+    grad_expected: 2027-06      # AUTHORITATIVE. Never restate from memory.
     current: true
-  - institution: University of Virginia
-    note: prior coursework in Computer Science and Economics
+  - institution: Example College
+    note: prior coursework in mathematics and statistics
     current: false
 
-# When I can start. A letter states this only as written here, and says nothing
-# about a start date while these are ASK. Worth filling in: the auditor refused
-# a live draft for inventing "starting in May" because this did not exist.
+# When Rae can start. A letter states this only as written here, and says
+# nothing about a start date while a value is ASK or absent.
 availability:
-  full_time: ASK               # e.g. "from June 2027, after graduating"
-  internship: ASK              # e.g. "summer 2027" — see the note in README
+  full_time: "from July 2027, after graduating"
+  # Graduation is June 2027, so there is no summer before it to intern in.
+  # An absent value is said out loud to the writer rather than guessed at.
+  internship: null
 
 authorization:
-  # Confirmed by the owner, 2026-09-20.
+  # Rae is a US citizen finishing a degree in London and applying to US roles,
+  # which is why a London address and US work authorization sit together here.
   us_work_authorized: true
   requires_sponsorship_now: false
   requires_sponsorship_future: false
@@ -53,110 +63,98 @@ authorization:
   veteran: false
 
 experience:
-  - org: University of Virginia
-    title: Student Consultant
+  - org: Example University, Department of Economics
+    title: Research Assistant
     start: ASK                  # month the role began, YYYY-MM
     end: present
-    location: Charlottesville, VA
+    location: London
     bullets:
-      - "Advise faculty and graduate researchers on Bloomberg Terminal, WRDS,
-         and Morningstar Direct; resolve cross-vendor data discrepancies."
-      - "Build and document reproducible data pulls so a researcher can rerun a
-         query months later and get the same series back."
-      - "Translate a research question into the right instrument, universe, and
-         date convention before any data leaves the terminal."
-    tags: [data, finance, research]
-    # More detail on the same role, for the writer to draw on. Source
-    # material, not sentences to paste.
+      - "Assemble and document panel datasets for two faculty housing studies;
+         reconcile series that three public sources report on different bases."
+      - "Write the cleaning and merge steps as scripts a supervisor can rerun,
+         so a table in a draft can be traced back to the file it came from."
+      - "Draft the data appendix for a working paper, stating each adjustment
+         and what it assumes."
+    tags: [data, research, economics]
+    # More detail on the same role, for the writer to draw on. Source material,
+    # not sentences to paste.
     detail:
-      - "I advise faculty and graduate researchers on Bloomberg Terminal, WRDS,
-         and Morningstar Direct, which in practice means being handed a research
-         question stated loosely and turning it into the right instrument,
-         universe, and date convention before any data leaves the terminal."
-      - "When two vendors disagree about the same series, I am the one who has to
-         work out which convention each of them is using and write it down."
-      - "I document the pulls so that a researcher can rerun a query months later
-         and get the same series back."
-
+      - "Most of the job is reconciliation. A housing series published by a
+         statistics agency, a listings aggregator and a local authority will
+         disagree about the same quarter, and the disagreement is usually a
+         definition rather than an error: one counts new lettings, one counts
+         asking prices, one counts every tenancy on the register. Someone has
+         to work out which is which and write it down before the number goes
+         into a paper."
+      - "The second half is reproducibility. I keep the pulls and the merges in
+         scripts with the source and the retrieval date recorded, so a table in
+         a draft can be traced to the file it came from months later."
 
 projects:
-  ohcamel:
-    name: OhCamel
-    url: https://github.com/ajaiupadhyaya/OhCamel
-    tracks: [quant]
+  rents_and_transit:
+    name: Rents and Transit
+    url: https://github.com/rae-mercer-example/rents-and-transit
+    tracks: [allocator, banking, corporate]
     # one_line, three_line and technical are descriptions for the writer to
     # draw on. resume_line is printed verbatim on the resume.
-    one_line: "OhCamel is a reactive risk and limits engine written in OCaml."
+    one_line: "Rents and Transit is a study of what happened to advertised rents
+      along a rail line in the years around its opening."
     resume_line: >-
-      Reactive risk and limits engine on an incremental computation framework;
-      recomputes exposure and limit breaches only along the dependency paths a
-      tick touches, rather than re-running the full book.
-    stack: [OCaml, Incremental]
+      Study of advertised rents along a new rail corridor; matched listings to
+      stations by walking distance and reported the estimate against several
+      definitions of the comparison area rather than the most favourable one.
+    stack: [Python, SQL, R]
     three_line: |
-      OhCamel is a reactive risk and limits engine written in OCaml on an incremental
-      computation framework. It recomputes exposure and limit breaches only along
-      the dependency paths a tick actually touches, rather than re-running the
-      full book on every update.
+      Rents and Transit looks at advertised rents near the stations of a rail line
+      in the years around its opening. Listings are matched to stations by walking
+      distance rather than straight-line distance, and the result is reported
+      against several definitions of the comparison area, because the choice of
+      comparison area moves the answer more than anything else in the model.
     technical: |
-      The engine models a book as a dependency graph of incremental nodes:
-      positions feed exposures, exposures feed limit checks, limit checks feed a
-      breach set. A price or position update invalidates only the nodes
-      downstream of it, so the cost of a tick scales with what changed rather
-      than with the size of the book. The design problems that mattered were
-      deciding where to cut the graph so recomputation stays cheap without
-      making the model dishonest, keeping the breach set consistent when several
-      inputs move in the same tick, and writing the whole thing so that the
-      stated risk number and the computed one cannot drift apart silently.
-  compute_index:
-    name: GPU Compute Price Index
-    tracks: [quant, allocator]
-    one_line: "The GPU Compute Price Index is an independent price index for
-      GPU compute rental markets, built because quoted rates are not comparable
-      across providers."
+      The interesting problem was not estimation, it was the comparison area. A
+      corridor that gets a station is not a random corridor, so the estimate is
+      only as honest as the counterfactual, and the obvious counterfactuals —
+      the next borough over, the rest of the city, the same corridor before
+      construction — each answer a different question. The study reports all of
+      them side by side with the sample each one rests on, so a reader can
+      disagree with a specific assumption rather than with the whole result.
+  vanilla:
+    name: Vanilla
+    url: https://github.com/rae-mercer-example/vanilla
+    tracks: [quant, banking]
+    one_line: "Vanilla is a small options-pricing library written to make the
+      assumptions behind a quoted price visible."
     resume_line: >-
-      Independent price index for GPU compute rental markets; normalises listings
-      that differ in hardware, commitment term, interconnect, and egress onto one
-      reference unit.
+      Options-pricing library in Python; European and American vanillas under
+      several models, with each price carrying the assumptions and the numerical
+      tolerance it was produced under.
+    stack: [Python, NumPy]
     three_line: |
-      The index is an independent price on GPU compute rental markets, built because
-      quoted rates are fragmented across providers and not directly comparable.
-      It normalises heterogeneous listings into a series you can actually take a
-      basis against.
+      Vanilla prices European and American vanilla options under a handful of
+      models and returns the assumptions alongside the number: the rate and
+      dividend conventions used, the grid or path count, and the tolerance the
+      answer was produced to. It exists because a price with no stated
+      assumptions cannot be checked by the person receiving it.
     technical: |
-      The hard part is not collection, it is comparability: providers quote
-      different hardware, commitment terms, interconnect, and egress, so a
-      headline hourly rate is not a price of the same thing. The index defines a
-      reference unit, maps listings onto it, and keeps each adjustment explicit,
-      so a reader can disagree with a specific assumption rather than with the
-      whole series.
-  basis:
-    name: BASIS
-    tracks: [quant, banking, allocator, corporate]
-    one_line: "BASIS is the biweekly research report I write on finance,
-      economics, and technology."
-    resume_line: >-
-      Biweekly research report on finance, economics, and technology, written to
-      a standing deadline; every claim sourced before the issue ships.
-    three_line: |
-      BASIS is a biweekly research report on finance, economics, and technology,
-      written to a standing deadline. Each issue takes a question, works it out against
-      primary sources, and states what the evidence does and does not support.
-    technical: |
-      Writing to a fixed cadence enforces a discipline that ad hoc research does
-      not: every claim has to be sourced before the issue ships, and a thesis
-      that does not survive the fortnight has to be said out loud rather than
-      quietly dropped.
+      The library keeps the model, the numerical method and the market
+      conventions as separate objects, so the same instrument can be priced
+      analytically, on a tree and by simulation and the three answers compared
+      as a test rather than trusted one at a time. The design decisions that
+      mattered were where to put day-count and settlement conventions so that
+      they are stated once instead of re-derived in each model, and how to
+      report convergence: the tolerance travels with the price, so a result that
+      has not converged is visibly a result that has not converged.
 
 skills:
   # Only what is evidenced elsewhere in this file. Add freely — the resume
-  # renders whatever is here and omits an empty group. Review before first use.
-  Languages: [OCaml, Python, SQL]
-  Platforms: [Bloomberg Terminal, WRDS, Morningstar Direct]
+  # renders whatever is here and omits an empty group.
+  Languages: [Python, R, SQL]
+  Methods: [Panel data, Monte Carlo, Numerical methods]
   Tools: [Git, LaTeX]
 
 essays:
-  # Canonical answers to the prompts every portal asks. Write once, adapt per app.
-  # why_this_firm is deliberately null: it is never reused verbatim.
+  # Canonical answers to the prompts every portal asks. Write once, adapt per
+  # app. why_this_firm is deliberately null: it is never reused verbatim.
   why_this_firm_150w: null
   why_finance_200w: null
   greatest_challenge_300w: null
@@ -164,7 +162,7 @@ essays:
   strength_weakness_150w: null
 
 # targets: lives in profile.private.yaml — the firm list is strategy, not a fact
-# about me, and this file is public.
+# about you, and this file is public.
 
 # ---------------------------------------------------------------------------
 # Writing brief. Instructions for Claude, not sentences for a template: nothing
@@ -200,10 +198,10 @@ writing:
       # The default subject of paragraph 2 on each track. Claude may choose a
       # different piece of work if the posting makes it clearly stronger, and
       # has to say why in its notes.
-      quant: OhCamel — lead with what the engine does and the design problems it forced.
-      allocator: The UVA consulting role, framed as data integrity and research support.
-      banking: The UVA consulting role and BASIS, framed as analysis and written communication.
-      corporate: The UVA consulting role, framed as reporting that others can rerun and trust.
+      quant: Vanilla — lead with what the library does and the design problems it forced.
+      allocator: Rents and Transit, framed as the choice of comparison area and what it costs.
+      banking: The research assistant role and Rents and Transit, framed as analysis and written communication.
+      corporate: The research assistant role, framed as reporting that others can rerun and trust.
 
   answers:
     why_role: >-

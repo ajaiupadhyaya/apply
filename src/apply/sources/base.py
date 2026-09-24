@@ -3,8 +3,9 @@
 A source is anything that can hand back job postings without a credential and
 without pretending to be a browser: a public ATS job-board API, a company's own
 careers JSON, or the owner's own inbox. There is deliberately no scraper here.
-Adding one would put the VCU-provisioned Handshake account at risk, and would
-make every other source's data less trustworthy by association.
+Adding one would put the user's university-provisioned Handshake account at
+risk, and would make every other source's data less trustworthy by
+association.
 """
 
 from __future__ import annotations
@@ -56,13 +57,17 @@ class RawPosting:
 #: Workday writes a location as "NY7 - 50 Hudson Yards, New York"; Greenhouse
 #: writes "New York, New York, United States". The same desk, two strings, so
 #: the fingerprint matches on the city rather than on the label.
+#:
+#: These are the places the shipped search already names — the `geography` and
+#: `non_us` blocks of search.defaults.yaml — and nobody's home town. A city
+#: missing from the list is not a bug: an unrecognised location falls through to
+#: the whole string, normalised, which only makes the fingerprint stricter.
 _CITIES = [
     "new york", "jersey city", "stamford", "greenwich", "boston", "chicago",
     "san francisco", "philadelphia", "charlotte", "atlanta", "dallas", "houston",
     "los angeles", "miami", "austin", "seattle", "denver", "washington",
-    "arlington", "richmond", "charlottesville", "mclean", "reston", "wilmington",
-    "london", "hong kong", "singapore", "tokyo", "amsterdam", "mumbai",
-    "bengaluru", "sydney", "toronto", "dublin", "shanghai", "remote",
+    "wilmington", "london", "hong kong", "singapore", "tokyo", "amsterdam",
+    "mumbai", "bengaluru", "sydney", "toronto", "dublin", "shanghai", "remote",
 ]
 
 

@@ -151,13 +151,12 @@ def run(
 
 def _mail(profile: Profile) -> list[discover.Message] | None:
     """Alert mail, if a transport is configured. None means 'not set up'."""
-    import os
+    # Same reason as the API key: a scheduled run's shell never reads a login
+    # profile, so the exported variable is absent at 06:30. The platform's
+    # secret store is not.
+    from . import secrets
 
-    # Same reason as the API key: launchd never reads ~/.zshrc, so the
-    # environment variable is absent at 06:30. The Keychain is not.
-    from .llm import _keychain_key
-
-    password = os.environ.get("APPLY_IMAP_PASSWORD") or _keychain_key("APPLY_IMAP_PASSWORD")
+    password = secrets.lookup("APPLY_IMAP_PASSWORD")
     if password:
         return discover.fetch_imap(user=profile.email, password=password)
     drop = data_dir() / "alerts.json"

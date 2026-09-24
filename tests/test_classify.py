@@ -7,14 +7,14 @@ from apply.classify import classify
 from apply.models import Track
 
 
-def test_blackrock_is_quant(blackrock_jd):
-    result = classify(blackrock_jd)
+def test_the_first_seed_posting_is_quant(quillon_jd):
+    result = classify(quillon_jd)
     assert result.track is Track.QUANT
-    assert "aladdin" in result.matched[Track.QUANT]
+    assert "factor model" in result.matched[Track.QUANT]
 
 
-def test_vcimco_is_allocator(vcimco_jd):
-    result = classify(vcimco_jd)
+def test_the_second_seed_posting_is_allocator(ashcombe_jd):
+    result = classify(ashcombe_jd)
     assert result.track is Track.ALLOCATOR
     assert "manager research" in result.matched[Track.ALLOCATOR]
 

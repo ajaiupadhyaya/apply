@@ -3,7 +3,7 @@
 // @namespace    https://github.com/ajaiupadhyaya
 // @version      0.1.0
 // @description  Fills labelled fields on an application portal from a local field pack. Fills only; never clicks, never submits.
-// @author       AJ Upadhyaya
+// @author       APPLY
 // @match        *://*/*
 // @exclude      *://*.joinhandshake.com/*
 // @exclude      *://joinhandshake.com/*

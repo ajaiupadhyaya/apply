@@ -1,8 +1,9 @@
 """Source adapters. Offline: no test here touches the network.
 
-Live behaviour was verified by hand against Jane Street (Greenhouse, 228
-postings) and BlackRock (Workday, deadlines present on hydration). What these
-tests protect is the parsing and identity logic underneath.
+Live behaviour was verified by hand against one real board of each kind: a
+Greenhouse listing a few hundred postings long, and a Workday board whose
+hydration carries deadlines. What these tests protect is the parsing and
+identity logic underneath.
 """
 
 from __future__ import annotations
@@ -82,3 +83,20 @@ def test_hydrated_requires_a_real_description():
     assert not make(description="").hydrated
     assert not make(description="short").hydrated
     assert make(description="x" * 300).hydrated
+
+
+def test_the_user_agent_identifies_the_software_not_a_person():
+    """A clone polls job boards as itself, never as this repository's author.
+
+    The string a board operator sees has to be honest about what is calling —
+    so it names the tool and the traffic — and has to stay free of whoever
+    happens to be running it: a name, a handle, a profile URL or an email.
+    """
+    import re
+
+    from apply.sources.ats import HEADERS, USER_AGENT
+
+    assert HEADERS["User-Agent"] == USER_AGENT
+    assert USER_AGENT.startswith("apply/")
+    assert "personal job-application tracker" in USER_AGENT
+    assert not re.search(r"github\.com|@|linkedin|mailto:", USER_AGENT, re.I)
