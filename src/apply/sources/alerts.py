@@ -62,6 +62,8 @@ JOB_SUBJECTS = [
     r"sees you as a top applicant",          # weekly round-up
     r"new matches for your saved search",
     r'^"?search on ',                        # a saved search, named by its date
+    r'^"[^"]+": .+ and more$',               # a saved search the user named
+    r"^new .+ at \S",                        # "New <title> at <firm>": one match
     r"added to collections you follow",
     r"is about to close",                    # carries a deadline
     r"flexible jobs near you",

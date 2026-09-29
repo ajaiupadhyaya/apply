@@ -36,9 +36,24 @@ def load(name: str) -> str:
     "Your saved job at Calderwell Advisors is about to close",
     "New items from Fenwold Securities and more added to collections you follow",
     "Flexible jobs near you this week",
+    # A saved search the user named: Handshake quotes the name, whatever it is.
+    '"Busn: Finance majors": Fenwold Securities - 2027 Analyst Program and more',
+    # One posting that matched the user's preferences.
+    "New 2027 Quantitative Internship Program - Investments at Calderwell Advisors",
 ])
 def test_job_bearing_subjects_are_recognised(subject):
     assert is_job_email(subject, HANDSHAKE)
+
+
+def test_a_single_job_match_yields_its_posting():
+    body = ("New job match\n\nA new role at Calderwell Advisors matches your preferences.\n\n"
+            "Calderwell Advisors\n2027 Quantitative Internship Program - Investments\n\n"
+            "$13–17K/mo • Internship • New York City, NY (Onsite)\n\nView job\n\n"
+            "Want better job recommendations?\nUpdate your preferences.")
+    postings = parse_alert("New ... at Calderwell Advisors", body, _dt.date(2026, 9, 23))
+    assert [(p.employer, p.title, p.location) for p in postings] == [
+        ("Calderwell Advisors", "2027 Quantitative Internship Program - Investments",
+         "New York City, NY")]
 
 
 @pytest.mark.parametrize("subject", [
