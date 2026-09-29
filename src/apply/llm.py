@@ -20,9 +20,11 @@ from pydantic import BaseModel, Field
 
 from . import secrets
 
-DEFAULT_MODEL = "claude-opus-5"
+#: Sonnet 5.5: the letters are grounded, linted and audited either way, and it
+#: costs 40% of Opus 5 per token. `--model claude-opus-5` still selects Opus.
+DEFAULT_MODEL = "claude-sonnet-5-5"
 
-#: Opus 5's safety classifiers can decline a request. With this beta and
+#: The model's safety classifiers can decline a request. With this beta and
 #: `fallbacks="default"`, a declined request is re-run server-side on the
 #: recommended model instead of coming back as a refusal — which matters most
 #: for a run nobody is watching.
@@ -33,6 +35,7 @@ FALLBACK_BETA = "server-side-fallback-2026-07-01"
 PRICING: dict[str, tuple[float, float]] = {
     "claude-opus-5": (5.00, 25.00),
     "claude-opus-4-8": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
     "claude-sonnet-5": (2.00, 10.00),
     "claude-haiku-4-5": (1.00, 5.00),
 }

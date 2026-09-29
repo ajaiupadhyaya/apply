@@ -466,6 +466,10 @@ The source material is cached, so an audit or a revision re-reads your profile
 at about a tenth of the price, and `--effort medium` roughly halves the
 reasoning.
 
+The default model is now Claude Sonnet 5.5, at $2 in and $10 out per million
+tokens against Opus 5's $5 and $25, so the same letter costs about 40% of the
+figures above. `--model claude-opus-5` switches back for a single run.
+
 A ledger checks three ceilings before every call and records the cost after
 it: per call, per run and per month (defaults $0.50, $2.00 and $15.00, set
 under `budget:` in `profile.private.yaml`). When a ceiling would be crossed, the
