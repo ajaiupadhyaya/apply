@@ -90,7 +90,8 @@ projects:
     url: https://github.com/rae-mercer-example/rents-and-transit
     tracks: [allocator, banking, corporate]
     # one_line, three_line and technical are descriptions for the writer to
-    # draw on. resume_line is printed verbatim on the resume.
+    # draw on. resume_line is the resume's wording when no tailored line has
+    # been written; Claude rewrites it for each posting.
     one_line: "Rents and Transit is a study of what happened to advertised rents
       along a rail line in the years around its opening."
     resume_line: >-
@@ -170,12 +171,11 @@ essays:
 # ---------------------------------------------------------------------------
 writing:
   voice: >-
-    Plain, specific and a little understated: someone who does the work and
-    assumes the reader does too. Vary sentence length and shape. Prefer the
-    concrete noun to the abstract one and the verb to the adjective. It should
-    read like a person wrote it for this one employer rather than like a brief
-    being followed. No sentence should survive being moved into a letter to a
-    different firm.
+    Formal, precise and professional, in the register a finance or technology
+    firm expects of an application: measured rather than enthusiastic, and
+    specific rather than general. Prefer the concrete noun to the abstract one
+    and the verb to the adjective. Every sentence should be written for this one
+    employer; none should survive being moved into a letter to a different firm.
 
   letter:
     length: 280 to 380 words across the body and closing. One page, always.

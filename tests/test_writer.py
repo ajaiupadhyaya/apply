@@ -172,7 +172,8 @@ def test_the_writer_is_told_the_owner_s_default_proof_asset(profile, quillon_jd)
 
 def test_the_allocator_default_is_not_the_quant_project(profile, ashcombe_jd):
     _, user = writer.prompts(profile, posting_from(ashcombe_jd), [])
-    task = user.split("# TASK", 1)[1]
+    # The letter's assignment; the resume's project list below it names every project.
+    task = user.split("# TASK", 1)[1].split("Resume experience entries", 1)[0]
     assert "Rents and Transit" in task and "Vanilla" not in task
 
 

@@ -623,8 +623,8 @@ def check(
 ) -> None:
     """Audit the current letter again, without rewriting or rebuilding it.
 
-    Reads out/<slug>/body.md — Claude's draft, or your edits of it — and has an
-    independent request check it against your sources. Changes no status and no
+    Reads out/<slug>/body.md and resume.json — Claude's draft, or your edits
+    of it — and has an independent request check it against your sources. Changes no status and no
     file except verification.json.
     """
     import json
@@ -648,7 +648,8 @@ def check(
         with console.status("auditing…"):
             written = writer.write(
                 profile, row.posting,
-                lint=lambda p: generate.lint(writer.full_text(p), profile, row.posting).errors,
+                lint=lambda p: generate.lint(writer.full_text(p), profile, row.posting).errors
+                + (generate.resume_problems(p, profile) if generate.has_resume(p) else []),
                 anchors=anchors, budget=budget, first_draft=package, max_drafts=1,
                 model=model or llm_mod.DEFAULT_MODEL, effort=effort,
             )

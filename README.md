@@ -330,7 +330,19 @@ of this are configuration, not code: see [Make it yours](#make-it-yours).
 
 ## Writing
 
-Claude writes every letter and portal answer. Nothing is pasted from a template.
+Claude writes every letter, every portal answer and every resume's bullets,
+for the posting in front of it. Nothing is pasted from a template.
+
+The register is formal business English, and that is a hard rule rather than
+part of the brief: no contractions, no sentence fragments, no colloquialisms,
+no volunteering what you have not done. The brief can make the writing plainer
+or more specific; it cannot make it less formal.
+
+On the resume, Claude writes the bullets and the project lines. It rewrites
+each role's bullets for the posting, leads with the most relevant, and chooses
+which projects to list. Titles, employers, dates, education and skills are
+printed from your profile exactly as written. The tailored text is saved to
+`out/<slug>/resume.json`, where you can edit it and rebuild with `--from-body`.
 
 What it reads, all of it yours:
 
@@ -348,9 +360,10 @@ Phone, street address and GPA are never sent to the API.
 ### The loop
 
 ```
-write    one request drafts the letter and both portal answers
-lint     free: banned phrases, unsourced figures, sponsorship wording
-fit      free: typeset it; it must be one page
+write    one request drafts the letter, both portal answers and the resume
+lint     free: banned phrases, informal register, unsourced figures,
+         sponsorship wording, the resume's shape
+fit      free: typeset the letter and the resume; each must be one page
 audit    paid: a separate request checks every sentence against your sources
 revise   paid: the writer gets its draft back with the exact problems
 ```
@@ -383,7 +396,8 @@ give no start date while it is empty.
 
 ### The lint
 
-It runs on every draft and every portal answer, before anything is typeset.
+It runs on every draft, every portal answer and every resume bullet, before
+anything is typeset.
 
 - the banned phrases: *passionate, dynamic, synergy, leverage my skills,
   fast-paced environment, I believe I would be a great fit*
@@ -391,7 +405,12 @@ It runs on every draft and every portal answer, before anything is typeset.
 - a figure written in digits that is in neither your profile, your context
   documents nor the posting. Digits only: "twenty percent" is a claim, not a
   token, and it is the audit that has to catch it
+- a contraction (*I'm, don't, it's*) outside a quotation from the posting, or
+  casual phrasing (*a lot of, stuff, kind of, basically*)
 - a sentence about sponsorship that contradicts your profile
+- a resume that misses a role, gives a role fewer than two or more than four
+  bullets, runs a bullet past 30 words, uses the first person, or names a
+  project that does not exist
 - more than one page
 
 ### Without an API key
@@ -410,7 +429,9 @@ apply gen <slug> --from-body      # lint, one-page check, then the PDFs
 The reply also carries the two portal answers. Save them in
 `out/<slug>/answers.md` under `## Why this role (short)` and `## Why this role
 (long)` and `--from-body` reads them too; without that file you still get the
-letter and the resume, and the portal answers stay empty.
+letter and the resume, and the portal answers stay empty. A reply's resume
+bullets go in `out/<slug>/resume.json`; without it, the resume prints your
+profile's own bullets.
 
 PROMPT.md is the exact request the API would have received: the same system
 prompt, the same extracts from your profile and context documents, the posting

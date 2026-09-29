@@ -38,7 +38,8 @@ def test_the_allocator_seed_has_the_right_deadline_and_proof(profile, ashcombe_j
     assert parsed.deadline == _dt.date(2026, 10, 14)
 
     _, user = writer.prompts(profile, parsed.to_posting(), [])
-    task = user.split("# TASK", 1)[1]
+    # The letter's assignment; the resume's project list below it names every project.
+    task = user.split("# TASK", 1)[1].split("Resume experience entries", 1)[0]
     assert "Rents and Transit" in task and "Vanilla" not in task
 
 

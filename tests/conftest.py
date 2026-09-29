@@ -173,6 +173,22 @@ CLEAN = dict(
                    "public sources report on different bases, and I wrote the data "
                    "appendix for a working paper. I want to learn how an office turns "
                    "that into a view."),
+    resume_experience=[dict(entry=1, bullets=[
+        "Assemble and document panel datasets for two faculty housing studies, "
+        "reconciling series that three public sources report on different bases.",
+        "Maintain cleaning and merge scripts a supervisor can rerun, so each table "
+        "in a draft traces to its source file.",
+        "Drafted the data appendix for a working paper, stating each adjustment "
+        "and its assumptions.",
+    ])],
+    resume_projects=[
+        dict(key="rents_and_transit",
+             line="Study of advertised rents along a new rail corridor, reported "
+                  "against several definitions of the comparison area."),
+        dict(key="vanilla",
+             line="Options-pricing library that returns its assumptions alongside "
+                  "the price."),
+    ],
     notes="",
 )
 

@@ -191,7 +191,10 @@ def test_a_sponsorship_claim_contradicting_the_profile_fails(profile, ashcombe_j
     "I do not require employment sponsorship.",
 ])
 def test_a_correct_sponsorship_statement_passes(profile, ashcombe_jd, sentence):
-    assert lint(sentence, profile, posting_from(ashcombe_jd)).ok
+    # "won't" fails the register check on its own; the negation still has to
+    # read as a correct sponsorship statement.
+    errors = lint(sentence, profile, posting_from(ashcombe_jd)).errors
+    assert not [e for e in errors if "sponsorship" in e]
 
 
 def test_a_number_from_a_context_document_is_sourced(profile, ashcombe_jd, workspace):
@@ -281,7 +284,7 @@ def test_regenerating_under_a_new_name_removes_the_old_pdf(profile, ashcombe_jd)
 # ------------------------------- what the wizard did not ask about
 #
 # The lint reads the letter, which is prose a model wrote and can be made to
-# rewrite. The resume is rendered straight out of the profile, so no amount of
+# rewrite. The resume's titles and dates are rendered straight out of the profile, so no amount of
 # reading the draft catches an unfilled field in it: `apply setup` never asks
 # about your last job, and the PDF printed what it found — "ASK, ASK  Present"
 # under EXPERIENCE, above an empty PROJECTS heading.
@@ -347,5 +350,8 @@ def test_a_profile_with_its_experience_written_builds(workspace, ashcombe_jd):
         profile.raw.pop(key, None)          # an entry you have not written yet
     assert profile.document_gaps() == []
 
-    artifacts = gen_mod.build(profile, posting_from(ashcombe_jd), caller=FakeClaude())
+    # No experience and no projects: nothing for the resume to tailor.
+    empty = FakeClaude.package(resume_experience=[], resume_projects=[])
+    artifacts = gen_mod.build(profile, posting_from(ashcombe_jd),
+                              caller=FakeClaude(packages=[empty]))
     assert artifacts.ok and artifacts.letter_pdf.exists()

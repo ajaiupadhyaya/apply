@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -270,6 +270,22 @@ SUPERLATIVES = [
     "industry-leading", "industry leading", "most respected", "storied",
 ]
 
+#: Casual phrasing no application should carry. Deliberately short: the
+#: verifier judges register as a whole; this catches what a regex can be sure of.
+COLLOQUIAL = [
+    "stuff", "a lot of", "lots of", "kind of", "sort of", "pretty much",
+    "gonna", "wanna", "gotta", "folks", "awesome", "super excited", "totally",
+    "basically", "honestly", "okay",
+]
+
+#: Contractions. Possessives ("the firm's") are not contractions and pass;
+#: "it's", "that's" and their like are.
+_CONTRACTION = re.compile(
+    r"\b(?:[A-Za-z]+n[’']t|[A-Za-z]+[’'](?:m|re|ve|ll|d)"
+    r"|(?:it|that|there|here|what|who|where|let|he|she)[’']s)\b", re.I)
+#: A quotation keeps the posting's own wording, contractions and all.
+_QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")
+
 _TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9./,%$+-]*")
 
 
@@ -292,6 +308,19 @@ def _boundary(phrase: str) -> re.Pattern:
 
 _PROHIBITED_RE = [(p, _boundary(p)) for p in PROHIBITED]
 _SUPERLATIVE_RE = [(p, _boundary(p)) for p in SUPERLATIVES]
+_COLLOQUIAL_RE = [(p, _boundary(p)) for p in COLLOQUIAL]
+
+
+def register_errors(text: str) -> list[str]:
+    """Informal register: contractions and casual phrasing, outside quotations."""
+    unquoted = _QUOTED.sub(" ", text)
+    errors = [
+        f'informal register: contraction "{c}" — write it out in full'
+        for c in sorted({m.group(0) for m in _CONTRACTION.finditer(unquoted)}, key=str.lower)
+    ]
+    errors += [f'informal register: "{phrase}" — use the precise professional term'
+               for phrase, pattern in _COLLOQUIAL_RE if pattern.search(unquoted)]
+    return errors
 
 
 def _digit_tokens(text: str) -> set[str]:
@@ -320,6 +349,8 @@ def lint(body: str, profile: Profile, posting: Posting) -> LintResult:
     for phrase, pattern in _PROHIBITED_RE:
         if pattern.search(body):
             result.errors.append(f'prohibited phrase: "{phrase}"')
+
+    result.errors += register_errors(body)
 
     jd_lower = posting.jd_raw.lower()
     for phrase, pattern in _SUPERLATIVE_RE:
@@ -381,6 +412,67 @@ def _sponsorship_errors(text: str, profile: Profile) -> list[str]:
                 f'says sponsorship is not needed, but the profile says it will be: '
                 f'"{sentence.strip()[:120]}"')
     return errors
+
+
+_FIRST_PERSON = re.compile(r"\bI\b|\b[Mm](?:e|y|ine|yself)\b")
+MAX_BULLET_WORDS = 30
+
+
+def resume_problems(package, profile: Profile) -> list[str]:
+    """The resume content's shape: every role covered, bullets that read as
+    resume bullets, projects that exist. Grounding is the lint's and the
+    verifier's; this is what a regex can be sure of."""
+    problems: list[str] = []
+    count = len(profile.experience)
+    seen: set[int] = set()
+    for role in package.resume_experience:
+        if not 1 <= role.entry <= count:
+            problems.append(f"resume: experience entry {role.entry} does not exist; "
+                            f"number them 1 to {count} as the TASK lists them")
+            continue
+        if role.entry in seen:
+            problems.append(f"resume: experience entry {role.entry} appears twice")
+        seen.add(role.entry)
+        bullets = [b for b in role.bullets if b.strip()]
+        if not 2 <= len(bullets) <= 4:
+            problems.append(f"resume: experience entry {role.entry} has {len(bullets)} "
+                            f"bullets; write two to four")
+        for bullet in bullets:
+            words = len(bullet.split())
+            if words > MAX_BULLET_WORDS:
+                problems.append(f'resume: bullet runs to {words} words (at most '
+                                f'{MAX_BULLET_WORDS}): "{bullet[:80]}"')
+            if _FIRST_PERSON.search(bullet):
+                problems.append(f'resume: bullet uses the first person: "{bullet[:80]}"')
+    missing = sorted(set(range(1, count + 1)) - seen)
+    if missing:
+        problems.append("resume: no bullets for experience entr"
+                        + ("y " if len(missing) == 1 else "ies ")
+                        + ", ".join(map(str, missing)))
+
+    keys = set(profile.projects)
+    listed: set[str] = set()
+    for project in package.resume_projects:
+        if project.key not in keys:
+            problems.append(f'resume: there is no project with the key "{project.key}"; '
+                            f"choose from {', '.join(sorted(keys))}")
+        elif project.key in listed:
+            problems.append(f'resume: project "{project.key}" is listed twice')
+        listed.add(project.key)
+        if not project.line.strip():
+            problems.append(f'resume: project "{project.key}" has no line')
+        elif _FIRST_PERSON.search(project.line):
+            problems.append(f'resume: project line uses the first person: '
+                            f'"{project.line[:80]}"')
+    if keys and not listed:
+        problems.append("resume: no projects listed; choose the ones this posting "
+                        "makes most relevant")
+    return problems
+
+
+def has_resume(package) -> bool:
+    """Whether a package carries tailored resume content at all."""
+    return bool(package.resume_experience or package.resume_projects)
 
 
 # ------------------------------------------------------------------ letter
@@ -463,12 +555,49 @@ def package_from_files(directory: Path):
             elif "long" in head.lower():
                 long = _collapse(text)
 
+    experience, projects = read_resume_file(directory)
     return Package(
         paragraph_1=body[0], paragraph_2=body[1], paragraph_3=body[2],
         paragraph_4=body[3], closing=closing, proof_asset="", anchor_used="",
         why_role_short=short, why_role_long=long,
+        resume_experience=experience, resume_projects=projects,
         notes="edited by hand",
     )
+
+
+RESUME_FILE = "resume.json"
+
+
+def read_resume_file(directory: Path) -> tuple[list, list]:
+    """resume.json's tailored bullets and project lines, or nothing — in which
+    case the resume prints the profile's own wording."""
+    import json
+
+    from .llm import ResumeProject, ResumeRole
+
+    path = directory / RESUME_FILE
+    if not path.exists():
+        return [], []
+    try:
+        data = json.loads(path.read_text())
+        return ([ResumeRole(**r) for r in data.get("experience") or []],
+                [ResumeProject(**p) for p in data.get("projects") or []])
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"{path} is not valid: {exc}") from exc
+
+
+def write_resume_file(package, directory: Path) -> Path:
+    import json
+
+    path = directory / RESUME_FILE
+    path.write_text(json.dumps({
+        "_comment": ("The resume's bullets and project lines, written for this posting. "
+                     "Edit freely, then: apply gen <slug> --from-body. Titles, "
+                     "employers and dates come from profile.yaml."),
+        "experience": [r.model_dump() for r in package.resume_experience],
+        "projects": [p.model_dump() for p in package.resume_projects],
+    }, indent=2, ensure_ascii=False) + "\n")
+    return path
 
 
 def write_body_files(package, directory: Path) -> tuple[Path, Path]:
@@ -580,10 +709,18 @@ def _month_year(value) -> str | None:
     return text
 
 
-def _resume_context(profile: Profile) -> tuple[dict, list[str]]:
+def _resume_context(profile: Profile, package=None) -> tuple[dict, list[str]]:
     """Pre-format everything date-shaped in Python. Templates lay out; they do
-    not do arithmetic, and they do not decide what a missing date means."""
+    not do arithmetic, and they do not decide what a missing date means.
+
+    With a package that carries resume content, the bullets and project lines
+    are the ones Claude wrote for this posting; titles, employers, dates and
+    everything else still come from the profile. Without one, the profile's
+    own wording is printed.
+    """
     warnings: list[str] = []
+    tailored = {r.entry: r.bullets for r in package.resume_experience} \
+        if package is not None else {}
 
     education = []
     for i, e in enumerate(profile.education):
@@ -615,8 +752,16 @@ def _resume_context(profile: Profile) -> tuple[dict, list[str]]:
         experience.append({
             "org": x.get("org", ""), "title": x.get("title", ""),
             "location": x.get("location"), "dates": dates,
-            "bullets": [re.sub(r"\s+", " ", b).strip() for b in (x.get("bullets") or [])],
+            "bullets": [re.sub(r"\s+", " ", b).strip()
+                        for b in (tailored.get(i + 1) or x.get("bullets") or []) if b.strip()],
         })
+
+    projects: list = list(profile.projects.values())
+    if package is not None and package.resume_projects:
+        projects = [
+            replace(profile.projects[p.key], resume_line=re.sub(r"\s+", " ", p.line).strip())
+            for p in package.resume_projects if p.key in profile.projects
+        ]
 
     skills = {k: v for k, v in (profile.raw.get("skills") or {}).items() if v}
     return {
@@ -627,16 +772,16 @@ def _resume_context(profile: Profile) -> tuple[dict, list[str]]:
         "links": profile.links,
         "education": education,
         "experience": experience,
-        "projects": list(profile.projects.values()),
+        "projects": projects,
         "skills": skills,
     }, warnings
 
 
-def render_resume(profile: Profile, variant: str) -> tuple[str, list[str]]:
+def render_resume(profile: Profile, variant: str, package=None) -> tuple[str, list[str]]:
     env = _env()
     env.finalize = _finalize
     template = env.get_template(f"resumes/{variant}.tex.j2")
-    context, warnings = _resume_context(profile)
+    context, warnings = _resume_context(profile, package)
     return template.render(**context), warnings
 
 
@@ -832,6 +977,14 @@ def _pages_for(profile: Profile, posting: Posting, letter: Letter) -> int:
         return page_count(compile_pdf(tex, max_pages=None))
 
 
+def _resume_pages_for(profile: Profile, variant: str, package) -> int:
+    """Render and compile a draft's resume somewhere disposable; count its pages."""
+    with tempfile.TemporaryDirectory(prefix="apply-fit-") as tmp:
+        tex = Path(tmp) / "resume.tex"
+        tex.write_text(render_resume(profile, variant, package)[0])
+        return page_count(compile_pdf(tex, max_pages=None))
+
+
 def _clear_pdfs(directory: Path) -> None:
     """A refused draft must not leave yesterday's PDF looking current."""
     for kind in ("Cover_Letter", "Resume"):
@@ -873,8 +1026,9 @@ def build(
 
     # Before anything is written, let alone paid for. The lint catches an ASK
     # that reaches the *letter*, because the letter is prose Claude wrote; this
-    # catches one that reaches the resume, which is rendered straight out of the
-    # profile and so cannot be caught by reading the draft. A wizard that never
+    # catches one that reaches the resume's titles, employers and dates, which
+    # are rendered straight out of the profile and so cannot be caught by
+    # reading the draft. A wizard that never
     # asked about your last job leaves experience[0] as four ASKs, and the PDF
     # printed them: "ASK, ASK — Present" under EXPERIENCE.
     gaps = profile.document_gaps()
@@ -905,11 +1059,21 @@ def build(
         artifacts.prompt_md = write_prompt(profile, posting, phrases, directory, to)
         return artifacts
 
+    variant = select_resume(posting.track)
+
     def lint_check(package) -> list[str]:
-        return lint(writer.full_text(package), profile, posting).errors
+        errors = lint(writer.full_text(package), profile, posting).errors
+        # A hand-edited body with no resume.json prints the profile's own
+        # resume; anything Claude writes has to carry one.
+        if not skip_resume and (has_resume(package) or not from_body):
+            errors += resume_problems(package, profile)
+        return errors
 
     def fit_check(package) -> int:
         return _pages_for(profile, posting, letter_from_package(package, to=to))
+
+    def resume_fit_check(package) -> int:
+        return _resume_pages_for(profile, variant, package)
 
     options: dict = {}
     if caller is not None:
@@ -922,7 +1086,8 @@ def build(
         raise llm_mod.LLMUnavailable(llm_mod.NO_CREDENTIAL)
 
     written = writer.write(
-        profile, posting, lint=lint_check, fit=fit_check, anchors=phrases, to=to,
+        profile, posting, lint=lint_check, fit=fit_check,
+        resume_fit=None if skip_resume else resume_fit_check, anchors=phrases, to=to,
         budget=budget, model=model or llm_mod.DEFAULT_MODEL, effort=effort, **options,
     )
     artifacts.written = written
@@ -935,6 +1100,8 @@ def build(
         if not from_body:
             artifacts.body_md, artifacts.answers_md = write_body_files(
                 written.package, directory)
+            if has_resume(written.package):
+                write_resume_file(written.package, directory)
     else:
         artifacts.lint = LintResult(errors=[written.reason or "nothing was written"])
 
@@ -950,10 +1117,13 @@ def build(
     _sweep(directory, keep=final, kind="Cover_Letter")
 
     if not skip_resume:
-        variant = select_resume(posting.track)
         artifacts.resume_variant = variant
-        source_tex, resume_warnings = render_resume(profile, variant)
+        source_tex, resume_warnings = render_resume(profile, variant, written.package)
         artifacts.warnings += resume_warnings
+        if not has_resume(written.package):
+            artifacts.warnings.append(
+                "the resume prints the profile's own bullets: there is no resume.json "
+                "for this application")
         artifacts.resume_tex = directory / f"{variant}.tex"
         artifacts.resume_tex.write_text(source_tex)
         target = directory / f"{profile.file_name}_Resume_{_document_tag(posting)}.pdf"

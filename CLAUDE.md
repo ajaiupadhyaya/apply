@@ -46,11 +46,14 @@
 - Prefer deterministic parsing; use the LLM only where regex fails.
 
 ## How letters are written
-- Claude writes every letter and portal answer (src/apply/writer.py); an
-  independent request audits it. Do not reintroduce template sentences in
-  profile.yaml — the `writing:` block is instructions, never prose to paste.
+- Claude writes every letter, portal answer and resume's bullets and project
+  lines (src/apply/writer.py); an independent request audits it. Resume titles,
+  employers, dates, education and skills print from the profile unchanged.
+  Do not reintroduce template sentences in profile.yaml — the `writing:` block
+  is instructions, never prose to paste.
 - The hard rules live in writer.WRITER_RULES and generate.lint. The brief may
-  change voice and emphasis; it may never loosen grounding.
+  change voice and emphasis; it may never loosen grounding or the formal
+  register (no contractions, fragments or colloquialisms).
 
 ## Tests
 - Tests never call the API. tests/conftest.py strips the key, blocks the

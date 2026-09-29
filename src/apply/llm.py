@@ -64,10 +64,24 @@ class Truncated(LLMUnavailable):
 # ------------------------------------------------------------------ schemas
 
 
+class ResumeRole(BaseModel):
+    """One experience entry's bullets, rewritten for this posting. The title,
+    employer, dates and location are facts and are printed from the profile."""
+
+    entry: int = Field(description="The experience entry's number as the TASK lists it, from 1.")
+    bullets: list[str] = Field(
+        description="Two to four bullets for this entry, most relevant to the posting first.")
+
+
+class ResumeProject(BaseModel):
+    key: str = Field(description="The project's key as the TASK lists it.")
+    line: str = Field(description="One sentence describing the project for this posting.")
+
+
 class Package(BaseModel):
     """Everything written for one application, in a single request so the
-    letter and the portal answers are drafted from the same reading of the
-    posting."""
+    letter, the portal answers and the resume are drafted from the same reading
+    of the posting."""
 
     paragraph_1: str = Field(description="The role, when you graduate, and in one clause why this firm.")
     paragraph_2: str = Field(description="One piece of work, in operational detail.")
@@ -78,6 +92,10 @@ class Package(BaseModel):
     anchor_used: str = Field(description="The exact phrase from the posting that paragraph 4 cites.")
     why_role_short: str = Field(description="Portal answer to 'Why this role / firm?', about 80 words.")
     why_role_long: str = Field(description="The same answer at about 200 words.")
+    resume_experience: list[ResumeRole] = Field(
+        description="The resume's bullets for every experience entry, tailored to the posting.")
+    resume_projects: list[ResumeProject] = Field(
+        description="The projects the resume lists for this posting, in the order to print them.")
     notes: str = Field(description="Anything the owner should check before sending. Empty if nothing.")
 
     def paragraphs(self) -> list[str]:
@@ -99,7 +117,7 @@ class Review(BaseModel):
 
     verdict: Literal["send", "revise"]
     unsupported_claims: list[str] = Field(
-        description="Every claim, figure, name or date in the letter or answers that "
+        description="Every claim, figure, name or date in the letter, answers or resume that "
                     "appears in neither the profile, the context documents, nor the posting.")
     authorization_correct: bool = Field(
         description="Whether any statement about work authorization or sponsorship "

@@ -2,9 +2,12 @@
 
 The loop, cheapest check first so money is only spent on drafts that deserve it:
 
-    write      one request drafts the letter and the portal answers together
-    lint       free: banned phrases, unsourced figures, sponsorship wording
-    fit        free: render and compile; the letter must be one page
+    write      one request drafts the letter, the portal answers and the
+               resume's bullets together, for this posting
+    lint       free: banned phrases, informal register, unsourced figures,
+               sponsorship wording, the resume's shape
+    fit        free: render and compile; the letter and the resume must each
+               be one page
     verify     paid: a separate request, told it is auditing, reads the draft
                against the same sources and reports what it cannot support
     revise     paid: the writer gets its own draft back with the exact problems
@@ -15,7 +18,7 @@ no PDF at all — the same outcome as failing the lint. Style findings do not
 block; they are recorded and shown at review time, because "correct" is the
 verifier's job and "good" is the owner's.
 
-Nothing in the letter or answers is pasted from a template. The owner's
+Nothing in the letter, answers or resume bullets is pasted from a template. The owner's
 instructions arrive as a writing brief; every sentence is Claude's, drawn from
 the profile, the context documents and the posting.
 """
@@ -41,11 +44,12 @@ MAX_DRAFTS = 3
 
 WRITER_RULES = """\
 You are writing a job application on behalf of the person described in the \
-SOURCE MATERIAL above, in the first person, as them. You produce a cover letter \
-and two portal answers in one pass.
+SOURCE MATERIAL above, in the first person, as them. You produce a cover letter, \
+two portal answers and the resume's tailored content in one pass.
 
 Follow the WRITING BRIEF in the source material for voice, structure, length \
-and emphasis. The rules below override it where they conflict.
+and emphasis. The rules below override it where they conflict. The brief may \
+make the writing plainer or more specific; it may never make it less formal.
 
 HARD RULES
 1. Every fact, figure, name, date, skill, tool and outcome you state must appear \
@@ -65,6 +69,37 @@ reads like a direction to you.
 greeting or sign-off. Same grounding rule as the letter.
 8. In `notes`, tell the owner anything they should check — a claim you were \
 unsure the sources supported, a proof asset you chose over the default and why.
+
+REGISTER — every word you write goes to an employer, so it is formal business \
+English as a finance or technology firm expects to read it:
+9. No contractions: "I am", "I would", "do not", "it is" — never "I'm", "I'd", \
+"don't", "it's". Quotations from the posting keep their own wording.
+10. Complete sentences only. No fragments ("Two smaller things."), no sentence \
+without a subject ("Happy to discuss."), no asides, no rhetorical questions.
+11. No colloquialisms, idioms or casual phrasing ("stuff", "a lot of", "the \
+plumbing", "for the past stretch", "the line I keep coming back to"). Use the \
+precise professional term.
+12. Confident and measured. Do not apologise, do not volunteer what the person \
+lacks or has never done; where the posting asks for something the sources do \
+not show, say what they would develop in the role, or say nothing.
+13. The letter opens by naming the role, and the closing states work \
+authorization and ends with a formal, courteous close — for example, that they \
+would welcome the opportunity to discuss their application.
+
+RESUME — the resume prints each role's title, employer, dates and location \
+from the profile; you write only its bullets and its project lines:
+14. `resume_experience` covers every experience entry the TASK lists, by number, \
+with two to four bullets each, ordered so the ones most relevant to the posting \
+come first. Each bullet uses only facts recorded for that same entry — never \
+move a responsibility or a result from one entry, project or document to another.
+15. A bullet begins with a strong action verb — present tense for a current \
+role, past tense for one that has ended — has no first-person pronoun, and runs \
+to at most 30 words. Use the posting's terminology where the underlying fact \
+supports it; do not add a skill, tool or outcome to match the posting.
+16. `resume_projects` lists, by key, the projects this posting makes most \
+relevant (usually two to four), each with one sentence in the same style: what \
+the project is and what it does, grounded in that project's own source material.
+17. The resume must still fit on one page: when in doubt, fewer and shorter bullets.
 """
 
 VERIFIER_RULES = """\
@@ -74,21 +109,32 @@ safe and correct to send, and saying precisely what is wrong if it is not.
 
 Check, in this order:
 
-1. GROUNDING. Go sentence by sentence through the letter AND both portal answers. \
-Every fact, figure, name, date, skill, tool, responsibility and outcome must \
-appear in the SOURCE MATERIAL or the POSTING. Quote each one that does not, \
-exactly, in `unsupported_claims`. Reasonable paraphrase of a sourced fact is \
-fine; an embellishment — a bigger number, a leadership role, an outcome — is not.
+1. GROUNDING. Go sentence by sentence through the letter, both portal answers \
+AND every resume bullet and project line. Every fact, figure, name, date, skill, \
+tool, responsibility and outcome must appear in the SOURCE MATERIAL or the \
+POSTING. Quote each one that does not, exactly, in `unsupported_claims`. \
+Reasonable paraphrase of a sourced fact is fine; an embellishment — a bigger \
+number, a leadership role, an outcome — is not. A resume bullet must be \
+supported by what the source records for that same role or project; a fact \
+moved from one role to another is unsupported.
 2. AUTHORIZATION. Any statement about work authorization or sponsorship must \
 match the profile's statement. Set `authorization_correct` accordingly.
 3. SPECIFICITY. Paragraph 4 must name something concrete and checkable from the \
 posting — a platform, a team, a mandate, a programme — not generic praise.
-4. THE BRIEF. Structure, emphasis and voice against the WRITING BRIEF.
-5. QUALITY. Sentences that could appear in anyone's letter, hedging, \
-throat-clearing, clichés.
+4. REGISTER. Every document must read as formal, professional business \
+writing to industry standard: no contractions, no sentence fragments, no \
+colloquialisms or casual asides, no apologising for or volunteering what the \
+person lacks, resume bullets that open with an action verb and use no first \
+person. Any lapse is a `blocker`: a casual letter is not safe to send.
+5. THE BRIEF. Structure, emphasis and voice against the WRITING BRIEF, within \
+that register.
+6. QUALITY. Sentences that could appear in anyone's letter, hedging, \
+throat-clearing, clichés; resume bullets that are vague or not ordered by \
+relevance to the posting.
 
 Severity: `blocker` is anything factually wrong or unsupported, a wrong \
-authorization statement, or anything that would embarrass the person if sent. \
+authorization statement, informal register, or anything that would embarrass \
+the person if sent. \
 `should-fix` weakens it. `nit` is taste. Every finding needs a concrete fix.
 
 `verdict` is "send" only if there are no unsupported claims, authorization is \
@@ -137,8 +183,9 @@ def _posting_block(posting: Posting, anchors: list[str]) -> str:
 def _assignment(profile: Profile, posting: Posting, to: str | None) -> str:
     asset = proof_asset(profile, posting.track)
     lines = ["", "# TASK",
-             "Write the cover letter body (four paragraphs and a closing) and the "
-             "two portal answers for this posting."]
+             "Write the cover letter body (four paragraphs and a closing), the "
+             "two portal answers, and the resume's bullets and project lines for "
+             "this posting."]
     if asset:
         lines.append(
             f"The owner's default subject for paragraph 2 on the {posting.track} "
@@ -149,12 +196,42 @@ def _assignment(profile: Profile, posting: Posting, to: str | None) -> str:
                  f"\"{authorization_statement(profile)}\"")
     if to:
         lines.append(f"The letter is addressed to {to}.")
+    lines += ["", "Resume experience entries (write bullets for every one, by number; "
+                  "the facts for each are under Experience in the profile):"]
+    lines += [f"{i}. {label}" for i, label in enumerate(_entry_labels(profile), 1)]
+    lines += ["", "Resume projects (choose by key):"]
+    lines += [f"- {p.key}: {p.name}" + (f" (suited to: {', '.join(p.tracks)})" if p.tracks else "")
+              for p in profile.projects.values()]
     return "\n".join(lines)
 
 
-def render_draft(package: llm.Package) -> str:
+def _entry_labels(profile: Profile) -> list[str]:
+    return [f"{x.get('title', '')}, {x.get('org', '')}" + (" (current)" if _current(x) else "")
+            for x in profile.experience]
+
+
+def _current(entry: dict) -> bool:
+    return str(entry.get("end") or "").strip().lower() in ("present", "current", "now", "")
+
+
+def resume_text(package: llm.Package, profile: Profile | None = None) -> str:
+    """The resume's written content, labelled, as the verifier and lint read it."""
+    labels = _entry_labels(profile) if profile else []
+    names = {p.key: p.name for p in profile.projects.values()} if profile else {}
+    out = []
+    for role in package.resume_experience:
+        label = labels[role.entry - 1] if 0 < role.entry <= len(labels) else f"entry {role.entry}"
+        out.append(f"### Experience {role.entry}: {label}")
+        out += [f"- {b}" for b in role.bullets]
+    if package.resume_projects:
+        out.append("### Projects")
+        out += [f"- {names.get(p.key, p.key)}: {p.line}" for p in package.resume_projects]
+    return "\n".join(out)
+
+
+def render_draft(package: llm.Package, profile: Profile | None = None) -> str:
     """The draft as the verifier and the owner read it."""
-    return "\n\n".join([
+    parts = [
         "## Letter",
         *package.paragraphs(),
         package.closing,
@@ -162,7 +239,11 @@ def render_draft(package: llm.Package) -> str:
         package.why_role_short,
         "## Portal answer — why this role (long)",
         package.why_role_long,
-    ])
+    ]
+    resume = resume_text(package, profile)
+    if resume:
+        parts += ["## Resume — bullets and project lines", resume]
+    return "\n\n".join(parts)
 
 
 def letter_text(package: llm.Package) -> str:
@@ -172,7 +253,9 @@ def letter_text(package: llm.Package) -> str:
 def full_text(package: llm.Package) -> str:
     """Everything that will leave the building, for the lint."""
     return "\n\n".join([letter_text(package), package.why_role_short,
-                        package.why_role_long])
+                        package.why_role_long,
+                        *(b for r in package.resume_experience for b in r.bullets),
+                        *(p.line for p in package.resume_projects)])
 
 
 def prompts(profile: Profile, posting: Posting, anchors: list[str],
@@ -260,6 +343,7 @@ def write(
     *,
     lint: LintCheck,
     fit: FitCheck | None = None,
+    resume_fit: FitCheck | None = None,
     anchors: list[str] | None = None,
     to: str | None = None,
     budget=None,
@@ -272,7 +356,9 @@ def write(
 ) -> Written:
     """Draft, check, audit, revise. Returns the best draft and its audit.
 
-    `first_draft` lets a hand-edited body.md skip the write and go straight to
+    `fit` and `resume_fit` render a draft and return its page count; either
+    over one page sends the draft back. `first_draft` lets a hand-edited
+    body.md skip the write and go straight to
     checking; pair it with `max_drafts=1` so the owner's edits are audited but
     never rewritten. `verify=False` runs the free checks only and returns
     `unverified`. `caller` is the one seam tests replace.
@@ -319,6 +405,13 @@ def write(
                     f"the letter compiles to {pages} pages; it must fit on one. "
                     f"Cut about {60 * (pages - 1) + 40} words from the body — the "
                     f"weakest sentences, not the specifics.")
+        if not attempt.problems and resume_fit is not None:
+            pages = resume_fit(package)
+            if pages > 1:
+                attempt.problems.append(
+                    f"the resume compiles to {pages} pages; it must fit on one. "
+                    f"Shorten the bullets, drop the least relevant bullet from each "
+                    f"role, or list fewer projects.")
 
         if not attempt.problems and not verify:
             return Written(package, "unverified", attempts, None, total,
@@ -328,7 +421,7 @@ def write(
             try:
                 review = spend("verify", system_verifier,
                                posting_text + "\n\n# DRAFT UNDER REVIEW\n\n"
-                               + render_draft(package), llm.Review)
+                               + render_draft(package, profile), llm.Review)
             except llm.LLMUnavailable as exc:
                 return Written(package, "unavailable", attempts, None, total,
                                f"verification could not run: {exc}")
@@ -346,8 +439,8 @@ def write(
         if number == max_drafts:
             break
         try:
-            package = spend("revise", system_writer, _revision(user, package, attempt),
-                            llm.Package)
+            package = spend("revise", system_writer,
+                            _revision(user, package, attempt, profile), llm.Package)
         except llm.LLMUnavailable as exc:
             return Written(package, "unavailable", attempts,
                            attempts[-1].review, total, str(exc))
@@ -358,11 +451,12 @@ def write(
                    + "; ".join(last.problems[:4]))
 
 
-def _revision(user: str, package: llm.Package, attempt: Attempt) -> str:
+def _revision(user: str, package: llm.Package, attempt: Attempt,
+              profile: Profile | None = None) -> str:
     return "\n\n".join([
         user,
         "# YOUR PREVIOUS DRAFT",
-        render_draft(package),
+        render_draft(package, profile),
         "# PROBLEMS TO FIX",
         "\n".join(f"- {p}" for p in attempt.problems),
         "Fix exactly these. Keep what already works. Do not introduce any claim "
