@@ -154,6 +154,7 @@ def test_the_scheduler_help_names_more_than_one_platform(fresh):
     """`schedule` grew systemd and cron backends; its help said launchd only."""
     output = run(fresh, "schedule", "--help").lower()
     assert "systemd" in output and "launchd" in output
+    assert "task scheduler" in output
     assert "launchagent" not in output
 
 

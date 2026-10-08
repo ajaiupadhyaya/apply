@@ -1247,10 +1247,10 @@ def schedule(
     """Run the pass every morning, through whatever supervises this machine.
 
     macOS gets a launchd agent; Linux gets a systemd user timer, or a cron line
-    on a box without systemd. With no flags this reports what is currently
-    scheduled. `--show` prints the file that would be written; `--install` is a
-    separate, explicit act, because it is persistent configuration on your
-    machine.
+    on a box without systemd; Windows gets a Task Scheduler task. With no flags
+    this reports what is currently scheduled. `--show` prints the file that
+    would be written; `--install` is a separate, explicit act, because it is
+    persistent configuration on your machine.
     """
     try:
         hour, minute = (int(part) for part in at.split(":", 1))
@@ -1293,7 +1293,7 @@ def schedule(
             f"logs: {plan.project / 'out' / 'run.log'}[/]",
             title="scheduled", border_style="green"))
         console.print("[dim]Stop it any time with `apply schedule --remove`, or "
-                      "pause a single night with `touch data/HALT`.[/]")
+                      "pause a single night by creating an empty file data/HALT.[/]")
         return
 
     state = supervisor.status()

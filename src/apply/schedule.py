@@ -1,10 +1,11 @@
 """Running the pass on a schedule, on whatever supervises this machine.
 
-Three backends, one interface. macOS gets launchd, because it is what the OS
+Four backends, one interface. macOS gets launchd, because it is what the OS
 actually supervises: it survives reboots, it does not need a Terminal open, and
 it catches up a missed run after the laptop wakes. Linux gets a systemd user
 timer for the same reasons — `Persistent=true` is launchd's catch-up — and
-falls back to cron on a box without systemd.
+falls back to cron on a box without systemd. Windows gets Task Scheduler with
+StartWhenAvailable, which is the same catch-up.
 
 Every job runs through a login shell so that PATH is set (uv is rarely on the
 default one). None of them relies on that shell for a secret: a non-interactive
@@ -25,6 +26,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 #: The launchd label, and the name of the plist under ~/Library/LaunchAgents.
 #: Neutral on purpose: this repository is public, and an agent that runs every
@@ -305,13 +307,89 @@ class CronBackend:
         }
 
 
+# ----------------------------------------------------------- Task Scheduler
+
+TASK_NAME = "APPLY daily run"
+
+
+class TaskSchedulerBackend:
+    """Windows. A scheduled task with StartWhenAvailable (launchd's catch-up)
+    and the user's interactive token, so Credential Manager is readable without
+    storing a password."""
+
+    def render(self, schedule: Schedule) -> str:
+        uv = shutil.which("uv") or "uv"
+        args = schedule.command.split(" ", 1)[1] if schedule.command.startswith("uv ") else schedule.command
+        action = f'/c ""{uv}" {args} >> "out\\run.log" 2>> "out\\run.err""'
+        return f"""<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>{escape(TASK_NAME)}: discover, ingest, write. Never submits.</Description></RegistrationInfo>
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>2026-01-01T{schedule.hour:02d}:{schedule.minute:02d}:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay>
+    </CalendarTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author"><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable>
+    <ExecutionTimeLimit>PT2H</ExecutionTimeLimit>
+    <Enabled>true</Enabled>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>cmd.exe</Command>
+      <Arguments>{escape(action)}</Arguments>
+      <WorkingDirectory>{escape(str(schedule.project))}</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
+"""
+
+    def install(self, schedule: Schedule) -> str:
+        if not shutil.which("uv"):
+            raise RuntimeError("uv is not on PATH; the scheduled task would not find it.")
+        schedule.log.parent.mkdir(parents=True, exist_ok=True)
+        xml_path = schedule.log.parent / "apply-task.xml"
+        xml_path.write_text(self.render(schedule), encoding="utf-16")
+        result = _run(["schtasks", "/Create", "/TN", TASK_NAME, "/XML", str(xml_path), "/F"])
+        if not _ok(result):
+            raise RuntimeError((result.stderr or result.stdout or "schtasks /Create failed").strip())
+        return TASK_NAME
+
+    def remove(self) -> bool:
+        return _ok(_run(["schtasks", "/Delete", "/TN", TASK_NAME, "/F"]))
+
+    def status(self) -> dict:
+        result = _run(["schtasks", "/Query", "/TN", TASK_NAME, "/XML", "ONE"])
+        if not _ok(result):
+            return {"installed": False}
+        # schtasks may emit UTF-16; read as UTF-8 that is NUL between characters.
+        xml = (result.stdout or "").replace("\x00", "")
+        when = re.search(r"<StartBoundary>[^T<]*T(\d\d):(\d\d)", xml)
+        args = re.search(r"<Arguments>(.*?)</Arguments>", xml, re.S)
+        return {"installed": True, "path": f"Task Scheduler › {TASK_NAME}",
+                "at": f"{when.group(1)}:{when.group(2)}" if when else "?",
+                "loaded": True, "command": args.group(1) if args else "",
+                "log": r"out\run.log"}
+
+
 def backend(platform: str | None = None):
-    """The supervisor for a platform: launchd, systemd, or cron."""
+    """The supervisor for a platform: launchd, systemd, cron, or Task Scheduler."""
     name = platform or sys.platform
     if name.startswith("darwin"):
         return LaunchdBackend()
     if name.startswith("linux"):
         return SystemdBackend() if shutil.which("systemctl") else CronBackend()
+    if name.startswith("win"):
+        return TaskSchedulerBackend()
     raise RuntimeError("no scheduler for this platform; run `apply run` from your own cron")
 
 

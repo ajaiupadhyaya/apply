@@ -247,3 +247,73 @@ class _Spy:
 
     def remove(self):
         return True
+
+
+# ------------------------------------------------------------ Task Scheduler
+
+def test_windows_gets_task_scheduler(monkeypatch):
+    from apply import schedule as s
+    assert isinstance(s.backend("win32"), s.TaskSchedulerBackend)
+
+
+def test_task_xml_runs_daily_catches_up_and_logs(tmp_path, monkeypatch):
+    from apply import schedule as s
+    monkeypatch.setattr(s.shutil, "which", lambda n: r"C:\Users\f\.local\bin\uv.exe" if n == "uv" else None)
+    plan = s.Schedule(hour=6, minute=30, project=tmp_path, command="uv run apply run --notify --llm api")
+    xml = s.TaskSchedulerBackend().render(plan)
+    assert "<StartBoundary>2026-01-01T06:30:00</StartBoundary>" in xml
+    assert "<DaysInterval>1</DaysInterval>" in xml
+    assert "<StartWhenAvailable>true</StartWhenAvailable>" in xml
+    assert "<RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable>" in xml
+    assert "<LogonType>InteractiveToken</LogonType>" in xml
+    assert f"<WorkingDirectory>{tmp_path}</WorkingDirectory>" in xml
+    assert r"C:\Users\f\.local\bin\uv.exe" in xml and "run apply run --notify --llm api" in xml
+    assert "&gt;&gt;" in xml and r"out\run.log" in xml
+
+
+def test_task_install_imports_utf16_xml_through_run(tmp_path, monkeypatch):
+    import subprocess
+    from apply import schedule as s
+    calls = []
+    monkeypatch.setattr(s.shutil, "which", lambda n: r"C:\uv.exe" if n == "uv" else None)
+    monkeypatch.setattr(s, "_run", lambda argv, stdin=None: calls.append(argv) or subprocess.CompletedProcess(argv, 0, "", ""))
+    name = s.TaskSchedulerBackend().install(s.Schedule(hour=7, minute=5, project=tmp_path))
+    assert name == s.TASK_NAME
+    create = calls[0]
+    assert create[:2] == ["schtasks", "/Create"] and "/F" in create
+    xml_path = create[create.index("/XML") + 1]
+    assert open(xml_path, encoding="utf-16").read().startswith('<?xml version="1.0" encoding="UTF-16"?>')
+
+
+def test_task_status_reads_back_the_time(monkeypatch):
+    import subprocess
+    from apply import schedule as s
+    xml = "<Task><StartBoundary>2026-01-01T07:05:00</StartBoundary><Arguments>/c run</Arguments></Task>"
+    monkeypatch.setattr(s, "_run", lambda argv, stdin=None: subprocess.CompletedProcess(argv, 0, xml, ""))
+    state = s.TaskSchedulerBackend().status()
+    assert state["installed"] and state["at"] == "07:05"
+
+
+def test_task_status_survives_utf16_read_as_utf8(monkeypatch):
+    """schtasks /Query /XML can emit UTF-16; decoded as UTF-8 it is NUL-spaced."""
+    import subprocess
+    from apply import schedule as s
+    xml = "<Task><StartBoundary>2026-01-01T07:05:00</StartBoundary><Arguments>/c run</Arguments></Task>"
+    garbled = "\x00".join(xml) + "\x00"
+    monkeypatch.setattr(s, "_run", lambda argv, stdin=None: subprocess.CompletedProcess(argv, 0, garbled, ""))
+    state = s.TaskSchedulerBackend().status()
+    assert state["installed"] and state["at"] == "07:05" and state["command"] == "/c run"
+
+
+def test_task_status_when_absent(monkeypatch):
+    import subprocess
+    from apply import schedule as s
+    monkeypatch.setattr(s, "_run", lambda argv, stdin=None: subprocess.CompletedProcess(argv, 1, "", "not found"))
+    assert s.TaskSchedulerBackend().status() == {"installed": False}
+
+
+def test_task_remove(monkeypatch):
+    import subprocess
+    from apply import schedule as s
+    monkeypatch.setattr(s, "_run", lambda argv, stdin=None: subprocess.CompletedProcess(argv, 0, "", ""))
+    assert s.TaskSchedulerBackend().remove() is True
