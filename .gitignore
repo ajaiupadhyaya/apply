@@ -12,6 +12,11 @@ data/search.yaml
 # The pause switch: `touch data/HALT` stops tonight's run.
 data/HALT
 
+# apply setup's working files.
+data/.setup_state.json
+data/.setup_draft.json
+data/.backup/
+
 # Local state and generated artifacts.
 data/apply.db
 data/apply.db-journal

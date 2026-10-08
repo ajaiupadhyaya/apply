@@ -270,3 +270,6 @@ def _location(city: str) -> dict:
     if tail.strip():
         return {"city": head.strip(), "state": tail.strip()}
     return {"city": head.strip()}
+
+
+from .wizard import run_wizard  # noqa: E402 — the wizard builds on everything above

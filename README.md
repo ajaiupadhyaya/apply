@@ -601,7 +601,7 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply schedule [--show \| --install \| --remove] [--at HH:MM]` | the morning job: launchd, a systemd user timer, or cron |
 | `apply runs` | what past runs did |
 | **Upkeep** | |
-| `apply setup [--persona] [--force]` | write `data/profile.yaml` from nine questions, and `data/search.yaml` from the city among them; `--persona` writes the example person instead |
+| `apply setup [--quick \| --persona] [--step S]` | guided setup from your resume and goals; `--quick` without an API key |
 | `apply doctor` | what's missing |
 | `apply init` · `apply seed` · `apply rm <slug>` | create the database, load examples, delete |
 

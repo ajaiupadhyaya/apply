@@ -211,10 +211,22 @@ def setup(
     persona: bool = typer.Option(False, "--persona", help="Write the example persona, unchanged."),
     force: bool = typer.Option(False, "--force", help="Replace an existing profile."),
     non_interactive: bool = typer.Option(False, "--non-interactive", help="Persona, no questions."),
+    quick: bool = typer.Option(False, "--quick", help="The nine questions, no API key needed."),
+    step: Optional[str] = typer.Option(None, "--step", help="Re-run one step of the guided setup: "
+                             "toolchain, key, about, documents, draft, review, employers, "
+                             "extras or finish."),
 ) -> None:
-    """Make this checkout yours: write a profile, then check the toolchain."""
+    """Make this checkout yours. By default a guided setup that reads your resume
+    and asks what you are looking for (needs an Anthropic API key); --quick asks
+    nine questions instead; --persona writes the example person."""
     from . import setup as setup_mod
 
+    if not (persona or non_interactive or quick):
+        from .setup.wizard import ConsoleAsker, run_wizard
+
+        db.init_db()
+        run_wizard(ConsoleAsker(console), step=step)
+        return
     target = data_dir() / "profile.yaml"
     try:
         if persona or non_interactive:

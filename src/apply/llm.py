@@ -253,6 +253,10 @@ def ping() -> None:
     except anthropic.AuthenticationError as exc:
         raise LLMUnavailable("the API key was rejected. Check it at console.anthropic.com "
                              "and store it again: uv run apply setup --step key") from exc
+    except anthropic.APIStatusError as exc:
+        # A 429 or a 5xx: the key may be fine, the API is busy or down.
+        raise LLMUnavailable(f"the API answered {exc.status_code} — it is busy or unavailable "
+                             "right now. Wait a minute and try again.") from exc
     except anthropic.APIConnectionError as exc:
         raise LLMUnavailable("could not reach the API (network).") from exc
 

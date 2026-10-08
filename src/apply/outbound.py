@@ -49,6 +49,12 @@ ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
         ("api.anthropic.com",),
         "Letter drafting and review, via the SDK.",
     ),
+    "apply.setup.wizard": (
+        ("api.anthropic.com",),
+        "`apply setup` asks for one profile draft (setup.draft.request, which "
+        "goes through apply.llm). Board lookups go through apply.resolve. "
+        "Writes configuration only; never an application.",
+    ),
     "apply.discover": (
         ("imap.gmail.com",),
         "Reads the owner's own alert mail, read-only, over IMAP.",

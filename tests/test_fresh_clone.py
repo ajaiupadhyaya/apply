@@ -31,6 +31,9 @@ USER_WRITES = [
     "data/apply.db",
     "data/HALT",
     "data/context/notes.md",
+    "data/.setup_state.json",
+    "data/.setup_draft.json",
+    "data/.backup/20260101T000000/profile.yaml",
     "out/some-firm-role-2027/letter.pdf",
 ]
 
@@ -205,7 +208,7 @@ def _commands(help_text: str) -> set[str]:
 
 def test_a_blank_graduation_month_is_refused_at_the_prompt(fresh):
     """Answering nothing used to write ASK and kill the next command."""
-    result = fresh.invoke(app, ["setup"], input="\n" * 40)
+    result = fresh.invoke(app, ["setup", "--quick"], input="\n" * 40)
 
     assert result.exit_code != 0
     assert "2027-05" in result.output                  # the shape it wants
