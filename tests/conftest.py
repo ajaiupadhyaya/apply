@@ -198,14 +198,16 @@ CLEAN = dict(
 
 class FakeClaude:
     """Stands in for llm.call. Script it with packages and reviews in order;
-    the last one of each repeats. Records every call so tests can assert on
-    what was asked and how many times."""
+    the last one of each repeats. Any other schema is scripted through
+    `others`, keyed by the schema's class name. Records every call so tests can
+    assert on what was asked and how many times."""
 
-    def __init__(self, packages=None, reviews=None):
+    def __init__(self, packages=None, reviews=None, others=None):
         from apply import llm
 
         self.packages = list(packages or [llm.Package(**CLEAN)])
         self.reviews = list(reviews or [self.review()])
+        self.others: dict[str, list] = {name: list(queue) for name, queue in (others or {}).items()}
         self.calls: list[tuple[str, list, str]] = []
 
     @staticmethod
@@ -226,11 +228,18 @@ class FakeClaude:
 
         return llm.Package(**{**CLEAN, **overrides})
 
-    def __call__(self, *, system, user, schema, model, effort):
+    def __call__(self, *, system, user, schema, model, effort, **kwargs):
         from apply import llm
 
         self.calls.append((schema.__name__, system, user))
-        queue = self.packages if schema is llm.Package else self.reviews
+        if schema is llm.Package:
+            queue = self.packages
+        elif schema is llm.Review:
+            queue = self.reviews
+        else:
+            queue = self.others.get(schema.__name__)
+            if not queue:
+                raise AssertionError(f"FakeClaude has nothing scripted for {schema.__name__}")
         result = queue.pop(0) if len(queue) > 1 else queue[0]
         return result, llm.Usage(model, input_tokens=6000, output_tokens=3000)
 
