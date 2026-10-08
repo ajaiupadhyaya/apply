@@ -145,3 +145,110 @@ def test_fake_claude_routes_other_schemas_by_name(fake_claude):
     assert result.identity.legal_last == "Reyes" and fake.count("Draft") == 1
     with pytest.raises(AssertionError, match="nothing scripted for Identity"):
         fake(system=[], user="u", schema=D.Identity, model=llm.DEFAULT_MODEL, effort="medium")
+
+
+# ------------------------------------------------ grounding without figures
+
+def test_grounding_drops_an_invented_skill_and_stack_item():
+    d = canned()
+    d.skills[0].items.append("Kubernetes")
+    d.projects[0].stack.append("Rust")
+    cleaned, notes = D.ground(d, SOURCES, answers())
+    assert cleaned.skills[0].items == ["Python", "OCaml", "SQL"]
+    assert cleaned.projects[0].stack == ["OCaml"]
+    assert any("Kubernetes" in n for n in notes) and any("Rust" in n for n in notes)
+
+
+def test_grounding_drops_an_invented_project():
+    d = canned()
+    d.projects.append(d.projects[0].model_copy(update={"key": "falcon", "name": "Falcon", "url": None}))
+    cleaned, notes = D.ground(d, SOURCES, answers())
+    assert [p.key for p in cleaned.projects] == ["kestrel"] and any("Falcon" in n for n in notes)
+
+
+def test_grounding_checks_education():
+    d = canned()
+    d.education[0].degree = "M.S."
+    d.education.append(D.Education(institution="Harvard University", degree="B.A."))
+    cleaned, notes = D.ground(d, SOURCES, answers())
+    assert [e.institution for e in cleaned.education] == ["Blue Ridge University"]
+    assert cleaned.education[0].degree == "ASK" and cleaned.education[0].major == "Computer Science"
+    assert any("Harvard" in n for n in notes) and any("M.S." in n for n in notes)
+
+
+def test_grounding_asks_for_an_inflated_title():
+    d = canned()
+    d.experience[0].title = "Senior Software Engineer"
+    cleaned, notes = D.ground(d, SOURCES, answers())
+    assert cleaned.experience[0].title == "ASK" and any("Senior Software Engineer" in n for n in notes)
+
+
+def test_grounding_asks_for_an_unsourced_name_and_email():
+    d = canned()
+    d.identity.legal_last = "Reynolds"
+    d.identity.email = "jordan@example.com"
+    cleaned, _ = D.ground(d, SOURCES, answers())
+    assert cleaned.identity.legal_first == "Jordan"
+    assert cleaned.identity.legal_last == "ASK" and cleaned.identity.email == "ASK"
+
+
+def test_grounding_matches_whole_words_only():
+    d = canned()
+    d.experience[0].org = "Acme"                        # sourced: "Acme Robotics"
+    d.experience.append(D.Experience(org="Meta", title="Intern", start="ASK", end="ASK",
+                                     bullets=[]))
+    cleaned, _ = D.ground(d, SOURCES + "\nmetadata pipelines", answers())
+    assert [e.org for e in cleaned.experience] == ["Acme"]
+
+
+def test_a_correction_note_is_a_source():
+    d = canned()
+    d.skills[0].items.append("Kubernetes")
+    cleaned, notes = D.ground(d, SOURCES, answers(), note="I also use Kubernetes daily")
+    assert "Kubernetes" in cleaned.skills[0].items and notes == []
+
+
+# ------------------------------------------------ search.yaml that loads
+
+def _build(files):
+    from apply import search
+    base = search.yaml.safe_load(search.DEFAULTS.read_text(encoding="utf-8"))
+    return search.build(*search._merge(base, files["search.yaml"]))
+
+
+def test_track_names_are_normalised_and_an_unknown_default_falls_back():
+    d = canned()
+    d.tracks[0].name = " SWE "
+    d.projects[0].tracks = ["SWE"]
+    d.default_track = "engineering"
+    files = D.to_files(d, answers())
+    cfg = _build(files)
+    assert [t.name for t in cfg.tracks] == ["swe"] and cfg.default_track == "swe"
+    assert files["profile.yaml"]["projects"]["kestrel"]["tracks"] == ["swe"]
+    assert set(files["profile.yaml"]["writing"]["letter"]["proof_asset"]) == {"swe"}
+
+
+def test_the_schema_refuses_a_bad_resume_layout_and_no_tracks():
+    from pydantic import ValidationError
+    raw = json.loads((FIX / "draft.json").read_text(encoding="utf-8"))
+    with pytest.raises(ValidationError):
+        D.Draft.model_validate({**raw, "tracks": [{**raw["tracks"][0], "resume": "skills_first"}]})
+    with pytest.raises(ValidationError):
+        D.Draft.model_validate({**raw, "tracks": []})
+
+
+def test_drafted_rejects_keep_the_defaults_guards():
+    d = canned()
+    d.reject_seniority = ["senior"]
+    d.reject_functions = ["sales"]
+    cfg = _build(D.to_files(d, answers()))
+    assert not cfg.rejects["seniority"].search("Rising Senior Summer Analyst")
+    assert cfg.rejects["seniority"].search("Senior Analyst")
+    assert not cfg.rejects["off_function"].search("Sales and Trading Summer Analyst")
+    assert cfg.rejects["off_function"].search("Inside Sales Representative")
+
+
+def test_no_remote_block_when_remote_is_not_ok():
+    files = D.to_files(canned(), answers(remote_ok=False))
+    assert list(files["search.yaml"]["geography"]) == ["seattle"]
+    assert len(_build(files).geography) == 1

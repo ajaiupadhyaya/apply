@@ -3,6 +3,11 @@
 One request drafts everything; a deterministic pass then removes whatever the
 user's own documents do not support, and the user approves each section before
 a file is written. The model proposes; the documents and the user decide.
+
+The pass checks what can be checked mechanically: names, organisations, titles,
+schools, skills, links, dates and every figure. Prose with no figure in it
+cannot be verified deterministically; it is left to the user, who approves
+each section before it is written.
 """
 
 from __future__ import annotations
@@ -10,6 +15,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -75,7 +81,7 @@ class Keyword(BaseModel):
 class TrackDraft(BaseModel):
     name: str = Field(description="lowercase, one word: 'swe', 'consulting', 'quant'")
     keywords: list[Keyword]
-    resume: str = Field(description="'projects_first' or 'experience_first'")
+    resume: Literal["projects_first", "experience_first"]
     code_link: bool
     proof_asset: str = Field(description="default subject of letter paragraph 2 on this track")
 
@@ -110,7 +116,7 @@ class Draft(BaseModel):
     letter_structure: str
     why_role: str
     avoid: list[str]
-    tracks: list[TrackDraft]
+    tracks: list[TrackDraft] = Field(min_length=1)
     default_track: str
     roles: list[Weighted]
     timing: list[Weighted]
@@ -220,12 +226,28 @@ def request(sources: str, answers: Answers, note: str = "", *, budget=None) -> D
 _YM = re.compile(r"^(\d{4})-(\d{2})$")
 
 
-def ground(d: Draft, sources: str, answers: Answers) -> tuple[Draft, list[str]]:
+def _present(phrase: str, low: str) -> bool:
+    """Whether a phrase appears in the lowercased corpus as whole words, so that
+    "Meta" is not sourced by "metadata"."""
+    from ..search import _pattern_for
+
+    phrase = (phrase or "").strip().lower()
+    if not phrase:
+        return False
+    return re.search(rf"(?<![a-z0-9]){_pattern_for(phrase)}(?![a-z0-9])", low) is not None
+
+
+def ground(d: Draft, sources: str, answers: Answers, note: str = "") -> tuple[Draft, list[str]]:
     """Remove what the documents do not support. Deterministic: the model's
-    output is a proposal, this is the check."""
+    output is a proposal, this is the check.
+
+    The corpus is the documents, the public answers and the user's correction
+    note — a fact the user typed is sourced. Names, titles, organisations,
+    skills and figures are checked against it; prose without a figure in it
+    cannot be, and is left to the user's approval of each section."""
     d = d.model_copy(deep=True)
     notes: list[str] = []
-    corpus = sources + "\n" + json.dumps(answers.public())
+    corpus = sources + "\n" + json.dumps(answers.public(), ensure_ascii=False) + "\n" + (note or "")
     allowed = _digit_tokens(corpus)
     years = set(re.findall(r"\b(?:19|20)\d{2}\b", corpus))
     low = corpus.lower()
@@ -242,11 +264,35 @@ def ground(d: Draft, sources: str, answers: Answers) -> tuple[Draft, list[str]]:
         notes.append(f"{where}: date {value!r} is not in your documents; set to ASK")
         return ASK
 
+    def fact(value: str | None, where: str) -> str | None:
+        """The value if the corpus names it, else ASK (blank stays blank)."""
+        if value in (None, "", ASK) or _present(value, low):
+            return value
+        notes.append(f"{where}: {value!r} is not in your documents; set to ASK")
+        return ASK
+
+    ident = d.identity
+    ident.legal_first = fact(ident.legal_first, "name")
+    ident.legal_last = fact(ident.legal_last, "name")
+    ident.email = fact(ident.email, "email")
+
+    education = []
+    for edu in d.education:
+        if not _present(edu.institution, low):
+            notes.append(f"dropped the school {edu.institution!r}: not named in your documents")
+            continue
+        edu.degree = fact(edu.degree, edu.institution)
+        edu.major = fact(edu.major, edu.institution)
+        edu.start = date_ok(edu.start, edu.institution)
+        education.append(edu)
+    d.education = education
+
     kept = []
     for e in d.experience:
-        if e.org.lower() not in low:
+        if not _present(e.org, low):
             notes.append(f"dropped the role at {e.org!r}: not named in your documents")
             continue
+        e.title = fact(e.title, f"{e.org} title")
         e.start, e.end = date_ok(e.start, e.org), date_ok(e.end, e.org)
         for attr in ("bullets", "detail"):
             lines = []
@@ -259,9 +305,21 @@ def ground(d: Draft, sources: str, answers: Answers) -> tuple[Draft, list[str]]:
             setattr(e, attr, lines)
         kept.append(e)
     d.experience = kept
-    for edu in d.education:
-        edu.start = date_ok(edu.start, edu.institution)
+
+    def only_sourced(items: list[str], where: str) -> list[str]:
+        out = []
+        for item in items:
+            if _present(item, low):
+                out.append(item)
+            else:
+                notes.append(f"{where}: dropped {item!r} — not in your documents")
+        return out
+
+    projects = []
     for p in d.projects:
+        if not _present(p.name, low):
+            notes.append(f"dropped the project {p.name!r}: not named in your documents")
+            continue
         for attr in ("one_line", "three_line", "resume_line", "technical"):
             bad = unsourced(getattr(p, attr))
             if bad:
@@ -270,6 +328,12 @@ def ground(d: Draft, sources: str, answers: Answers) -> tuple[Draft, list[str]]:
         if p.url and p.url.lower().removeprefix("https://").removeprefix("http://") not in low:
             notes.append(f"{p.name}: removed the link — it is not in your documents or answers")
             p.url = None
+        p.stack = only_sourced(p.stack, f"{p.name} stack")
+        projects.append(p)
+    d.projects = projects
+
+    for group in d.skills:
+        group.items = only_sourced(group.items, f"skills ({group.group})")
     return d, notes
 
 
@@ -286,12 +350,60 @@ def _slug(label: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_") or "place"
 
 
+def _track(name: str) -> str:
+    return (name or "").strip().lower()
+
+
+def _without_lookaround(pattern: str) -> str:
+    """A pattern with its (?<!…), (?<=…), (?!…) and (?=…) groups removed:
+    '(?<!rising\\s)senior(?!\\s+year)' → 'senior'."""
+    out, i = [], 0
+    while i < len(pattern):
+        if pattern.startswith(("(?<!", "(?<=", "(?!", "(?="), i):
+            depth = 0
+            while i < len(pattern):
+                if pattern[i] == "\\":
+                    i += 2
+                    continue
+                depth += {"(": 1, ")": -1}.get(pattern[i], 0)
+                i += 1
+                if depth == 0:
+                    break
+            continue
+        out.append(pattern[i])
+        if pattern[i] == "\\" and i + 1 < len(pattern):
+            out.append(pattern[i + 1])
+            i += 1
+        i += 1
+    return "".join(out)
+
+
+def _rejects(phrases: list[str], defaults: list[str]) -> list[str]:
+    """Drafted reject phrases as patterns. A phrase that is a default's base
+    word gets the default's pattern, guards and all: the shipped 'senior' knows
+    "Rising Senior Summer Analyst" is a student, and 'sales' knows "Sales and
+    Trading" is a markets desk. A plain phrase would forget both."""
+    bases = {_without_lookaround(p).lower(): p for p in defaults}
+    out = []
+    for phrase in phrases:
+        rx = _rx(phrase)
+        out.append(bases.get(rx.lower()) or bases.get(phrase.strip().lower()) or rx)
+    return out
+
+
 def to_files(d: Draft, answers: Answers) -> dict[str, dict]:
+    import yaml
+
     from . import persona
-    from ..search import country_of
+    from ..search import DEFAULTS, country_of
 
     data = persona()
-    names = {t.name for t in d.tracks}
+    tracks = {}
+    for t in d.tracks:
+        tracks.setdefault(_track(t.name), t)
+    default = _track(d.default_track)
+    if default not in tracks:
+        default = next(iter(tracks))
     data["identity"] = {"legal_first": d.identity.legal_first, "legal_last": d.identity.legal_last,
                         "preferred_name": d.identity.preferred_name or d.identity.legal_first,
                         "email": d.identity.email,
@@ -310,7 +422,8 @@ def to_files(d: Draft, answers: Answers) -> dict[str, dict]:
                              "felony": False, "veteran": False}
     data["experience"] = [e.model_dump() for e in d.experience]
     data["projects"] = {p.key: {**{k: v for k, v in p.model_dump().items() if k != "key"},
-                                "tracks": [t for t in p.tracks if t in names] or [d.default_track]}
+                                "tracks": [t for t in dict.fromkeys(map(_track, p.tracks))
+                                           if t in tracks] or [default]}
                         for p in d.projects}
     data["skills"] = {g.group: g.items for g in d.skills}
     data["essays"] = {k: None for k in (data.get("essays") or {})} or None
@@ -318,27 +431,30 @@ def to_files(d: Draft, answers: Answers) -> dict[str, dict]:
     writing["voice"] = d.voice
     writing.setdefault("letter", {})
     writing["letter"].update({"length": d.letter_length, "structure": d.letter_structure,
-                              "proof_asset": {t.name: t.proof_asset for t in d.tracks}})
+                              "proof_asset": {name: t.proof_asset for name, t in tracks.items()}})
     writing["answers"] = {"why_role": d.why_role}
     writing["avoid"] = d.avoid
     data["writing"] = writing
     data.pop("_note", None)
 
+    shipped = (yaml.safe_load(DEFAULTS.read_text(encoding="utf-8")) or {}).get("rejects") or {}
+    places = [p for p in d.locations
+              if answers.remote_ok or not (p.title or p.label.strip().lower() == "remote")]
     abroad = any(country_of(place) == "elsewhere" for place in answers.locations)
     search = {
-        "rejects": {"seniority": [_rx(w) for w in d.reject_seniority],
-                    "off_function": [_rx(w) for w in d.reject_functions],
-                    "too_technical": [_rx(w) for w in d.reject_technical]},
+        "rejects": {"seniority": _rejects(d.reject_seniority, shipped.get("seniority") or []),
+                    "off_function": _rejects(d.reject_functions, shipped.get("off_function") or []),
+                    "too_technical": _rejects(d.reject_technical, shipped.get("too_technical") or [])},
         "geography": {_slug(p.label): {"label": p.label, "weight": p.weight,
                                        "patterns": [_rx(m) for m in p.match], "match_title": p.title}
-                      for p in d.locations},
+                      for p in places},
         "role_fit": [[_bounded(w.match), w.weight] for w in d.roles],
         "timing": [[_bounded(w.match), w.weight] for w in d.timing],
         "title_timing": [[_bounded(w.match), w.weight] for w in d.title_timing],
-        "tracks": {"default": d.default_track,
-                   "kinds": {t.name: {"resume": t.resume, "code_link": t.code_link,
-                                      "keywords": [[k.phrase, k.weight] for k in t.keywords]}
-                             for t in d.tracks}},
+        "tracks": {"default": default,
+                   "kinds": {name: {"resume": t.resume, "code_link": t.code_link,
+                                    "keywords": [[k.phrase, k.weight] for k in t.keywords]}
+                             for name, t in tracks.items()}},
         "limits": {"max_years_experience": d.max_years_experience,
                    "advanced_degree_required": d.reject_advanced_degree,
                    "graduate_programs": d.reject_graduate_programs},
