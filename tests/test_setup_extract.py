@@ -72,3 +72,48 @@ def test_forbidden_answers():
     assert extract.contains_forbidden("DOB: 01/02/2003")
     assert extract.contains_forbidden("date of birth 2003-01-02")
     assert not extract.contains_forbidden("graduating 2027-05; 3 years of Python")
+
+
+def test_broken_documents_raise_unreadable(tmp_path):
+    bad = tmp_path / "bad.docx"
+    bad.write_bytes(b"not a zip")
+    with pytest.raises(extract.Unreadable, match="bad.docx"):
+        extract.read_document(bad)
+    nodoc = tmp_path / "nodoc.docx"
+    with zipfile.ZipFile(nodoc, "w") as z:
+        z.writestr("x.txt", "hi")
+    with pytest.raises(extract.Unreadable, match="nodoc.docx"):
+        extract.read_document(nodoc)
+    badxml = tmp_path / "badxml.docx"
+    with zipfile.ZipFile(badxml, "w") as z:
+        z.writestr("word/document.xml", "<w:document")
+    with pytest.raises(extract.Unreadable, match="badxml.docx"):
+        extract.read_document(badxml)
+    pdf = tmp_path / "bad.pdf"
+    pdf.write_bytes(b"garbage, not a pdf")
+    with pytest.raises(extract.Unreadable, match="bad.pdf"):
+        extract.read_document(pdf)
+
+
+def test_international_phone_and_tolerant_exact_phone():
+    out = extract.redact("Call +44 20 7946 0958 or 804 555 0123.\nBorn 2024-2025, 2025-08, GPA 3.9, zip 23220, 40%",
+                         phone="(804)555-0123")
+    assert "7946" not in out and "555" not in out
+    assert "2024-2025, 2025-08, GPA 3.9, zip 23220, 40%" in out
+
+
+def test_street_forms():
+    for line in ("123 main street", "1200 N. Broad Street", "5 W 5th St", "PO Box 123", "P.O. Box 123",
+                 "Apt 4B", "Unit 3", "Suite 200", "#12"):
+        assert extract.redact(line) == "[address]", line
+    assert extract.redact("lives at 9 Elm Ave, Springfield, VA 23220") == "lives at [address]"
+    assert extract.redact("managed 250 Wall Street clients") .endswith("clients")
+    assert extract.redact("Built 40 Smith Court reports").endswith("reports")
+    assert extract.redact("ran unit tests; 3 years of Python") == "ran unit tests; 3 years of Python"
+
+
+def test_more_forbidden_forms():
+    for t in ("birthdate 2003", "birth date: x", "my birthday", "D.O.B. 1/2/03", "123 45 6789"):
+        assert extract.contains_forbidden(t), t
+    assert not extract.contains_forbidden("Dobson and Adobe")
+    assert "6789" not in extract.redact("id 123 45 6789")
