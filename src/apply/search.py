@@ -154,6 +154,28 @@ def _size(block) -> int:
     return len(block or [])
 
 
+def _limits(block, where: str) -> dict:
+    """The career-stage bars, checked once so the gate can trust their types."""
+    if block is None:
+        block = {}
+    if not isinstance(block, dict):
+        raise ValueError(f"search config: limits must be a mapping ({where})")
+    unknown = sorted(set(block) - set(DEFAULT_LIMITS))
+    if unknown:
+        raise KeyError(f"search config: limits has unknown key(s) {unknown}; "
+                       f"known: {sorted(DEFAULT_LIMITS)} ({where})")
+    limits = {**DEFAULT_LIMITS, **block}
+    years = limits["max_years_experience"]
+    if years is not None and (isinstance(years, bool) or not isinstance(years, int) or years < 0):
+        raise ValueError(f"search config: limits.max_years_experience must be a whole "
+                         f"number >= 0 or null, not {years!r} ({where})")
+    for key in ("advanced_degree_required", "graduate_programs"):
+        if not isinstance(limits[key], bool):
+            raise ValueError(f"search config: limits.{key} must be true or false, "
+                             f"not {limits[key]!r} ({where})")
+    return limits
+
+
 def build(raw: dict, sources: dict[str, str]) -> SearchConfig:
     """Compile a loaded mapping. Raises if a block is the wrong shape."""
     geography = []
@@ -184,7 +206,7 @@ def build(raw: dict, sources: dict[str, str]) -> SearchConfig:
         sizes={name: _size(block) for name, block in raw.items()},
         tracks=tracks,
         default_track=default_track,
-        limits={**DEFAULT_LIMITS, **(raw.get("limits") or {})},
+        limits=_limits(raw.get("limits"), sources.get("limits", "defaults")),
     )
 
 

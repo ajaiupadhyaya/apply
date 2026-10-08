@@ -555,6 +555,9 @@ def test_a_software_engineering_search_pursues_swe_roles(isolated_data_dir):
     assert "Seattle +25" in r.reasons
     assert score(_p("Backend Engineer")).rejected_by != "technical"
     assert score(_p("Summer Analyst, Investment Banking")).verdict is not Verdict.PURSUE
+    # With a body, the career-stage limits are live in a non-finance search too.
+    assert score(_p("Software Engineer", body="4+ years of experience")).rejected_by == "experience"
+    assert score(_p("Software Engineer", body="A PhD is required.")).rejected_by == "degree"
 
 
 def test_the_years_bar_is_configurable(isolated_data_dir):
@@ -562,6 +565,8 @@ def test_the_years_bar_is_configurable(isolated_data_dir):
     assert score(_p("Software Engineer", body="2+ years of experience")).rejected_by == "experience"
     _override(isolated_data_dir, {**SWE_SEATTLE, "limits": {"max_years_experience": None}})
     assert score(_p("Software Engineer", body="5+ years of experience")).rejected_by != "experience"
+    # A partial override leaves the other limits at their defaults.
+    assert score(_p("Software Engineer", body="A PhD is required.")).rejected_by == "degree"
 
 
 def test_degree_gates_can_be_turned_off(isolated_data_dir):
@@ -574,3 +579,18 @@ def test_degree_gates_can_be_turned_off(isolated_data_dir):
 def test_default_limits_are_todays():
     assert search.load().limits == {"max_years_experience": 3, "advanced_degree_required": True,
                                     "graduate_programs": True}
+
+
+@pytest.mark.parametrize("limits,match", [
+    ({"max_years_experience": "3"}, "max_years_experience"),
+    ({"max_years_experience": False}, "max_years_experience"),
+    ({"max_years_experience": -1}, "max_years_experience"),
+    ({"advanced_degree_required": "false"}, "advanced_degree_required"),
+    ({"graduate_programs": 0}, "graduate_programs"),
+    ({"max_years": 3}, "unknown key"),
+])
+def test_a_malformed_limits_block_is_refused_at_load(isolated_data_dir, limits, match):
+    _override(isolated_data_dir, {**SWE_SEATTLE, "limits": limits})
+    with pytest.raises((KeyError, ValueError), match=match) as err:
+        search.load()
+    assert "data/search.yaml" in str(err.value)
