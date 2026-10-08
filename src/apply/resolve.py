@@ -17,6 +17,7 @@ name. The careers page carries the right one; guessing does not.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 
@@ -57,21 +58,29 @@ class Candidate:
     config: dict
     supported: bool
 
-    def as_yaml(self, name: str, priority: int = 3) -> str:
+    def as_yaml(self, name: str, priority: int = 3, search: list[str] | None = None) -> str:
+        terms = "    search: [" + ", ".join(json.dumps(t) for t in (search or ["analyst", "intern", "2027"])) + "]"
         lines = [f"  - name: {name}", f"    ats: {self.ats}"]
         for key in ("board", "host", "tenant", "site"):
             if key in self.config:
                 lines.append(f"    {key}: {self.config[key]}")
         if self.ats == "workday":
-            lines.append('    search: ["analyst", "intern", "2027"]')
+            lines.append(terms)
             lines.append("    max_results: 120")
         elif self.ats == "oracle":
             lines.append("    max_results: 1000")
         elif self.ats == "eightfold":
-            lines.append('    search: ["analyst", "intern", "2027"]')
+            lines.append(terms)
             lines.append("    max_results: 300")
         lines.append(f"    priority: {priority}")
         return "\n".join(lines)
+
+    def as_entry(self, name: str, priority: int, search: list[str], tracks: list[str]) -> dict:
+        entry = {"name": name, "ats": self.ats, **self.config, "tracks": tracks, "priority": priority}
+        if self.ats in ("workday", "eightfold"):
+            entry["search"] = search
+            entry["max_results"] = 120
+        return entry
 
 
 def fetch(url: str, timeout: float = 20.0) -> str:
@@ -111,18 +120,44 @@ def candidates(html: str) -> list[Candidate]:
     return sorted(found.values(), key=lambda c: (not c.supported, c.ats))
 
 
-def verify(candidate: Candidate, name: str = "probe") -> int | None:
+def verify(candidate: Candidate, name: str = "probe", search: list[str] | None = None) -> int | None:
     """Actually call the board. Returns the posting count, or None if it did not answer."""
     from .sources import ADAPTERS
 
     adapter = ADAPTERS.get(candidate.ats)
     if adapter is None:
         return None
-    config = {"name": name, **candidate.config, "search": ["analyst"], "max_results": 20}
+    config = {"name": name, **candidate.config, "search": search or ["analyst"], "max_results": 20}
     try:
         return len(adapter.fetch(config))
     except Exception:                                   # noqa: BLE001
         return None
+
+
+_NAME_SUFFIX = re.compile(r"\b(inc|llc|lp|llp|ltd|plc|corp|corporation|co|company|group|holdings)\b\.?", re.I)
+
+
+def slug_candidates(name: str) -> list[str]:
+    """The slugs a firm's board most often lives under, most likely first."""
+    words = re.findall(r"[a-z0-9]+", _NAME_SUFFIX.sub(" ", name.lower()))
+    out = ["".join(words), "-".join(words)]
+    if len(words) > 1:
+        out += ["".join(words[:-1]), words[0]]
+    return list(dict.fromkeys(s for s in out if s))
+
+
+def probe_slugs(name: str, verify_fn=None) -> tuple["Candidate", int] | None:
+    """Try the public board APIs under the likely slugs. Only an answer with
+    postings counts; a guess is never written to the registry."""
+    verify_fn = verify_fn or verify
+    for slug in slug_candidates(name):
+        for ats in ("greenhouse", "lever", "ashby"):
+            candidate = Candidate(ats=ats, evidence=f"probed {ats}:{slug}",
+                                  config={"board": slug}, supported=True)
+            count = verify_fn(candidate, name)
+            if count:
+                return candidate, count
+    return None
 
 
 def resolve(url: str, *, check: bool = True, name: str = "probe") -> list[tuple[Candidate, int | None]]:
