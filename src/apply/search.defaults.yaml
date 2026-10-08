@@ -317,3 +317,141 @@ timing:
 title_timing:
   - ['\b20(26|27)\b', 14]
   - ['\bclass\s+of\b', 14]
+
+
+# ------------------------------------------------------------------ tracks
+#
+# The kinds of role this search is for. Each decides three things: which
+# keywords pull a posting toward it (classify.py), which resume layout goes out
+# with it (projects_first or experience_first), and whether its letter may
+# offer a link to the proof project's code. A posting matching none of them,
+# or tied between several, becomes `default`. Phrases are literal text matched
+# on word boundaries, not regexes. Weight 5 is decisive, 1 is weak; repetition
+# counts up to three times.
+
+tracks:
+  default: corporate
+  kinds:
+    quant:
+      resume: projects_first
+      code_link: true
+      keywords:
+        - ["market making", 5]
+        - ["market-making", 5]
+        - ["quantitative", 4]
+        - ["quant", 4]
+        - ["systematic", 4]
+        - ["backtest", 4]
+        - ["aladdin", 4]
+        - ["low latency", 4]
+        - ["high frequency", 4]
+        - ["ocaml", 4]
+        - ["trading", 3]
+        - ["derivatives", 3]
+        - ["alpha", 3]
+        - ["stochastic", 3]
+        - ["research associate", 3]
+        - ["c++", 3]
+        - ["signal", 2]
+        - ["volatility", 2]
+        - ["risk management", 3]
+        - ["risk", 2]
+        - ["execution", 2]
+        - ["python", 1]
+        - ["portfolio construction", 2]
+        - ["time series", 3]
+        - ["statistical", 2]
+        - ["hedging", 3]
+        - ["attribution", 2]
+        - ["exposure", 2]
+        - ["var", 3]
+        - ["factor model", 4]
+        - ["pricing model", 4]
+    banking:
+      resume: experience_first
+      code_link: false
+      keywords:
+        - ["investment banking", 5]
+        - ["mergers and acquisitions", 5]
+        - ["leveraged buyout", 5]
+        - ["comparable company", 5]
+        - ["pitchbook", 5]
+        - ["deal execution", 4]
+        - ["m&a", 4]
+        - ["lbo", 4]
+        - ["sell-side", 3]
+        - ["sell side", 3]
+        - ["buy-side advisory", 3]
+        - ["private capital", 3]
+        - ["private equity", 3]
+        - ["coverage group", 3]
+        - ["dcf", 3]
+        - ["discounted cash flow", 4]
+        - ["pitch", 3]
+        - ["corporate development", 4]
+        - ["transaction", 2]
+        - ["valuation", 2]
+        - ["financial modeling", 2]
+        - ["coverage", 2]
+        - ["capital raise", 4]
+        - ["restructuring", 3]
+    allocator:
+      resume: experience_first
+      code_link: false
+      keywords:
+        - ["fund of funds", 5]
+        - ["asset allocation", 5]
+        - ["manager selection", 5]
+        - ["manager research", 5]
+        - ["investment office", 5]
+        - ["endowment", 4]
+        - ["ocio", 4]
+        - ["outsourced chief investment", 5]
+        - ["allocator", 4]
+        - ["limited partner", 3]
+        - ["institutional investing", 3]
+        - ["foundation", 3]
+        - ["pension", 3]
+        - ["capital markets assumptions", 4]
+        - ["due diligence", 2]
+        - ["asset classes", 3]
+        - ["investment committee", 3]
+        - ["long-term pool", 4]
+        - ["general partner", 2]
+        - ["endowment model", 5]
+        - ["investment team", 3]
+        - ["investment office", 4]
+        - ["custodian", 3]
+        - ["investment review", 3]
+        - ["asset owner", 4]
+        - ["portfolio operations", 3]
+        - ["portfolio managers", 2]
+        - ["separate account", 3]
+        - ["mandate", 2]
+    corporate:
+      resume: experience_first
+      code_link: false
+      keywords:
+        - ["financial planning and analysis", 5]
+        - ["fp&a", 5]
+        - ["variance analysis", 5]
+        - ["rotational program", 5]
+        - ["month-end close", 5]
+        - ["rotational", 3]
+        - ["budgeting", 3]
+        - ["controller", 3]
+        - ["treasury", 3]
+        - ["business analyst", 3]
+        - ["management reporting", 3]
+        - ["corporate finance", 3]
+        - ["cost center", 3]
+        - ["forecasting", 2]
+        - ["accounting", 2]
+        - ["business partner", 2]
+        - ["operating plan", 3]
+        - ["reconciliation", 3]
+        - ["reconcile", 3]
+        - ["close process", 4]
+        - ["general ledger", 4]
+        - ["expense", 2]
+        - ["procurement", 3]

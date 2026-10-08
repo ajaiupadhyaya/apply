@@ -25,6 +25,9 @@ DEFAULTS = Path(__file__).resolve().parent / "search.defaults.yaml"
 #: A pattern that matches nothing, for a block someone emptied out.
 _NEVER = re.compile(r"(?!x)x")
 
+#: A track's resume layout → the resume template that renders it.
+RESUME_TEMPLATES = {"projects_first": "resume_quant", "experience_first": "resume_traditional"}
+
 
 def _any(patterns: list[str], block: str = "") -> re.Pattern:
     """Whole-token alternation, the form score.py has always used.
@@ -46,6 +49,17 @@ def _any(patterns: list[str], block: str = "") -> re.Pattern:
 
 
 @dataclass(frozen=True, slots=True)
+class TrackSpec:
+    """One kind of role: the keywords that pull a posting toward it, the resume
+    layout that goes out with it, and whether its letter may link the code."""
+
+    name: str
+    keywords: tuple[tuple[str, int], ...]
+    resume: str = "experience_first"
+    code_link: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class SearchConfig:
     rejects: dict[str, re.Pattern]
     class_scoped: dict[str, re.Pattern]
@@ -63,6 +77,15 @@ class SearchConfig:
     sources: dict[str, str]
     #: block name → how many entries it holds, for `apply search` to print.
     sizes: dict[str, int]
+    #: The kinds of role this search is for, in the order the YAML lists them.
+    tracks: tuple[TrackSpec, ...] = ()
+    #: The track a posting gets when none matches or several tie.
+    default_track: str = "corporate"
+
+    def track(self, name: str) -> TrackSpec:
+        """The named track's spec, or the default track's for a name it lacks."""
+        by_name = {t.name: t for t in self.tracks}
+        return by_name.get(str(name), by_name[self.default_track])
 
     @property
     def assume_us(self) -> bool:
@@ -92,8 +115,33 @@ def _weighted(rows, block: str) -> tuple[tuple[str, int], ...]:
     return tuple(out)
 
 
+def _tracks(block: dict | None, where: str) -> tuple[tuple[TrackSpec, ...], str]:
+    block = block or {}
+    kinds = block.get("kinds") or {}
+    if not kinds:
+        raise KeyError(f"search config: tracks.kinds is empty ({where})")
+    specs = []
+    for name, body in kinds.items():
+        body = body or {}
+        resume = body.get("resume", "experience_first")
+        if resume not in RESUME_TEMPLATES:
+            raise ValueError(f"search config: tracks.kinds.{name}.resume must be one of "
+                             f"{sorted(RESUME_TEMPLATES)} ({where})")
+        specs.append(TrackSpec(
+            name=str(name).strip().lower(),
+            keywords=tuple((str(p).lower(), int(w)) for p, w in (body.get("keywords") or [])),
+            resume=resume, code_link=bool(body.get("code_link", False))))
+    default = str(block.get("default") or specs[0].name).lower()
+    if default not in {s.name for s in specs}:
+        raise ValueError(f"search config: tracks.default {default!r} is not a track ({where})")
+    return tuple(specs), default
+
+
 def _size(block) -> int:
     """How many entries a block holds, counted the way the YAML writes them."""
+    if isinstance(block, dict) and isinstance(block.get("kinds"), dict):
+        # `tracks`: a default and its kinds. The kinds are the entries.
+        return len(block["kinds"])
     if isinstance(block, dict):
         return sum(len(v) if isinstance(v, list) else 1 for v in block.values())
     return len(block or [])
@@ -112,6 +160,7 @@ def build(raw: dict, sources: dict[str, str]) -> SearchConfig:
         geography.append((key, str(block.get("label", key)), weight,
                           _any(patterns, f"geography.{key}"),
                           bool(block.get("match_title"))))
+    tracks, default_track = _tracks(raw.get("tracks"), sources.get("tracks", "defaults"))
     return SearchConfig(
         rejects={name: _any(patterns, f"rejects.{name}")
                  for name, patterns in (raw.get("rejects") or {}).items()},
@@ -126,6 +175,8 @@ def build(raw: dict, sources: dict[str, str]) -> SearchConfig:
         country=str(raw.get("country") or "us"),
         sources=sources,
         sizes={name: _size(block) for name, block in raw.items()},
+        tracks=tracks,
+        default_track=default_track,
     )
 
 

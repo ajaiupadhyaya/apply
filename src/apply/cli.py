@@ -894,7 +894,8 @@ def mark(slug: str, status: str, note: Optional[str] = typer.Option(None, "--not
 def status(
     all_rows: bool = typer.Option(False, "--all", help="Include closed applications."),
     track: Optional[str] = typer.Option(
-        None, "--track", help="Only one track: quant, banking, allocator or corporate."),
+        None, "--track",
+        help="Only one track: one of the tracks in your search configuration (`apply search`)."),
 ) -> None:
     """The pipeline, deadline first."""
     conn = _conn()
@@ -1579,7 +1580,7 @@ def search() -> None:
     for column in ("block", "entries", "from"):
         table.add_column(column, justify="right" if column == "entries" else "left")
     for name in ("thresholds", "rejects", "class_scoped", "geography", "non_us",
-                 "role_fit", "timing", "title_timing"):
+                 "role_fit", "timing", "title_timing", "tracks"):
         source = config.sources.get(name, "defaults")
         if name == "thresholds" and from_profile:
             source = from_profile
@@ -1590,6 +1591,8 @@ def search() -> None:
                   + ", ".join(f"{label} +{weight}"
                               for _, label, weight, _, _ in config.geography)
                   + "[/]")
+    console.print("[dim]tracks: " + ", ".join(t.name for t in config.tracks)
+                  + f" (a tie or no match is {config.default_track})[/]")
     if not config.assume_us:
         console.print(f"[dim]country: {config.country} — nothing is refused for being "
                       f"outside the US.[/]")

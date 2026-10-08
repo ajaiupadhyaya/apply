@@ -61,7 +61,7 @@ exactly as pasted either way.</p>
         {% if parsed.classification.tied %}
           <p class="notice quiet" style="margin-top:0">
             Nothing in this posting matched a track strongly, so it defaulted to
-            <strong>corporate</strong> &mdash; the least over-claiming thing to be
+            <strong>{{ parsed.classification.default }}</strong> &mdash; the least over-claiming thing to be
             wrong about. Set it yourself if you know better.</p>
         {% else %}
         <div class="bars">

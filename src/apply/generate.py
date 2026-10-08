@@ -19,7 +19,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from .models import Posting, Track
+from .models import Posting
 from .profile import ASK, Profile
 
 # ------------------------------------------------------------------ paths
@@ -663,16 +663,25 @@ def _human_date(d: _dt.date | None = None) -> str:
 
 def render_letter(profile: Profile, posting: Posting, letter: Letter) -> str:
     """Track template + the written paragraphs -> LaTeX source."""
+    from .search import load
+
     env = _env()
     env.finalize = _finalize
-    template = env.get_template(f"letters/{posting.track}.tex.j2")
+    track = str(posting.track)
+    name = f"letters/{track}.tex.j2"
+    if not (templates_dir() / name).exists():
+        name = "letters/generic.tex.j2"
+    template = env.get_template(name)
 
-    # The quant template offers a link to the code when paragraph 2 is about a
-    # project that has one. Claude names its proof asset; match it to a project.
+    # A track with `code_link` offers a link to the code when paragraph 2 is
+    # about a project that has one. Claude names its proof asset; match it to a
+    # project of that track.
+    spec = load().track(track)
     proof_url = None
     body = letter.full_text.lower()
     for project in profile.projects.values():
-        if project.url and project.name.lower() in body and "quant" in project.tracks:
+        if (spec.code_link and project.url and project.name.lower() in body
+                and track in project.tracks):
             proof_url = project.url
             break
 
@@ -693,18 +702,11 @@ def render_letter(profile: Profile, posting: Posting, letter: Letter) -> str:
     )
 
 
-RESUME_VARIANT = {
-    Track.QUANT: "resume_quant",
-    Track.BANKING: "resume_traditional",
-    Track.ALLOCATOR: "resume_traditional",
-    Track.CORPORATE: "resume_traditional",
-}
+def select_resume(track: str) -> str:
+    """The resume template for a track, by the layout its configuration names."""
+    from .search import RESUME_TEMPLATES, load
 
-
-def select_resume(track: Track | str) -> str:
-    # Track subclasses str, so isinstance(track, str) is True for members too —
-    # check for the enum first or `Track.QUANT` round-trips through "Track.QUANT".
-    return RESUME_VARIANT[track if isinstance(track, Track) else Track.parse(track)]
+    return RESUME_TEMPLATES[load().track(str(track)).resume]
 
 
 _MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",

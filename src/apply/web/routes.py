@@ -18,7 +18,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .. import db, digest as digest_mod, generate, host
+from .. import db, digest as digest_mod, generate, host, search as search_mod
 from ..models import Status, Track, TransitionError
 from ..parse import parse as parse_jd
 from ..profile import Profile
@@ -49,7 +49,8 @@ def pipeline(request: Request, track: str | None = None):
     rows = [r for r in db.rows(conn)
             if r.application.status not in ("rejected", "withdrawn")
             and not digest_mod.screened_out(r)]
-    by_track = {t.value: sum(1 for r in rows if r.posting.track == t.value) for t in Track}
+    by_track = {t: sum(1 for r in rows if r.posting.track == t)
+                for t in (s.name for s in search_mod.load().tracks)}
     current = track if track in by_track else None     # an unknown track shows everything
     if current:
         rows = [r for r in rows if r.posting.track == current]
@@ -135,7 +136,7 @@ def add_parse(request: Request, jd: str = Form(...)):
         "web/confirm.html",
         _context("add",
             parsed=parsed, jd_escaped=jd, notes=parsed.notes,
-            tracks=[t.value for t in Track],
+            tracks=[s.name for s in search_mod.load().tracks],
             top_score=max(scores.values()) or 1,
         ),
     )
@@ -146,7 +147,7 @@ def add_create(
     jd: str = Form(...),
     company: str = Form(...),
     role: str = Form(...),
-    track: str = Form("corporate"),
+    track: str | None = Form(None),
     deadline: str = Form(""),
     location: str = Form(""),
     comp: str = Form(""),
@@ -161,7 +162,7 @@ def add_create(
     parsed.company, parsed.role = company.strip(), role.strip()
     parsed.location = location.strip() or None
     parsed.comp = comp.strip() or None
-    parsed.classification.track = Track.parse(track)
+    parsed.classification.track = Track.parse(track or search_mod.load().default_track)
     parsed.deadline = _dt.date.fromisoformat(deadline) if deadline else None
 
     posting = parsed.to_posting()

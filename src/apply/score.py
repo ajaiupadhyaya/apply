@@ -271,7 +271,7 @@ def score(posting: RawPosting, preferences: dict | None = None,
         value += priority_bonus
         reasons.append(f"target firm +{priority_bonus}")
 
-    classification = classify(haystack)
+    classification = classify(haystack, config)
     track = classification.track.value
     if classification.scores[classification.track] >= 10:
         value += 8

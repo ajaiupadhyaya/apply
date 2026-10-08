@@ -9,31 +9,31 @@ from apply.models import Track
 
 def test_the_first_seed_posting_is_quant(quillon_jd):
     result = classify(quillon_jd)
-    assert result.track is Track.QUANT
+    assert result.track == Track.QUANT
     assert "factor model" in result.matched[Track.QUANT]
 
 
 def test_the_second_seed_posting_is_allocator(ashcombe_jd):
     result = classify(ashcombe_jd)
-    assert result.track is Track.ALLOCATOR
+    assert result.track == Track.ALLOCATOR
     assert "manager research" in result.matched[Track.ALLOCATOR]
 
 
 def test_deal_work_is_banking():
     text = ("M&A analyst. Deal execution, pitchbook preparation, comparable "
             "company analysis, LBO modeling, sell-side processes.")
-    assert classify(text).track is Track.BANKING
+    assert classify(text).track == Track.BANKING
 
 
 def test_rotational_finance_is_corporate():
     text = ("Rotational program in corporate finance: FP&A, variance analysis, "
             "budgeting, management reporting.")
-    assert classify(text).track is Track.CORPORATE
+    assert classify(text).track == Track.CORPORATE
 
 
 def test_nothing_matched_falls_back_to_corporate():
     result = classify("We are hiring someone nice.")
-    assert result.track is Track.CORPORATE
+    assert result.track == Track.CORPORATE
     assert result.tied
     assert "defaulted" in result.why
 
@@ -41,7 +41,7 @@ def test_nothing_matched_falls_back_to_corporate():
 def test_a_tie_resolves_to_corporate():
     """Corporate is the least over-claiming thing to be wrong about."""
     result = classify("")
-    assert result.track is Track.CORPORATE
+    assert result.track == Track.CORPORATE
 
 
 def test_word_boundaries_hold():
