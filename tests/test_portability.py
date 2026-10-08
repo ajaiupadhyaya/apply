@@ -38,3 +38,12 @@ def test_yaml_with_typography_round_trips(tmp_path):
     data = {"note": "It’s the desk — not the title — that “matters”."}
     path = write_profile(data, tmp_path / "p.yaml")
     assert "— not the title —" in path.read_text(encoding="utf-8")
+
+
+def test_install_scripts_exist_and_end_in_setup():
+    ps1 = (ROOT / "scripts" / "install.ps1").read_text(encoding="utf-8")
+    sh = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
+    for script in (ps1, sh):
+        assert "uv sync" in script and "apply setup" in script
+    assert "winget install" in ps1 and "MiKTeX.MiKTeX" in ps1 and "AutoInstall=1" in ps1
+    assert "astral.sh/uv/install.ps1" in ps1
