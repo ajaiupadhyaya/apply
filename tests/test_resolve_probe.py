@@ -37,3 +37,27 @@ def test_as_yaml_defaults_and_eightfold_search():
     assert 'search: ["analyst", "intern", "2027"]' in c.as_yaml("X")
     assert 'search: ["quant"]' in c.as_yaml("X", search=["quant"])
     assert "search" not in resolve.Candidate("greenhouse", "", {"board": "x"}, True).as_entry("X", 3, ["a"], [])
+
+
+def test_slug_candidates_never_fall_back_to_a_bare_first_word():
+    assert "two" not in resolve.slug_candidates("Two Sigma")
+    assert "man" not in resolve.slug_candidates("Man Group")
+    assert resolve.slug_candidates("Jane Street") == ["janestreet", "jane-street"]
+
+
+def test_as_entry_and_as_yaml_share_the_caps():
+    for ats, cap in resolve.MAX_RESULTS.items():
+        c = resolve.Candidate(ats, "", {"host": "h", "site": "s", "tenant": "t"}, True)
+        assert c.as_entry("X", 3, ["a"], [])["max_results"] == cap
+        assert f"max_results: {cap}" in c.as_yaml("X")
+    assert resolve.Candidate("oracle", "", {"host": "h", "site": "s"}, True).as_entry("X", 3, ["a"], [])["search"] == ["a"]
+
+
+def test_verify_is_none_when_the_adapter_raises(monkeypatch):
+    from apply.sources import ADAPTERS
+
+    def boom(config):
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(ADAPTERS["greenhouse"], "fetch", boom)
+    assert resolve.verify(resolve.Candidate("greenhouse", "", {"board": "x"}, True)) is None
