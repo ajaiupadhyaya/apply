@@ -13,7 +13,7 @@ jobs:
       matrix:
         # The machine it is developed on, and the one a stranger is most likely
         # to clone it onto. The scheduler and the secret lookup differ on each.
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         # The floor pyproject promises, and the version it is developed on.
         python: ["3.11", "3.13"]
     steps:
@@ -21,9 +21,18 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0   # publishes exact tags only; there is no moving v10
       - name: Install
         run: uv sync --python ${{ matrix.python }}
+      - name: TeX (Windows, one leg)
+        if: runner.os == 'Windows' && matrix.python == '3.13'
+        shell: pwsh
+        run: |
+          choco install miktex --no-progress -y
+          $bin = "C:\Program Files\MiKTeX\miktex\bin\x64"
+          echo $bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & "$bin\initexmf.exe" --admin --set-config-value=[MPM]AutoInstall=1
+          & "$bin\miktex.exe" --admin packages update-package-database
       - name: Lint (pyflakes rules)
         run: uvx ruff check --select F src tests
-      # No TeX here, so the handful of tests that compile a PDF skip themselves.
+      # No TeX here (except one Windows leg), so the handful of tests that compile a PDF skip themselves.
       # Every test that could reach the Anthropic API is blocked in conftest.
       - name: Test
         run: uv run --python ${{ matrix.python }} pytest -q
@@ -34,10 +43,14 @@ jobs:
   # in the README work on a clone, not that the code is correct.
   smoke:
     runs-on: ${{ matrix.os }}
+    # Git Bash on Windows, so `test -f` and `test -z` mean the same everywhere.
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
