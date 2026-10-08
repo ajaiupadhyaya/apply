@@ -272,4 +272,4 @@ def _location(city: str) -> dict:
     return {"city": head.strip()}
 
 
-from .wizard import run_wizard  # noqa: E402 — the wizard builds on everything above
+from .wizard import run_wizard  # noqa: E402, F401 — the wizard builds on everything above

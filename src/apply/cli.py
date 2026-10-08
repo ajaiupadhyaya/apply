@@ -34,6 +34,19 @@ from .profile import Profile, ProfileError, data_dir
 console = Console()
 
 
+def _utf8_streams() -> None:
+    """Make stdout and stderr UTF-8 so ✓ ✗ — survive a pipe on Windows.
+
+    Redirected, Python on Windows writes the ANSI code page (cp1252), which
+    cannot encode them. `console` has no file of its own, so rich writes
+    through whatever sys.stdout is at print time and picks this up.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure and (getattr(stream, "encoding", "") or "").lower().replace("_", "-") != "utf-8":
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 class Sentences(typer.core.TyperGroup):
     """One doorway out for a profile that cannot be read.
 
@@ -46,6 +59,7 @@ class Sentences(typer.core.TyperGroup):
     """
 
     def invoke(self, ctx):
+        _utf8_streams()
         try:
             return super().invoke(ctx)
         except ProfileError as exc:

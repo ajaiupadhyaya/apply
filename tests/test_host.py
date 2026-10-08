@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
 
-import pytest
 
 
 def test_open_path_on_windows_uses_startfile(monkeypatch, tmp_path):

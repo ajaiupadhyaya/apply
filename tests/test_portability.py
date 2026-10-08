@@ -70,3 +70,16 @@ def test_install_scripts_verify_each_step():
     assert "uv installed but not on PATH" in sh
     # uv sync runs before the TeX check, so the hint prints after it
     assert sh.index("uv sync") < sh.index("command -v pdflatex")
+
+
+def test_cli_makes_a_cp1252_stdout_utf8(monkeypatch):
+    import io
+    import sys
+    from apply import cli
+    raw = io.BytesIO()
+    fake = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+    monkeypatch.setattr(sys, "stdout", fake)
+    cli._utf8_streams()
+    cli.console.print("✓ —")
+    fake.flush()
+    assert "✓ —".encode("utf-8") in raw.getvalue()
