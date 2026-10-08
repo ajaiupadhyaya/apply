@@ -432,3 +432,58 @@ All tests use FakeClaude. No test calls the API (existing rule).
 - **The owner's public history still holds the old profile.** Scrubbing history
   is out of scope, so the owner should decide separately whether to make this
   repo private.
+
+---
+
+## Addendum (2026-10-08): rebased onto `publish-clean`
+
+The owner chose to build on the existing `publish-clean` branch rather than
+`main`. That branch already does much of Part 2:
+- `data/profile.yaml` is gitignored, and a fictional persona (Rae Mercer) is
+  both the scaffold and the test fixture.
+- The gate's vocabulary is YAML: `src/apply/search.defaults.yaml`, overridden
+  per top-level block by a gitignored `data/search.yaml`.
+- There is a 9-question `apply setup` with `--persona`/`--non-interactive`,
+  and launchd/systemd/cron backends.
+- `secrets.lookup` reads the environment, then the Keychain, then `keyring`.
+- CI runs on Ubuntu and macOS, and there are owner-string tests.
+
+Where this spec and the branch differ, the branch's shapes win:
+
+- **2.1 / 2.3:** search criteria stay in `data/search.yaml` with the branch's
+  keys (`rejects`, `class_scoped`, `geography`, `non_us`, `country`,
+  `role_fit`, `timing`, `title_timing`, `thresholds`), not in
+  `profile.private.yaml`. They gain two blocks:
+  - `tracks:` replaces the spec's `search.tracks`.
+  - `limits:` holds max years of experience, the advanced-degree reject and
+    the graduate-programme reject.
+- **1.1:** OS-specific code stays in the seams the branch already has
+  (`secrets.py`, `schedule.py`, `cli.read_clipboard`, `notify.banner`,
+  `generate.tex_hint`), each gaining a Windows branch. A small `host.py` holds
+  only `open_path`, which `cli` and `web` share.
+- **1.2:** `keyring` becomes a real dependency, with a new
+  `secrets.store(name, value)` written through `keyring` (service `"apply"`,
+  username = secret name, the layout `lookup` already reads). CLAUDE.md's
+  "nothing writes a credential" becomes "nothing writes a credential to a
+  file".
+- **1.3:** the launchd label is already neutral (`apply.daily`, legacy label
+  retired). Windows gets a fourth backend, `TaskSchedulerBackend`.
+- **1.7:** the CI file is `.github/workflows/tests.yml`. Windows joins both of
+  its jobs.
+- **Part 3:**
+  - `src/apply/setup.py` becomes the package `src/apply/setup/`. Its existing
+    contents move unchanged into `__init__.py`.
+  - The new wizard is the interactive default.
+  - The old nine questions remain as `apply setup --quick`, for someone
+    without an API key.
+  - `--persona` and `--non-interactive` are unchanged, since CI's smoke job
+    uses them.
+  - Key verification is `llm.ping()`, a free `models.list` request, in place
+    of a Haiku call.
+  - The draft uses `llm.DEFAULT_MODEL` (Sonnet 5.5 on this branch), with a
+    per-call cap of at least $2 for the `setup` purpose.
+  - Graduation date stays required: the wizard asks "expected, or when you
+    graduated", so a non-student still has one.
+- **4.1:** the export keeps authorship lines (LICENSE, the repository URL, the
+  legacy launchd label). The deny-list targets the owner's biography, using
+  the branch's `AUTHORS_BIOGRAPHY`, not the owner's name as author.
