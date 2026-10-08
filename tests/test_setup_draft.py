@@ -116,7 +116,7 @@ def test_files_load_as_a_profile(workspace):
     assert p.display_name.endswith("Reyes") and "swe" in p.projects["kestrel"].tracks
 
 
-def test_request_goes_through_llm_call_and_the_ledger(monkeypatch, conn):
+def test_propose_goes_through_llm_call_and_the_ledger(monkeypatch, conn):
     from apply import llm
     from apply.budget import Budget
     seen = {}
@@ -127,7 +127,7 @@ def test_request_goes_through_llm_call_and_the_ledger(monkeypatch, conn):
 
     monkeypatch.setattr(llm, "call", fake_call)
     budget = Budget(conn)                              # default $0.50 per call
-    result = D.request(SOURCES, answers(phone="(555) 201-4477", street_address="12 Elm St",
+    result = D.propose(SOURCES, answers(phone="(555) 201-4477", street_address="12 Elm St",
                                         gpa="3.8"),
                        note="more weight on Seattle", budget=budget)
     assert seen["schema"] is D.Draft and "more weight on Seattle" in seen["user"]

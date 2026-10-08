@@ -243,3 +243,93 @@ def test_review_keeps_private_values_the_user_did_not_restate(isolated_data_dir,
     assert private["identity"]["phone"] == "+1 555 0100 222"
     assert private["budget"]["per_call_usd"] == 1.0
     assert private["budget"]["monthly_usd"] == 15.0
+
+
+def _review_state(data: Path) -> None:
+    answers = {"roles": "swe", "job_types": ["internship"], "locations": ["Seattle, WA"],
+               "remote_ok": True, "firms": [], "avoid": "", "links": {}, "extra": "",
+               "work_authorized": True, "sponsorship_now": False, "sponsorship_future": False,
+               "grad_expected": "2027-05", "student": True, "availability_full_time": None,
+               "availability_internship": None}
+    state = json.dumps({"done": [], "answers": answers})
+    (data / ".setup_state.json").write_text(state, encoding="utf-8")
+
+
+def test_drafted_text_is_shown_literally_not_as_markup(isolated_data_dir):
+    """A redaction token is text: '[phone]' must survive the review screen and
+    '[/x]' must not raise a MarkupError."""
+    from rich.console import Console
+
+    data = isolated_data_dir
+    body = json.loads((FIX / "draft.json").read_text(encoding="utf-8"))
+    body["experience"][0]["bullets"] = ["Call me at [phone] about the [/x] rewrite"]
+    draft = json.dumps(body)
+    (data / ".setup_draft.json").write_text(draft, encoding="utf-8")
+    _review_state(data)
+    console = Console(record=True, width=200)
+
+    class Shown(Script):
+        def say(self, markup):
+            super().say(markup)
+            console.print(markup)
+
+    asker = Shown([(f"{s}: accept", "accept") for s in ("identity", "experience", "projects",
+                                                        "skills", "writing", "search")])
+    wizard.run_wizard(asker, step="review", data=data)
+    assert "Call me at [phone] about the [/x] rewrite" in console.export_text()
+
+
+def test_backups_in_the_same_second_never_overwrite(isolated_data_dir):
+    path = isolated_data_dir / "profile.yaml"
+    path.write_text("first\n", encoding="utf-8")
+    one = wizard._backup(isolated_data_dir, path)
+    path.write_text("second\n", encoding="utf-8")
+    two = wizard._backup(isolated_data_dir, path)
+    assert one != two
+    assert one.read_text(encoding="utf-8") == "first\n"
+    assert two.read_text(encoding="utf-8") == "second\n"
+
+
+def test_a_ceiling_must_be_a_positive_number(isolated_data_dir, fake_api):
+    state = {"done": []}
+    ctx = {"asker": Script([("anthropic api key", "sk-ant-x"), ("monthly spending", "-5"),
+                            ("monthly spending", "nan"), ("monthly spending", "lots"),
+                            ("monthly spending", "$12.5")]),
+           "data": isolated_data_dir, "state": state}
+    wizard._key(ctx)
+    assert ctx["asker"].answers == []
+    assert state["budget"] == {"monthly_usd": 12.5}
+
+
+def test_the_draft_starts_from_the_owners_own_ceilings(isolated_data_dir, fake_api):
+    data = isolated_data_dir
+    on_file = "budget:\n  monthly_usd: 40.0\n  per_call_usd: 3.0\n  per_run_usd: 9.0\n"
+    (data / "profile.private.yaml").write_text(on_file, encoding="utf-8")
+    _review_state(data)
+    state = json.loads((data / ".setup_state.json").read_text(encoding="utf-8"))
+    state["sources"] = (FIX / "resume.txt").read_text(encoding="utf-8")
+    ctx = {"asker": Script([]), "data": data, "state": state}
+    try:
+        wizard._draft(ctx)
+        caps = ctx["budget"].caps
+    finally:
+        ctx["conn"].close()
+    assert caps["monthly_usd"] == 40.0 and caps["per_run_usd"] == 9.0 and caps["per_call_usd"] == 3.0
+    state["budget"] = {"monthly_usd": 20.0}
+    (data / "profile.private.yaml").write_text("budget:\n  per_run_usd: 1.0\n", encoding="utf-8")
+    ctx = {"asker": Script([]), "data": data, "state": state}
+    try:
+        wizard._draft(ctx)
+        caps = ctx["budget"].caps
+    finally:
+        ctx["conn"].close()
+    assert caps["monthly_usd"] == 20.0 and caps["per_run_usd"] == 5.0
+
+
+@pytest.mark.parametrize("args", [["--step", "key", "--quick"], ["--step", "key", "--persona"],
+                                  ["--step", "key", "--non-interactive"], ["--force"]])
+def test_cli_refuses_flags_that_do_not_combine(args):
+    from apply.cli import app
+    result = CliRunner().invoke(app, ["setup", *args])
+    assert result.exit_code != 0
+    assert "Traceback" not in result.output and ("--step" in result.output or "--force" in result.output)

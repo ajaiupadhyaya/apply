@@ -221,6 +221,12 @@ def setup(
     nine questions instead; --persona writes the example person."""
     from . import setup as setup_mod
 
+    if step is not None and (quick or persona or non_interactive):
+        _fail("--step re-runs one step of the guided setup; it does not combine with "
+              "--quick, --persona or --non-interactive.")
+    if force and not (quick or persona or non_interactive):
+        _fail("--force goes with --quick or --persona. The guided setup asks before it "
+              "replaces a file, and backs it up first.")
     if not (persona or non_interactive or quick):
         from .setup.wizard import ConsoleAsker, run_wizard
 

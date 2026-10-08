@@ -208,7 +208,7 @@ def _user_message(sources: str, answers: Answers, note: str) -> str:
     return text
 
 
-def request(sources: str, answers: Answers, note: str = "", *, budget=None) -> Draft:
+def propose(sources: str, answers: Answers, note: str = "", *, budget=None) -> Draft:
     from .. import llm
 
     user = _user_message(sources, answers, note)

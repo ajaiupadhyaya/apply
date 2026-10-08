@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as _dt
 import getpass
 import json
+import math
 import re
 import secrets as _random
 import shutil
@@ -20,6 +21,8 @@ from pathlib import Path
 from typing import Protocol
 
 import yaml
+from rich.markup import escape as _esc
+from rich.text import Text
 
 from . import draft as D
 from . import extract
@@ -46,18 +49,18 @@ class ConsoleAsker:
 
     def text(self, prompt, default=None):
         from rich.prompt import Prompt
-        return Prompt.ask(prompt, default=default or "", console=self.console).strip()
+        return Prompt.ask(Text(prompt), default=default or "", console=self.console).strip()
 
     def secret(self, prompt):
         return getpass.getpass(f"{prompt}: ").strip()
 
     def confirm(self, prompt, default=True):
         from rich.prompt import Confirm
-        return Confirm.ask(prompt, default=default, console=self.console)
+        return Confirm.ask(Text(prompt), default=default, console=self.console)
 
     def choice(self, prompt, options, default=None):
         from rich.prompt import Prompt
-        return Prompt.ask(prompt, choices=options, default=default, console=self.console)
+        return Prompt.ask(Text(prompt), choices=options, default=default, console=self.console)
 
     def edit(self, text):
         import click
@@ -88,8 +91,14 @@ def _save_state(data: Path, state: dict) -> None:
 
 
 def _backup(data: Path, path: Path) -> Path:
-    stamp = _dt.datetime.now().strftime("%Y%m%dT%H%M%S")
+    # Microseconds, and a counter besides: two backups in one second must
+    # never land in the same folder and overwrite the first.
+    stamp = _dt.datetime.now().strftime("%Y%m%dT%H%M%S%f")
     target = data / ".backup" / stamp / path.relative_to(data)
+    n = 1
+    while target.exists():
+        target = data / ".backup" / f"{stamp}-{n}" / path.relative_to(data)
+        n += 1
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(path, target)
     return target
@@ -108,9 +117,9 @@ def _write_file(data: Path, rel: str, text: str, asker: Asker, *, example: Path 
             return True
         if not _is_untouched(path, example):
             if not asker.confirm(f"{rel} already exists. Back it up and replace it?", default=False):
-                asker.say(f"[dim]kept your {rel}[/]")
+                asker.say(f"[dim]kept your {_esc(rel)}[/]")
                 return False
-            asker.say(f"[dim]backed up to {_backup(data, path)}[/]")
+            asker.say(f"[dim]backed up to {_esc(str(_backup(data, path)))}[/]")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return True
@@ -214,10 +223,10 @@ def _toolchain(ctx: dict) -> None:
         asker.say("[green]✓[/] pdflatex found: letters and resumes will compile to PDF.")
     else:
         asker.say("[yellow]•[/] pdflatex is not installed. Everything but the PDFs works without it. "
-                  f"To get it:\n    {generate.tex_hint()}")
+                  f"To get it:\n    {_esc(generate.tex_hint())}")
     if generate.miktex_autoinstall() is False:
         asker.say("[yellow]•[/] MiKTeX asks before installing a package, and that dialog hangs an "
-                  "unattended run. Turn it off:\n    initexmf --set-config-value=[MPM]AutoInstall=1")
+                  "unattended run. Turn it off:\n    " + _esc("initexmf --set-config-value=[MPM]AutoInstall=1"))
 
 
 def _key(ctx: dict) -> None:
@@ -242,13 +251,13 @@ def _key(ctx: dict) -> None:
             try:
                 secrets.store("ANTHROPIC_API_KEY", key)
             except Exception as exc:                     # noqa: BLE001 — no keyring backend, locked store
-                asker.say(f"[red]Could not store the key:[/] {exc}\nStore it yourself, then press "
-                          f"Enter here:\n    {secrets.how_to_store('ANTHROPIC_API_KEY')}")
+                asker.say(f"[red]Could not store the key:[/] {_esc(str(exc))}\nStore it yourself, then press "
+                          f"Enter here:\n    {_esc(secrets.how_to_store('ANTHROPIC_API_KEY'))}")
                 continue
         try:
             llm.ping()
         except llm.LLMUnavailable as exc:
-            asker.say(f"[red]✗[/] {exc}")
+            asker.say(f"[red]✗[/] {_esc(str(exc))}")
             continue
         asker.say("[green]✓[/] the key works.")
         break
@@ -257,10 +266,13 @@ def _key(ctx: dict) -> None:
         if not ceiling:
             break
         try:
-            state["budget"] = {"monthly_usd": float(ceiling)}
-            break
+            dollars = float(ceiling)
         except ValueError:
-            asker.say(f"[yellow]{ceiling!r} is not a number of dollars.[/]")
+            dollars = -1.0
+        if math.isfinite(dollars) and dollars > 0:
+            state["budget"] = {"monthly_usd": dollars}
+            break
+        asker.say(f"[yellow]{_esc(repr(ceiling))} is not a positive number of dollars.[/]")
 
 
 def _about(ctx: dict) -> None:
@@ -295,7 +307,7 @@ def _about(ctx: dict) -> None:
         problem = check_grad_expected(grad)
         if problem is None:
             break
-        asker.say(f"[yellow]{problem}[/]")
+        asker.say(f"[yellow]{_esc(problem)}[/]")
     full_time = clean("When are you available full-time? (Enter to skip)") or None
     internship = clean("Internship availability (Enter to skip)") or None
     asker.say("[dim]The next three go only into the private file and onto your resume; "
@@ -334,15 +346,15 @@ def _documents(ctx: dict) -> None:
                 break
             path = Path(raw).expanduser()
             if not path.is_file():
-                asker.say(f"[yellow]No file at {path}.[/]")
+                asker.say(f"[yellow]No file at {_esc(str(path))}.[/]")
                 continue
             try:
                 text = extract.read_document(path)
             except extract.Unreadable as exc:
-                asker.say(f"[yellow]{exc}[/]")
+                asker.say(f"[yellow]{_esc(str(exc))}[/]")
                 continue
             clean = extract.redact(text, phone=answers.phone, address=answers.street_address)
-            asker.say(f"[green]✓[/] {path.name}: {len(clean.split())} words")
+            asker.say(f"[green]✓[/] {_esc(path.name)}: {len(clean.split())} words")
             _write_file(data, f"context/{name}.md",
                         f"<!-- source: {path.name}, imported by apply setup -->\n\n{clean}\n", asker)
             texts.append(clean)
@@ -359,7 +371,8 @@ def _draft(ctx: dict, note: str = "") -> D.Draft:
     if ctx.get("conn") is None:
         db.init_db(data / "apply.db")
         ctx["conn"] = db.connect(data / "apply.db")
-    caps = {**budget.DEFAULTS, **(state.get("budget") or {})}
+    # The owner's own ceilings first, then this setup's answer.
+    caps = {**budget.DEFAULTS, **(_private_base(data).get("budget") or {}), **(state.get("budget") or {})}
     caps["per_run_usd"] = max(caps["per_run_usd"], SETUP_PER_RUN_USD)
     if ctx.get("budget") is None:
         ctx["budget"] = budget.Budget(ctx["conn"], caps=caps)
@@ -367,13 +380,14 @@ def _draft(ctx: dict, note: str = "") -> D.Draft:
         asker.say("[bold]5. The draft[/]\nOne request to Claude (about $0.10–0.30). It proposes; "
                   "a check then removes anything your documents do not support.")
     try:
-        proposed = D.request(state["sources"], answers, note=note, budget=ctx["budget"])
+        # The request itself is sent by apply.llm (draft.propose calls llm.call).
+        proposed = D.propose(state["sources"], answers, note=note, budget=ctx["budget"])
     except (llm.LLMUnavailable, budget.BudgetExceeded) as exc:
-        asker.say(f"[red]✗[/] {exc}")
+        asker.say(f"[red]✗[/] {_esc(str(exc))}")
         raise SystemExit("the draft did not run; `uv run apply setup` resumes here.") from exc
     grounded, notes = D.ground(proposed, state["sources"], answers, note=note)
     for line in notes:
-        asker.say(f"[yellow]•[/] {line}")
+        asker.say(f"[yellow]•[/] {_esc(line)}")
     _draft_path(data).write_text(grounded.model_dump_json(indent=1), encoding="utf-8")
     return grounded
 
@@ -425,7 +439,7 @@ def _review(ctx: dict) -> None:
     for section in D.SECTIONS:
         while True:
             shown = _dump(_view(files, section))
-            asker.say(f"\n[bold]{section}[/]\n{shown}")
+            asker.say(f"\n[bold]{section}[/]\n{_esc(shown)}")
             pick = asker.choice(f"{section}: accept, edit, or redo with a note?",
                                 ["accept", "edit", "redo"], "accept")
             if pick == "accept":
@@ -437,7 +451,7 @@ def _review(ctx: dict) -> None:
                 try:
                     body = yaml.safe_load(edited) or {}
                 except yaml.YAMLError as exc:
-                    asker.say(f"[red]That is not valid YAML:[/] {exc}")
+                    asker.say(f"[red]That is not valid YAML:[/] {_esc(str(exc))}")
                     continue
                 if not isinstance(body, dict):
                     asker.say("[red]That is not a block of keys; nothing changed.[/]")
@@ -506,11 +520,11 @@ def _employers(ctx: dict) -> None:
                 try:
                     results = resolve.resolve(url, name=name)
                 except Exception as exc:                 # noqa: BLE001 — network, HTTP status
-                    asker.say(f"[yellow]Could not read that page:[/] {exc}")
+                    asker.say(f"[yellow]Could not read that page:[/] {_esc(str(exc))}")
                     results = []
                 for candidate, count in results:
                     if candidate.supported and count:
-                        asker.say(f"[green]✓[/] {name}: {candidate.ats} ({count} open postings)")
+                        asker.say(f"[green]✓[/] {_esc(name)}: {_esc(candidate.ats)} ({count} open postings)")
                         found = candidate
                         break
         if found is None:
@@ -522,9 +536,9 @@ def _employers(ctx: dict) -> None:
         entries.append(entry)
     _write_yaml(data, "employers.yaml", {"employers": entries}, asker, example=example)
     for name in unresolved:
-        asker.say(f"[yellow]•[/] {name}: no board found. Its postings still arrive through job-alert "
+        asker.say(f"[yellow]•[/] {_esc(name)}: no board found. Its postings still arrive through job-alert "
                   "mail (`apply ingest`), and `apply add --clipboard` files any one you find; "
-                  f"`apply resolve <careers-url> --name \"{name}\"` adds it later.")
+                  f"`apply resolve <careers-url> --name \"{_esc(name)}\"` adds it later.")
 
 
 def _extras(ctx: dict) -> None:
@@ -543,8 +557,8 @@ def _extras(ctx: dict) -> None:
                 secrets.store("APPLY_IMAP_PASSWORD", password.replace(" ", ""))
                 asker.say("[green]✓[/] stored in your OS credential store. `apply ingest --imap` reads it.")
             except Exception as exc:                     # noqa: BLE001
-                asker.say(f"[red]Could not store it:[/] {exc}\n    "
-                          f"{secrets.how_to_store('APPLY_IMAP_PASSWORD')}")
+                asker.say(f"[red]Could not store it:[/] {_esc(str(exc))}\n    "
+                          f"{_esc(secrets.how_to_store('APPLY_IMAP_PASSWORD'))}")
     if asker.confirm("Push notifications to your phone via ntfy.sh?", False):
         topic = "apply-" + _random.token_urlsafe(12)
         _merge_private(data, {"notify": {"ntfy_topic": topic}})
@@ -556,14 +570,14 @@ def _extras(ctx: dict) -> None:
             match = re.fullmatch(r"(\d{1,2}):(\d{2})", at)
             if match and int(match.group(1)) < 24 and int(match.group(2)) < 60:
                 break
-            asker.say(f"[yellow]{at!r} is not HH:MM.[/]")
+            asker.say(f"[yellow]{_esc(repr(at))} is not HH:MM.[/]")
         plan = schedule.Schedule(int(match.group(1)), int(match.group(2)), project=generate.repo_root(),
                                  command="uv run apply run --notify --llm api")
         try:
             schedule.install(plan)
             asker.say(f"[green]✓[/] the morning run is scheduled for {plan.at}.")
         except Exception as exc:                         # noqa: BLE001 — the supervisor refused
-            asker.say(f"[red]Could not schedule it:[/] {exc}. `apply schedule --install` tries again.")
+            asker.say(f"[red]Could not schedule it:[/] {_esc(str(exc))}. `apply schedule --install` tries again.")
 
 
 def _finish(ctx: dict) -> None:
@@ -590,7 +604,7 @@ def run_wizard(asker: Asker, *, step: str | None = None, data: Path | None = Non
 
     data = data or data_dir()
     if step is not None and step not in RUNNERS:
-        asker.say(f"[red]unknown step {step!r}[/]; one of: {', '.join(STEPS)}")
+        asker.say(f"[red]unknown step {_esc(repr(step))}[/]; one of: {', '.join(STEPS)}")
         raise SystemExit(2)
     state = _load_state(data)
     ctx = {"asker": asker, "data": data, "state": state}

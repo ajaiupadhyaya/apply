@@ -102,7 +102,7 @@ uv run apply serve             # the dashboard, at localhost:8787
 
 `--persona` writes the invented person this repository ships, Rae Mercer of
 Example University, and gives you a profile complete enough to render a letter
-and a resume end to end. When you want your own, `uv run apply setup --force`
+and a resume end to end. When you want your own, `uv run apply setup --quick --force`
 asks nine questions — name, email, school, degree, graduation month, the city
 you want to work in, the work you want, work authorization, a GitHub link — and
 replaces the persona. It leaves everything it could not ask about marked `ASK`:
