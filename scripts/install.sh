@@ -9,11 +9,13 @@ if ! command -v uv >/dev/null; then
   if ask "Install uv (the Python manager APPLY uses)?"; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
+    command -v uv >/dev/null || { echo "uv installed but not on PATH; open a new terminal and re-run."; exit 1; }
   else echo "uv is required."; exit 1; fi
 fi
+
+uv sync
 if ! command -v pdflatex >/dev/null; then
   echo "No TeX yet — letters can be written but not typeset. $(uv run python -c 'from apply.generate import tex_hint; print(tex_hint())' 2>/dev/null || true)"
 fi
 
-uv sync
 uv run apply setup

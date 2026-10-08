@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -47,3 +48,25 @@ def test_install_scripts_exist_and_end_in_setup():
         assert "uv sync" in script and "apply setup" in script
     assert "winget install" in ps1 and "MiKTeX.MiKTeX" in ps1 and "AutoInstall=1" in ps1
     assert "astral.sh/uv/install.ps1" in ps1
+
+
+def test_install_scripts_are_ascii_shebanged_and_executable():
+    ps1 = ROOT / "scripts" / "install.ps1"
+    sh = ROOT / "scripts" / "install.sh"
+    assert ps1.read_bytes().isascii()
+    assert sh.read_text(encoding="utf-8").startswith("#!/usr/bin/env bash")
+    if os.name != "nt":
+        assert os.access(sh, os.X_OK)
+
+
+def test_install_scripts_verify_each_step():
+    ps1 = (ROOT / "scripts" / "install.ps1").read_text(encoding="utf-8")
+    sh = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
+    assert "uv sync failed" in ps1 and "$LASTEXITCODE" in ps1
+    assert "uv installed but not found" in ps1
+    assert "https://miktex.org/download" in ps1
+    assert "MiKTeX is not on PATH yet" in ps1
+    assert "uv run apply status" in ps1
+    assert "uv installed but not on PATH" in sh
+    # uv sync runs before the TeX check, so the hint prints after it
+    assert sh.index("uv sync") < sh.index("command -v pdflatex")
