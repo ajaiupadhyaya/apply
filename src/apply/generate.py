@@ -535,7 +535,7 @@ def package_from_files(directory: Path):
             f"{body_path} does not exist. Run `apply gen <slug>` first, or save the "
             f"letter body there yourself: paragraphs separated by blank lines, the "
             f"last one being the closing.")
-    paragraphs = [_collapse(p) for p in re.split(r"\n\s*\n", body_path.read_text())
+    paragraphs = [_collapse(p) for p in re.split(r"\n\s*\n", body_path.read_text(encoding="utf-8"))
                   if p.strip() and not p.lstrip().startswith("<!--")]
     if len(paragraphs) < 2:
         raise ValueError(f"{body_path} needs at least a body paragraph and a closing.")
@@ -547,7 +547,7 @@ def package_from_files(directory: Path):
     short = long = ""
     answers_path = directory / "answers.md"
     if answers_path.exists():
-        sections = re.split(r"(?m)^##\s+", answers_path.read_text())
+        sections = re.split(r"(?m)^##\s+", answers_path.read_text(encoding="utf-8"))
         for section in sections:
             head, _, text = section.partition("\n")
             if "short" in head.lower():
@@ -579,7 +579,7 @@ def read_resume_file(directory: Path) -> tuple[list, list]:
     if not path.exists():
         return [], []
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         return ([ResumeRole(**r) for r in data.get("experience") or []],
                 [ResumeProject(**p) for p in data.get("projects") or []])
     except (ValueError, TypeError) as exc:
@@ -590,29 +590,32 @@ def write_resume_file(package, directory: Path) -> Path:
     import json
 
     path = directory / RESUME_FILE
-    path.write_text(json.dumps({
+    text = json.dumps({
         "_comment": ("The resume's bullets and project lines, written for this posting. "
                      "Edit freely, then: apply gen <slug> --from-body. Titles, "
                      "employers and dates come from profile.yaml."),
         "experience": [r.model_dump() for r in package.resume_experience],
         "projects": [p.model_dump() for p in package.resume_projects],
-    }, indent=2, ensure_ascii=False) + "\n")
+    }, indent=2, ensure_ascii=False) + "\n"
+    path.write_text(text, encoding="utf-8")
     return path
 
 
 def write_body_files(package, directory: Path) -> tuple[Path, Path]:
     """body.md and answers.md: the editable copies of what was written."""
     body = directory / "body.md"
-    body.write_text(
+    body_text = (
         "<!-- Edit freely, then: apply gen <slug> --from-body\n"
         "     Paragraphs are separated by blank lines; the last is the closing.\n"
         "     Your edits are checked by the lint and audited by Claude, never "
         "rewritten. -->\n\n"
         + "\n\n".join([*package.paragraphs(), package.closing]) + "\n")
+    body.write_text(body_text, encoding="utf-8")
     answers = directory / "answers.md"
-    answers.write_text(
+    answers_text = (
         "## Why this role (short)\n\n" + package.why_role_short.strip()
         + "\n\n## Why this role (long)\n\n" + package.why_role_long.strip() + "\n")
+    answers.write_text(answers_text, encoding="utf-8")
     return body, answers
 
 
@@ -795,7 +798,7 @@ class CompileError(RuntimeError):
 def _log_tail(log: Path, lines: int = 30) -> str:
     if not log.exists():
         return "(no log written)"
-    text = log.read_text(errors="replace").splitlines()
+    text = log.read_text(encoding="utf-8", errors="replace").splitlines()
     interesting = [l for l in text if l.startswith("!") or "Error" in l or "error" in l]
     tail = interesting[-lines:] or text[-lines:]
     return "\n".join(tail)
@@ -821,7 +824,7 @@ def compile_pdf(tex_path: Path, *, max_pages: int | None = 1) -> Path:
             proc = subprocess.run(
                 ["pdflatex", "-interaction=nonstopmode", "-halt-on-error",
                  "-output-directory", str(tmpdir), str(tmpdir / tex_path.name)],
-                capture_output=True, text=True,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
             )
             if proc.returncode != 0:
                 raise CompileError(
@@ -965,7 +968,7 @@ def write_prompt(profile: Profile, posting: Posting, anchors: list[str],
     ])
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / "PROMPT.md"
-    path.write_text(text + "\n")
+    path.write_text(text + "\n", encoding="utf-8")
     return path
 
 
@@ -973,7 +976,7 @@ def _pages_for(profile: Profile, posting: Posting, letter: Letter) -> int:
     """Render and compile a draft somewhere disposable; count its pages."""
     with tempfile.TemporaryDirectory(prefix="apply-fit-") as tmp:
         tex = Path(tmp) / "fit.tex"
-        tex.write_text(render_letter(profile, posting, letter))
+        tex.write_text(render_letter(profile, posting, letter), encoding="utf-8")
         return page_count(compile_pdf(tex, max_pages=None))
 
 
@@ -981,7 +984,7 @@ def _resume_pages_for(profile: Profile, variant: str, package) -> int:
     """Render and compile a draft's resume somewhere disposable; count its pages."""
     with tempfile.TemporaryDirectory(prefix="apply-fit-") as tmp:
         tex = Path(tmp) / "resume.tex"
-        tex.write_text(render_resume(profile, variant, package)[0])
+        tex.write_text(render_resume(profile, variant, package)[0], encoding="utf-8")
         return page_count(compile_pdf(tex, max_pages=None))
 
 
@@ -1052,7 +1055,7 @@ def build(
     artifacts = Artifacts(slug=posting.slug, directory=directory,
                           letter_tex=directory / "cover_letter.tex", anchors=anchors)
     artifacts.posting_md = directory / "posting.md"
-    artifacts.posting_md.write_text(_posting_md(posting, anchors))
+    artifacts.posting_md.write_text(_posting_md(posting, anchors), encoding="utf-8")
 
     if llm == "manual" and not from_body:
         artifacts.source = "prompt"
@@ -1093,7 +1096,7 @@ def build(
     artifacts.written = written
 
     artifacts.verification = directory / "verification.json"
-    artifacts.verification.write_text(json.dumps(written.as_record(), indent=2) + "\n")
+    artifacts.verification.write_text(json.dumps(written.as_record(), indent=2) + "\n", encoding="utf-8")
 
     if written.package is not None:
         artifacts.lint = lint(writer.full_text(written.package), profile, posting)
@@ -1110,7 +1113,7 @@ def build(
         return artifacts
 
     letter = letter_from_package(written.package, to=to)
-    artifacts.letter_tex.write_text(render_letter(profile, posting, letter))
+    artifacts.letter_tex.write_text(render_letter(profile, posting, letter), encoding="utf-8")
     final = directory / f"{profile.file_name}_Cover_Letter_{_document_tag(posting)}.pdf"
     compile_pdf(artifacts.letter_tex, max_pages=1).replace(final)
     artifacts.letter_pdf = final
@@ -1125,7 +1128,7 @@ def build(
                 "the resume prints the profile's own bullets: there is no resume.json "
                 "for this application")
         artifacts.resume_tex = directory / f"{variant}.tex"
-        artifacts.resume_tex.write_text(source_tex)
+        artifacts.resume_tex.write_text(source_tex, encoding="utf-8")
         target = directory / f"{profile.file_name}_Resume_{_document_tag(posting)}.pdf"
         compile_pdf(artifacts.resume_tex, max_pages=1).replace(target)
         artifacts.resume_pdf = target

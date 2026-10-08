@@ -28,7 +28,7 @@ LI = "jobs-listings@linkedin.com"
 
 
 def cards():
-    return parse_linkedin(FIXTURE.read_text(), SENT)
+    return parse_linkedin(FIXTURE.read_text(encoding="utf-8"), SENT)
 
 
 # ------------------------------------------------------------- which mail
@@ -53,7 +53,7 @@ def test_the_rest_of_linkedin_s_mail_is_ignored(sender):
 
 def test_a_new_sender_address_is_still_recognised_by_its_cards():
     """Addresses change; a card with a /jobs/view/ link does not look like anything else."""
-    body = FIXTURE.read_text()
+    body = FIXTURE.read_text(encoding="utf-8")
     assert source_of("some-new-address@linkedin.com", body) == "linkedin"
 
 
@@ -220,7 +220,7 @@ def test_ingestion_files_linkedin_postings_and_names_unknown_firms(conn):
 
 
 def test_stored_linkedin_postings_carry_no_token(conn):
-    body = FIXTURE.read_text()
+    body = FIXTURE.read_text(encoding="utf-8")
     result = discover.ingest_alerts(conn, [discover.Message(
         subject="x", body=body, received=SENT, sender=LI)], employers=[])
     for slug in result.created:
@@ -229,7 +229,7 @@ def test_stored_linkedin_postings_carry_no_token(conn):
 
 
 def test_old_alerts_are_skipped_when_a_limit_is_set(conn):
-    old = discover.Message(subject="x", body=FIXTURE.read_text(), received=SENT, sender=LI)
+    old = discover.Message(subject="x", body=FIXTURE.read_text(encoding="utf-8"), received=SENT, sender=LI)
     result = discover.ingest_alerts(conn, [old], employers=[], max_age_days=21)
     assert result.skipped_old == 1 and result.fetched == 0
 

@@ -108,7 +108,7 @@ def test_setup_refuses_to_flatten_a_profile_that_exists(fresh):
 
 def test_every_command_in_help_is_documented_in_the_readme(fresh):
     listed = _commands(run(fresh, "--help"))
-    readme = (repo_root() / "README.md").read_text()
+    readme = (repo_root() / "README.md").read_text(encoding="utf-8")
     missing = sorted(name for name in listed if f"apply {name}" not in readme)
     assert missing == [], f"commands with no line in the README: {missing}"
 
@@ -142,7 +142,7 @@ def test_the_wrong_file_is_refused_in_a_sentence(fresh, tmp_path):
     """`--file` wants an alert export; a JSONDecodeError explains nothing."""
     run(fresh, "setup", "--non-interactive")
     not_an_export = tmp_path / "posting.txt"
-    not_an_export.write_text("Some Firm — Analyst\nLocation: New York\n")
+    not_an_export.write_text("Some Firm — Analyst\nLocation: New York\n", encoding="utf-8")
 
     output = fails(fresh, "ingest", "--file", str(not_an_export))
 
@@ -215,8 +215,8 @@ def test_a_profile_that_cannot_be_read_gets_a_sentence_not_a_traceback(fresh, tm
     run(fresh, "setup", "--non-interactive")
     run(fresh, "seed")
     profile = tmp_path / "data" / "profile.yaml"
-    profile.write_text(profile.read_text().replace("grad_expected: 2027-06",
-                                                   "grad_expected: ASK"))
+    profile.write_text(profile.read_text(encoding="utf-8").replace("grad_expected: 2027-06",
+                                                   "grad_expected: ASK"), encoding="utf-8")
 
     # The commands that derive class standing and the eligibility window from
     # it. The value is read lazily, so before this each of them reached the
@@ -237,8 +237,8 @@ def test_a_profile_that_cannot_be_read_gets_a_sentence_not_a_traceback(fresh, tm
 def test_doctor_says_which_holes_are_load_bearing(fresh, tmp_path):
     run(fresh, "setup", "--non-interactive")
     profile = tmp_path / "data" / "profile.yaml"
-    profile.write_text(profile.read_text().replace("grad_expected: 2027-06",
-                                                   "grad_expected: ASK"))
+    profile.write_text(profile.read_text(encoding="utf-8").replace("grad_expected: 2027-06",
+                                                   "grad_expected: ASK"), encoding="utf-8")
 
     output = run(fresh, "doctor")
 
@@ -252,7 +252,7 @@ def test_setup_writes_a_search_for_the_city_it_asked_about(fresh, tmp_path):
     """The wizard asks where you want to work; the gate has to hear the answer."""
     run(fresh, "setup", "--non-interactive")            # the persona lives in London
 
-    written = (tmp_path / "data" / "search.yaml").read_text()
+    written = (tmp_path / "data" / "search.yaml").read_text(encoding="utf-8")
     assert "London" in written
     assert "London +25" in run(fresh, "search")
     # …and the shipped placeholder geography is gone, rather than sitting
@@ -264,8 +264,8 @@ def test_search_prints_the_thresholds_the_gate_will_use(fresh, tmp_path):
     """profile.private.example.yaml sets them, and setup copies it onto your disk."""
     run(fresh, "setup", "--non-interactive")
     private = tmp_path / "data" / "profile.private.yaml"
-    private.write_text(private.read_text().replace("pursue: 70", "pursue: 40")
-                       .replace("maybe: 45", "maybe: 20"))
+    private.write_text(private.read_text(encoding="utf-8").replace("pursue: 70", "pursue: 40")
+                       .replace("maybe: 45", "maybe: 20"), encoding="utf-8")
 
     output = run(fresh, "search")
 
@@ -284,7 +284,7 @@ def test_status_prints_the_slug_every_other_command_wants(fresh):
 def test_the_persona_profile_keeps_the_line_saying_it_is_fiction(fresh, tmp_path):
     run(fresh, "setup", "--persona")
 
-    first_line = (tmp_path / "data" / "profile.yaml").read_text().splitlines()[0]
+    first_line = (tmp_path / "data" / "profile.yaml").read_text(encoding="utf-8").splitlines()[0]
     assert "does not exist" in first_line
 
 

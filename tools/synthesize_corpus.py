@@ -254,7 +254,7 @@ def _capitalised(word: str) -> str:
 
 def configured(raw: dict | None = None) -> list[tuple[str, str, int | None]]:
     """Every pattern in the shipped vocabulary, as (block, pattern, weight)."""
-    raw = raw if raw is not None else yaml.safe_load(search.DEFAULTS.read_text())
+    raw = raw if raw is not None else yaml.safe_load(search.DEFAULTS.read_text(encoding="utf-8"))
     out: list[tuple[str, str, int | None]] = []
     for block in ("rejects", "class_scoped"):
         for name, patterns in (raw.get(block) or {}).items():
@@ -483,7 +483,7 @@ def _refused_by(title: str) -> str | None:
 
 
 def build() -> list[dict]:
-    raw = yaml.safe_load(search.DEFAULTS.read_text())
+    raw = yaml.safe_load(search.DEFAULTS.read_text(encoding="utf-8"))
     cases: list[dict] = []
     frames = ["{}, Global Markets", "2027 {} Programme", "{} - Americas"]
 
@@ -591,7 +591,7 @@ def main() -> None:
         "graduation": list(GRADUATION), "class_standing": CLASS_STANDING,
         "cases": cases,
     }
-    OUT.write_text(json.dumps(head, indent=1) + "\n")
+    OUT.write_text(json.dumps(head, indent=1) + "\n", encoding="utf-8")
     counts = {kind: sum(1 for row in cases if row["kind"] == kind)
               for kind in ("entry", "near-miss", "algorithm")}
     print(f"{len(cases)} cases -> {OUT} ({OUT.stat().st_size // 1024} KB)")

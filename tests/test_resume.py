@@ -139,7 +139,7 @@ def test_build_writes_the_tailored_resume_and_reads_it_back(profile, ashcombe_jd
     posting = posting_from(ashcombe_jd)
     artifacts = generate.build(profile, posting, caller=FakeClaude())
     assert artifacts.ok and artifacts.resume_pdf.exists()
-    assert "Drafted the data appendix" in artifacts.resume_tex.read_text()
+    assert "Drafted the data appendix" in artifacts.resume_tex.read_text(encoding="utf-8")
 
     saved = artifacts.directory / generate.RESUME_FILE
     assert saved.exists()
@@ -156,4 +156,4 @@ def test_an_informal_draft_is_revised_and_never_printed_as_written(profile, ashc
     artifacts = generate.build(profile, posting_from(ashcombe_jd), caller=fake)
     assert artifacts.ok
     assert fake.count("Package") == 2
-    assert "I'd" not in artifacts.letter_tex.read_text()
+    assert "I'd" not in artifacts.letter_tex.read_text(encoding="utf-8")

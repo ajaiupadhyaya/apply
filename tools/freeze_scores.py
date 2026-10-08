@@ -228,7 +228,7 @@ def main() -> None:
 
     head = {"graduation": list(preferences["graduation"]),
             "class_standing": preferences["class_standing"]}
-    OUT.write_text(json.dumps({**head, "titles": titles, "bodied": bodied}, indent=1))
+    OUT.write_text(json.dumps({**head, "titles": titles, "bodied": bodied}, indent=1), encoding="utf-8")
     print(f"{len(titles)} titles and {len(bodied)} with bodies -> {OUT} "
           f"({OUT.stat().st_size // 1024} KB, gitignored)")
     print("The committed corpus is tests/fixtures/gate_corpus.json; write that "

@@ -13,9 +13,8 @@ def test_deep_merge_overlays_without_flattening():
 
 
 def test_the_private_overlay_wins(workspace):
-    (workspace / "data" / "profile.private.yaml").write_text(
-        "identity:\n  phone: '555'\n  email: override@example.com\n"
-    )
+    overlay = "identity:\n  phone: '555'\n  email: override@example.com\n"
+    (workspace / "data" / "profile.private.yaml").write_text(overlay, encoding="utf-8")
     profile = Profile.load()
     assert profile.phone == "555"
     assert profile.email == "override@example.com"

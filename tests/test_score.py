@@ -87,7 +87,7 @@ def test_both_seed_postings_clear_the_pursue_bar():
         ("quillon.txt", "2027 Full-Time Analyst Program (Americas)", "New York, NY"),
     ]
     for name, title, location in cases:
-        body = (FIXTURES / name).read_text()
+        body = (FIXTURES / name).read_text(encoding="utf-8")
         result = score(make(title=title, location=location, body=body))
         assert result.verdict is Verdict.PURSUE, f"{name} fell to {result.value}"
 

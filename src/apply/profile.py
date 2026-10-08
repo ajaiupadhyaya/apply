@@ -146,9 +146,9 @@ class Profile:
                 f"no profile at {public}. Run `apply setup` to write one."
             )
         sources = [public]
-        raw = yaml.safe_load(public.read_text()) or {}
+        raw = yaml.safe_load(public.read_text(encoding="utf-8")) or {}
         if private.exists():
-            raw = deep_merge(raw, yaml.safe_load(private.read_text()) or {})
+            raw = deep_merge(raw, yaml.safe_load(private.read_text(encoding="utf-8")) or {})
             sources.append(private)
         return cls(raw, sources)
 

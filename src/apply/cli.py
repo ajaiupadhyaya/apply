@@ -110,7 +110,7 @@ def read_clipboard() -> str:
     for name, command in CLIPBOARD_READERS:
         if shutil.which(name) is None:
             continue
-        done = subprocess.run(command, capture_output=True, text=True)
+        done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if done.returncode != 0:
             raise ClipboardUnavailable(
                 f"{name} could not read the clipboard: "
@@ -262,7 +262,7 @@ def init(
         if not template.exists():
             _fail(f"no profile at {public}, and no template to scaffold from.")
         public.parent.mkdir(parents=True, exist_ok=True)
-        public.write_text(template.read_text())
+        public.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
         console.print(f"[green]✓[/] scaffolded [bold]{public}[/] — edit it before generating.")
 
     profile = _profile()
@@ -425,7 +425,7 @@ def _read_jd(file, stdin, clipboard, url) -> tuple[str, str | None]:
     if file:
         if not file.exists():
             _fail(f"no such file: {file}")
-        return file.read_text(), None
+        return file.read_text(encoding="utf-8"), None
     if clipboard:
         try:
             return read_clipboard(), None
@@ -656,7 +656,7 @@ def check(
     except (budget_mod.BudgetExceeded, llm_mod.LLMUnavailable) as exc:
         _fail(str(exc))
 
-    (directory / "verification.json").write_text(json.dumps(written.as_record(), indent=2) + "\n")
+    (directory / "verification.json").write_text(json.dumps(written.as_record(), indent=2) + "\n", encoding="utf-8")
     _print_verification(written)
     if written.review:
         console.print(f"\n[dim]strongest: {written.review.strongest_sentence}[/]")
@@ -957,7 +957,7 @@ def fields(slug: str, plain: bool = typer.Option(False, "--plain", help="label=v
     path = generate.out_dir() / row.posting.slug / "fieldpack.json"
     if not path.exists():
         _fail(f"no fieldpack yet. Run `apply gen {slug}`.")
-    pack = json.loads(path.read_text())
+    pack = json.loads(path.read_text(encoding="utf-8"))
     if plain:
         for f in pack["fields"]:
             print(f"{f['labels'][0]}={f['value']}")
@@ -1610,7 +1610,7 @@ def _thresholds_in_force(config) -> tuple[dict, str | None]:
     if not preferences.get("thresholds"):
         return thresholds, None
     for path in reversed(profile.sources):
-        block = ((yaml.safe_load(path.read_text()) or {}).get("search") or {})
+        block = ((yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("search") or {})
         if block.get("thresholds"):
             return thresholds, path.name
     return thresholds, "your profile"
@@ -1663,7 +1663,7 @@ def seed() -> None:
         if db.get_posting(conn, slug):
             console.print(f"[dim]•[/] {slug} already present")
             continue
-        parsed = parse_jd(path.read_text(), source="company_site")
+        parsed = parse_jd(path.read_text(encoding="utf-8"), source="company_site")
         posting = parsed.to_posting(slug=slug)
         posting.priority = priority
         db.create_posting(conn, posting)

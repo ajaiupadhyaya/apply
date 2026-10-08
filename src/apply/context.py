@@ -168,7 +168,7 @@ def load_documents(directory: Path | None = None) -> list[tuple[str, str]]:
     for path in sorted(directory.glob("*.md")):
         if path.name.lower() == "readme.md":
             continue                      # the folder's own instructions
-        text = path.read_text(errors="replace").strip()
+        text = path.read_text(encoding="utf-8", errors="replace").strip()
         if not text:
             continue
         text = text[:MAX_DOC_CHARS]
@@ -246,7 +246,7 @@ def pull_readme(repo: str, *, name: str | None = None) -> Path:
     came from, so a stale one can be recognised and refreshed.
     """
     result = subprocess.run(["gh", "api", f"repos/{repo}/readme"],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or f"could not read {repo}")
     payload = json.loads(result.stdout)
@@ -260,5 +260,5 @@ def pull_readme(repo: str, *, name: str | None = None) -> Path:
     header = (f"<!-- source: https://github.com/{repo} — README, digested: intro, "
               f"every heading, and each section's opening. {len(raw):,} chars -> "
               f"{len(digest):,}. Re-pull to refresh. -->\n\n")
-    path.write_text(header + digest + "\n")
+    path.write_text(header + digest + "\n", encoding="utf-8")
     return path

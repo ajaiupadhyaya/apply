@@ -48,9 +48,8 @@ def test_absent_private_facts_are_simply_omitted(profile, ashcombe_jd):
 def test_private_facts_appear_when_the_overlay_exists(workspace, ashcombe_jd):
     from apply.profile import Profile
 
-    (workspace / "data" / "profile.private.yaml").write_text(
-        "identity:\n  phone: '+1 555 555 0123'\neducation_private:\n  gpa: '3.87'\n"
-    )
+    overlay = "identity:\n  phone: '+1 555 555 0123'\neducation_private:\n  gpa: '3.87'\n"
+    (workspace / "data" / "profile.private.yaml").write_text(overlay, encoding="utf-8")
     pack = build(Profile.load(), posting_from(ashcombe_jd))
     values = {f["labels"][0]: f["value"] for f in pack["fields"]}
     assert values["Phone"] == "+1 555 555 0123"
@@ -73,4 +72,4 @@ def test_claude_s_answers_reach_the_copy_buttons(profile, ashcombe_jd):
 
 def test_write_produces_readable_json(profile, ashcombe_jd, tmp_path):
     path = write(profile, posting_from(ashcombe_jd), tmp_path / "pack")
-    assert json.loads(path.read_text())["slug"]
+    assert json.loads(path.read_text(encoding="utf-8"))["slug"]

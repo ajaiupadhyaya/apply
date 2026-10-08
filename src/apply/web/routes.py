@@ -74,7 +74,7 @@ def detail(request: Request, slug: str, m: str | None = None, ok: str = "1"):
     fieldpack = None
     pack_path = directory / "fieldpack.json"
     if pack_path.exists():
-        fieldpack = json.loads(pack_path.read_text())
+        fieldpack = json.loads(pack_path.read_text(encoding="utf-8"))
 
     def _name(path: str | None) -> str | None:
         return Path(path).name if path and Path(path).exists() else None
@@ -83,7 +83,7 @@ def detail(request: Request, slug: str, m: str | None = None, ok: str = "1"):
     audit_path = directory / "verification.json"
     if audit_path.exists():
         try:
-            audit = json.loads(audit_path.read_text())
+            audit = json.loads(audit_path.read_text(encoding="utf-8"))
         except ValueError:
             audit = None
 

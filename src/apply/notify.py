@@ -23,7 +23,7 @@ from pathlib import Path
 def write_summary(text: str, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / "LATEST_RUN.md"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     return path
 
 

@@ -42,7 +42,7 @@ UNIT = "apply"
 
 def _run(argv: list[str], stdin: str | None = None):
     """Every call to launchctl, systemctl or crontab, in one interceptable place."""
-    return subprocess.run(argv, input=stdin, capture_output=True, text=True)
+    return subprocess.run(argv, input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def _ok(result) -> bool:
@@ -212,7 +212,7 @@ class SystemdBackend:
         directory = self.unit_dir()
         directory.mkdir(parents=True, exist_ok=True)
         for name, text in self.units(schedule).items():
-            (directory / name).write_text(text)
+            (directory / name).write_text(text, encoding="utf-8")
         _run(["systemctl", "--user", "daemon-reload"])
         _run(["systemctl", "--user", "enable", "--now", f"{UNIT}.timer"])
         return directory / f"{UNIT}.timer"
@@ -233,9 +233,9 @@ class SystemdBackend:
         service = self.unit_dir() / f"{UNIT}.service"
         if not timer.exists():
             return {"installed": False}
-        when = re.search(r"OnCalendar=\*-\*-\* (\d{2}:\d{2})", timer.read_text())
+        when = re.search(r"OnCalendar=\*-\*-\* (\d{2}:\d{2})", timer.read_text(encoding="utf-8"))
         command = re.search(r"ExecStart=/bin/sh -lc '(.*)'",
-                            service.read_text() if service.exists() else "")
+                            service.read_text(encoding="utf-8") if service.exists() else "")
         return {
             "installed": True,
             "path": str(timer),

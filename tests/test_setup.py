@@ -24,11 +24,11 @@ def _profile(data: dict) -> Profile:
 
 
 def persona_brief() -> dict:
-    return yaml.safe_load(setup.EXAMPLE_PROFILE.read_text())["writing"]
+    return yaml.safe_load(setup.EXAMPLE_PROFILE.read_text(encoding="utf-8"))["writing"]
 
 
 def test_the_persona_is_a_complete_profile():
-    data = yaml.safe_load(setup.EXAMPLE_PROFILE.read_text())
+    data = yaml.safe_load(setup.EXAMPLE_PROFILE.read_text(encoding="utf-8"))
     profile = _profile(data)
     assert profile.unresolved() == []          # nothing left as ASK
     assert data["education"][0]["grad_expected"]
@@ -65,16 +65,16 @@ def _files_describing_a_person() -> list[pathlib.Path]:
 @pytest.mark.parametrize("path", _files_describing_a_person(),
                          ids=lambda p: p.name)
 def test_no_tracked_profile_describes_a_real_person(path):
-    text = path.read_text().lower()
+    text = path.read_text(encoding="utf-8").lower()
     for fragment in AUTHORS_BIOGRAPHY:
         assert fragment not in text, f"{path.name} names {fragment!r}"
 
 
 def test_the_persona_and_the_fixture_are_the_same_invented_person():
     """One fiction, not two. A second persona is a second thing to keep clean."""
-    persona = yaml.safe_load(setup.EXAMPLE_PROFILE.read_text())
+    persona = yaml.safe_load(setup.EXAMPLE_PROFILE.read_text(encoding="utf-8"))
     fixture = yaml.safe_load(
-        (pathlib.Path(__file__).parent / "fixtures" / "profile.yaml").read_text())
+        (pathlib.Path(__file__).parent / "fixtures" / "profile.yaml").read_text(encoding="utf-8"))
 
     assert fixture["identity"] == persona["identity"]
     assert fixture["education"] == persona["education"]
@@ -137,7 +137,7 @@ def test_the_scaffold_inherits_no_fact_about_the_persona():
     assert "experience[0].org" in unresolved
 
     # And nothing of the persona survives anywhere in the file.
-    persona = yaml.safe_load(setup.EXAMPLE_PROFILE.read_text())
+    persona = yaml.safe_load(setup.EXAMPLE_PROFILE.read_text(encoding="utf-8"))
     written = yaml.safe_dump(data, sort_keys=False, allow_unicode=True).lower()
     for project in persona["projects"].values():
         assert project["name"].lower() not in written
@@ -150,19 +150,19 @@ def test_writing_refuses_to_overwrite(tmp_path):
     with pytest.raises(FileExistsError):
         setup.write_profile({"identity": {"legal_first": "B"}}, target)
     setup.write_profile({"identity": {"legal_first": "B"}}, target, force=True)
-    assert "B" in target.read_text()
+    assert "B" in target.read_text(encoding="utf-8")
 
 
 def test_examples_are_copied_only_when_missing(tmp_path):
-    (tmp_path / "profile.private.example.yaml").write_text("a: 1\n")
-    (tmp_path / "employers.example.yaml").write_text("employers: []\n")
-    (tmp_path / "employers.yaml").write_text("employers: [{name: Mine}]\n")
+    (tmp_path / "profile.private.example.yaml").write_text("a: 1\n", encoding="utf-8")
+    (tmp_path / "employers.example.yaml").write_text("employers: []\n", encoding="utf-8")
+    (tmp_path / "employers.yaml").write_text("employers: [{name: Mine}]\n", encoding="utf-8")
 
     created = setup.copy_examples(tmp_path)
 
     assert (tmp_path / "profile.private.yaml").exists()
     assert [p.name for p in created] == ["profile.private.yaml"]
-    assert "Mine" in (tmp_path / "employers.yaml").read_text()   # untouched
+    assert "Mine" in (tmp_path / "employers.yaml").read_text(encoding="utf-8")   # untouched
 
 
 def test_examples_can_come_from_the_checkout(tmp_path):
@@ -170,7 +170,7 @@ def test_examples_can_come_from_the_checkout(tmp_path):
     source, data = tmp_path / "repo", tmp_path / "elsewhere"
     source.mkdir()
     data.mkdir()
-    (source / "employers.example.yaml").write_text("employers: []\n")
+    (source / "employers.example.yaml").write_text("employers: []\n", encoding="utf-8")
 
     created = setup.copy_examples(data, source)
 
@@ -273,25 +273,25 @@ def test_the_persona_is_copied_with_its_comments(tmp_path):
     target = tmp_path / "profile.yaml"
     setup.copy_persona(target)
 
-    written = target.read_text()
-    assert written == setup.EXAMPLE_PROFILE.read_text()
+    written = target.read_text(encoding="utf-8")
+    assert written == setup.EXAMPLE_PROFILE.read_text(encoding="utf-8")
     assert "does not exist" in written.splitlines()[0]
     assert sum(1 for line in written.splitlines() if line.startswith("#")) > 10
 
 
 def test_copying_the_persona_refuses_to_flatten_a_profile(tmp_path):
     target = tmp_path / "profile.yaml"
-    target.write_text("identity: {legal_first: Someone}\n")
+    target.write_text("identity: {legal_first: Someone}\n", encoding="utf-8")
     with pytest.raises(FileExistsError):
         setup.copy_persona(target)
     setup.copy_persona(target, force=True)
-    assert "Mercer" in target.read_text()
+    assert "Mercer" in target.read_text(encoding="utf-8")
 
 
 def test_the_dumped_scaffold_is_still_a_dump(tmp_path):
     """The wizard's output has no comments to keep, so it keeps its `_note`."""
     data = setup.profile_from(setup.Answers(name="Rae Mercer", grad_expected="2027-05"))
-    written = setup.write_profile(data, tmp_path / "profile.yaml").read_text()
+    written = setup.write_profile(data, tmp_path / "profile.yaml").read_text(encoding="utf-8")
     assert written.startswith("_note:")
 
 
@@ -305,7 +305,7 @@ def test_the_city_becomes_the_gates_primary_geography(tmp_path):
     config = _search_in(tmp_path)
     assert [(label, weight) for _, label, weight, _, _ in config.geography] == [
         ("New York", 25), ("remote", 10), ("US finance hub", 6)]
-    assert "research" in written.read_text()          # the work answer is at least visible
+    assert "research" in written.read_text(encoding="utf-8")          # the work answer is at least visible
 
 
 def test_a_us_city_keeps_the_us_only_checks(tmp_path):
@@ -330,16 +330,16 @@ def test_a_city_that_says_nothing_about_its_country_does_not_guess(tmp_path):
 def test_no_city_leaves_the_shipped_geography_and_says_so(tmp_path):
     written = setup.write_search(setup.Answers(), tmp_path / "search.yaml")
 
-    assert "geography:" not in written.read_text().replace("# geography:", "")
+    assert "geography:" not in written.read_text(encoding="utf-8").replace("# geography:", "")
     assert _search_in(tmp_path).sources["geography"] == "defaults"
 
 
 def test_an_existing_search_is_never_overwritten(tmp_path):
     mine = tmp_path / "search.yaml"
-    mine.write_text("thresholds: {pursue: 30, maybe: 10}\n")
+    mine.write_text("thresholds: {pursue: 30, maybe: 10}\n", encoding="utf-8")
 
     assert setup.write_search(setup.Answers(city="London"), mine) is None
-    assert mine.read_text() == "thresholds: {pursue: 30, maybe: 10}\n"
+    assert mine.read_text(encoding="utf-8") == "thresholds: {pursue: 30, maybe: 10}\n"
 
 
 def test_the_persona_supplies_its_own_city(tmp_path):

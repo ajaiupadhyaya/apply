@@ -38,7 +38,7 @@ def load_employers(path: Path | None = None) -> list[dict]:
     path = path or (data_dir() / "employers.yaml")
     if not path.exists():
         return []
-    payload = yaml.safe_load(path.read_text()) or {}
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     employers = payload.get("employers") or []
     for entry in employers:
         entry.setdefault("priority", 3)
@@ -472,7 +472,7 @@ def load_messages(path: Path) -> list[Message]:
     """Read an alert export. Accepts a bare list or {"messages": [...]}."""
     import json
 
-    payload = json.loads(Path(path).read_text())
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
     rows = payload.get("messages") if isinstance(payload, dict) else payload
     return [Message.from_dict(row) for row in (rows or [])]
 

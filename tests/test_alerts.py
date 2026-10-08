@@ -25,7 +25,7 @@ HANDSHAKE = "handshake@notifications.joinhandshake.com"
 
 
 def load(name: str) -> str:
-    return (ALERTS / name).read_text()
+    return (ALERTS / name).read_text(encoding="utf-8")
 
 
 # ------------------------------------------------------- which mail matters

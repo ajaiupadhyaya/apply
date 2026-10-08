@@ -82,7 +82,7 @@ def test_an_ampersand_in_a_company_name_compiles(profile, ashcombe_jd, fake_clau
     artifacts = generate.build(profile, posting, caller=fake_claude())
     assert artifacts.ok
     assert generate.page_count(artifacts.letter_pdf) == 1
-    assert r"Smith \& Co." in artifacts.letter_tex.read_text()
+    assert r"Smith \& Co." in artifacts.letter_tex.read_text(encoding="utf-8")
 
 
 # 5 --------------------------------------------------------------------
@@ -192,7 +192,7 @@ def test_digest_lists_the_allocator_seed_deadline(conn, ashcombe_jd):
 
 # 10 -------------------------------------------------------------------
 def test_the_stylesheet_defines_dark_mode_and_a_narrow_breakpoint():
-    css = (generate.repo_root() / "src" / "apply" / "web" / "static" / "apply.css").read_text()
+    css = (generate.repo_root() / "src" / "apply" / "web" / "static" / "apply.css").read_text(encoding="utf-8")
     assert "@media (prefers-color-scheme: dark)" in css
     assert ':root:not([data-theme="light"])' in css
     assert ':root[data-theme="dark"]' in css
@@ -216,12 +216,13 @@ def test_a_hand_written_body_with_no_key_is_built_on_the_lint_alone(profile, ash
     posting = posting_from(ashcombe_jd)
     directory = generate.out_dir() / posting.slug
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "body.md").write_text("\n\n".join(
+    body = "\n\n".join(
         [CLEAN["paragraph_1"], CLEAN["paragraph_2"], CLEAN["paragraph_3"],
-         CLEAN["paragraph_4"], CLEAN["closing"]]) + "\n")
-    (directory / "answers.md").write_text(
-        "## Why this role (short)\n\n" + CLEAN["why_role_short"]
-        + "\n\n## Why this role (long)\n\n" + CLEAN["why_role_long"] + "\n")
+         CLEAN["paragraph_4"], CLEAN["closing"]]) + "\n"
+    (directory / "body.md").write_text(body, encoding="utf-8")
+    answers = ("## Why this role (short)\n\n" + CLEAN["why_role_short"]
+               + "\n\n## Why this role (long)\n\n" + CLEAN["why_role_long"] + "\n")
+    (directory / "answers.md").write_text(answers, encoding="utf-8")
 
     # No caller and no credential: conftest's tripwire fails the test if either
     # the writer or the auditor reaches the API.
@@ -230,14 +231,15 @@ def test_a_hand_written_body_with_no_key_is_built_on_the_lint_alone(profile, ash
     assert artifacts.written.status == "unverified"
     assert artifacts.written.review is None                 # nothing audited it
     assert artifacts.letter_pdf is not None and artifacts.letter_pdf.exists()
-    record = json.loads(artifacts.verification.read_text())
+    record = json.loads(artifacts.verification.read_text(encoding="utf-8"))
     assert record["status"] == "unverified" and record["verdict"] is None
     assert "not audited" in record["reason"]
 
     # And the lint still refuses: the exception is the audit, never the lint.
-    (directory / "body.md").write_text("\n\n".join(
+    bad_body = "\n\n".join(
         [CLEAN["paragraph_1"], "I am passionate about institutional investing.",
-         CLEAN["paragraph_3"], CLEAN["paragraph_4"], CLEAN["closing"]]) + "\n")
+         CLEAN["paragraph_3"], CLEAN["paragraph_4"], CLEAN["closing"]]) + "\n"
+    (directory / "body.md").write_text(bad_body, encoding="utf-8")
     refused = generate.build(profile, posting, llm="manual", from_body=True)
     assert not refused.written.ok
     assert refused.letter_pdf is None
@@ -250,7 +252,7 @@ def test_the_readme_states_the_exception_to_the_no_pdf_promise():
     A reader of "Either failure means no PDF" has no way to know that the
     hand-written path builds on the lint alone, so the row says so.
     """
-    readme = (generate.repo_root() / "README.md").read_text()
+    readme = (generate.repo_root() / "README.md").read_text(encoding="utf-8")
     row = next(line for line in readme.splitlines()
                if line.startswith("| Claim what you haven't done"))
     assert "--from-body" in row and "unverified" in row
@@ -270,7 +272,7 @@ def test_no_browser_automation_exists_anywhere():
     for path in (generate.repo_root() / "src").rglob("*.py"):
         if path.name == "outbound.py":
             continue                      # the file that declares the list
-        text = path.read_text().lower()
+        text = path.read_text(encoding="utf-8").lower()
         for needle in FORBIDDEN_MACHINERY:
             if needle in text:
                 offenders.append(f"{path.name}: {needle}")
@@ -315,7 +317,7 @@ def _undeclared_senders(package_root: Path, declared) -> dict[str, str]:
     """Modules under `package_root` that can send and are not in `declared`."""
     offenders = {}
     for path in sorted(package_root.rglob("*.py")):
-        line = _sending_line(path.read_text())
+        line = _sending_line(path.read_text(encoding="utf-8"))
         if line is None:
             continue
         parts = path.relative_to(package_root).with_suffix("").parts
@@ -348,8 +350,8 @@ def test_the_outbound_check_catches_an_undeclared_sender(tmp_path):
     """
     package = tmp_path / "apply"
     (package / "sources").mkdir(parents=True)
-    (package / "__init__.py").write_text("")
-    (package / "sources" / "__init__.py").write_text("")
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "sources" / "__init__.py").write_text("", encoding="utf-8")
 
     senders = {
         "session": "def submit(session, url, form):\n    return session.post(url, data=form)\n",
@@ -363,10 +365,10 @@ def test_the_outbound_check_catches_an_undeclared_sender(tmp_path):
         "declared": "import httpx\n\n\ndef search(url):\n    return httpx.get(url)\n",
     }
     for name, source in senders.items():
-        (package / "sources" / f"{name}.py").write_text(source)
-    (package / "quiet.py").write_text("def slugify(text):\n    return text.lower()\n")
-    (package / "web.py").write_text(
-        '@router.post("/add")\ndef add(request):\n    return render(request)\n')
+        (package / "sources" / f"{name}.py").write_text(source, encoding="utf-8")
+    (package / "quiet.py").write_text("def slugify(text):\n    return text.lower()\n", encoding="utf-8")
+    web = '@router.post("/add")\ndef add(request):\n    return render(request)\n'
+    (package / "web.py").write_text(web, encoding="utf-8")
 
     offenders = _undeclared_senders(package, {"apply.sources.declared": ((), "declared")})
 
@@ -388,7 +390,7 @@ def test_every_declared_module_actually_sends():
     root = generate.repo_root() / "src" / "apply"
     silent = [module for module in ALLOWED
               if _sending_line((root / (module.removeprefix("apply.").replace(".", "/")
-                                        + ".py")).read_text()) is None]
+                                        + ".py")).read_text(encoding="utf-8")) is None]
     assert silent == [], f"declared in apply.outbound but sends nothing: {silent}"
 
 
@@ -408,7 +410,7 @@ def test_no_employer_facing_host_is_allowed():
 #
 # The previous version of this check read every line naming ANTHROPIC_API_KEY
 # and passed if the line held "environ", a "#" or a quote — which any line
-# naming the key by a literal necessarily does, so `Path("k.txt").write_text(
+# naming the key by a literal necessarily does, so `Path("k.txt").write_text call
 # lookup("ANTHROPIC_API_KEY"))` passed it. What follows asks what the code
 # *does* with a secret rather than which words the line contains.
 
@@ -502,25 +504,25 @@ def test_no_credential_is_ever_written_to_disk():
     """A key may be read at call time; it may never be persisted."""
     offenders = []
     for path in sorted((generate.repo_root() / "src").rglob("*.py")):
-        offenders += [f"{path.name} {where}" for where in _credential_writes(path.read_text())]
+        offenders += [f"{path.name} {where}" for where in _credential_writes(path.read_text(encoding="utf-8"))]
     assert offenders == [], f"a credential reaches a file: {offenders}"
 
 
 def test_the_credential_check_catches_code_that_writes_one():
     """The tripwire, tripped. Every snippet below passed the old check."""
     hostile = {
-        "write_text": 'Path("/tmp/k.txt").write_text(lookup("ANTHROPIC_API_KEY"))',
-        "open for writing": 'open("cache.json", "w").write(os.environ["ANTHROPIC_API_KEY"])',
-        "single quotes": "open('cache.json','w').write(os.environ.get('ANTHROPIC_API_KEY'))",
+        "write_text": 'Path("/tmp/k.txt").write_text(lookup("ANTHROPIC_API_KEY"), encoding="utf-8")',
+        "open for writing": 'open("cache.json", "w", encoding="utf-8").write(os.environ["ANTHROPIC_API_KEY"])',
+        "single quotes": "open('cache.json','w', encoding='utf-8').write(os.environ.get('ANTHROPIC_API_KEY'))",
         "json": 'json.dump({"key": secrets.lookup("ANTHROPIC_API_KEY")}, handle)',
         "the whole environment": "json.dump(dict(os.environ), handle)",
         "through a variable": ('key = secrets.lookup("ANTHROPIC_API_KEY")\n'
-                               'Path("k.txt").write_text(key)\n'),
+                               'Path("k.txt").write_text(key, encoding="utf-8")\n'),
         "interpolated": ('token = os.environ["ANTHROPIC_AUTH_TOKEN"]\n'
                          'handle.write(f"auth={token}\\n")\n'),
         "the imap password": ('password = secrets.lookup("APPLY_IMAP_PASSWORD")\n'
-                              'Path("mail.log").write_text(password)\n'),
-        "a parameter": "def cache(path, password):\n    path.write_text(password)\n",
+                              'Path("mail.log").write_text(password, encoding="utf-8")\n'),
+        "a parameter": "def cache(path, password):\n    path.write_text(password, encoding='utf-8')\n",
     }
     for name, source in hostile.items():
         assert _credential_writes(source), f"missed: {name}"
@@ -528,9 +530,9 @@ def test_the_credential_check_catches_code_that_writes_one():
     innocent = (
         'def lookup(name):\n'
         '    return os.environ.get(name)\n'
-        'Path("verification.json").write_text(json.dumps(record))\n'
+        'Path("verification.json").write_text(json.dumps(record), encoding="utf-8")\n'
         'console.print(secrets.how_to_store("ANTHROPIC_API_KEY"))\n'
-        'Path(os.environ["APPLY_DATA_DIR"], "db").write_text(schema)\n'
+        'Path(os.environ["APPLY_DATA_DIR"], "db").write_text(schema, encoding="utf-8")\n'
         'handle.write(os.getenv("APPLY_OUT_DIR", ""))\n'
     )
     assert _credential_writes(innocent) == []
@@ -543,7 +545,7 @@ def test_the_secrets_module_never_persists_what_it_reads():
     them: no file is opened, nothing is cached on the module, so a second call
     goes back to the store rather than to something left lying around.
     """
-    source = (generate.repo_root() / "src" / "apply" / "secrets.py").read_text()
+    source = (generate.repo_root() / "src" / "apply" / "secrets.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
 
     writes = [f"line {node.lineno}: {_call_name(node)}" for node in ast.walk(tree)

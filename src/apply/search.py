@@ -131,10 +131,10 @@ def build(raw: dict, sources: dict[str, str]) -> SearchConfig:
 
 @lru_cache(maxsize=8)
 def _load_cached(path: str | None) -> SearchConfig:
-    raw = yaml.safe_load(DEFAULTS.read_text()) or {}
+    raw = yaml.safe_load(DEFAULTS.read_text(encoding="utf-8")) or {}
     override: dict = {}
     if path and Path(path).exists():
-        override = yaml.safe_load(Path(path).read_text()) or {}
+        override = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
     merged, sources = _merge(raw, override)
     return build(merged, sources)
 
@@ -180,7 +180,7 @@ def country_of(city: str) -> str:
     city = (city or "").strip()
     if not city:
         return ""
-    raw = yaml.safe_load(DEFAULTS.read_text()) or {}
+    raw = yaml.safe_load(DEFAULTS.read_text(encoding="utf-8")) or {}
     if _any(raw.get("non_us") or [], "non_us").search(city):
         return "elsewhere"
     if re.search(rf",\s*(?:{_STATE_ALT})\.?\s*$", city, re.I):

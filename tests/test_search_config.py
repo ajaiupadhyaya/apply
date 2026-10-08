@@ -38,7 +38,7 @@ from apply.score import score
 from apply.sources.base import RawPosting
 
 FIXTURES = Path(__file__).parent / "fixtures"
-CORPUS = json.loads((FIXTURES / "gate_corpus.json").read_text())
+CORPUS = json.loads((FIXTURES / "gate_corpus.json").read_text(encoding="utf-8"))
 CASES = CORPUS["cases"]
 LOCAL = FIXTURES / "score_corpus.local.json"
 REPO = Path(__file__).resolve().parents[1]
@@ -191,7 +191,7 @@ STREET = re.compile(
 
 
 def _registry_spellings() -> list[str]:
-    employers = yaml.safe_load((REPO_DATA / "employers.example.yaml").read_text())
+    employers = yaml.safe_load((REPO_DATA / "employers.example.yaml").read_text(encoding="utf-8"))
     names = []
     for entry in employers["employers"]:
         names.append(entry["name"])
@@ -207,7 +207,7 @@ def test_the_committed_corpus_names_no_real_firm():
     A reader who greps this file must come away with the vocabulary of the gate
     and nothing about anybody's search.
     """
-    text = (FIXTURES / "gate_corpus.json").read_text()
+    text = (FIXTURES / "gate_corpus.json").read_text(encoding="utf-8")
 
     found = [name for name in _registry_spellings()
              if re.search(rf"(?<![A-Za-z0-9]){re.escape(name)}(?![A-Za-z0-9])",
@@ -258,7 +258,7 @@ def test_the_owners_own_pipeline_still_scores_the_same():
     description — is checked here, against a file that is never committed. It is
     the author's re-verification, and it skips itself for everybody else.
     """
-    local = json.loads(LOCAL.read_text())
+    local = json.loads(LOCAL.read_text(encoding="utf-8"))
     cases = [*local.get("titles", []), *local.get("bodied", [])]
     preferences = {"graduation": tuple(local["graduation"]),
                    "class_standing": local["class_standing"]}
@@ -292,7 +292,7 @@ def test_a_users_own_search_yaml_cannot_move_the_frozen_corpus():
         "Writing a search.yaml into it would edit the working tree, so the "
         "isolation in tests/conftest.py is gone — fix that, not this test.")
 
-    (data / "search.yaml").write_text(search.starter("London"))
+    (data / "search.yaml").write_text(search.starter("London"), encoding="utf-8")
     search._load_cached.cache_clear()
 
     # The file is genuinely in force: the production loader picks it up, and it
@@ -314,9 +314,9 @@ def test_a_users_own_search_yaml_cannot_move_the_frozen_corpus():
 
 
 def test_an_override_replaces_one_block_and_keeps_the_rest(tmp_path):
-    (tmp_path / "search.yaml").write_text(
-        "geography:\n"
-        "  primary: {weight: 30, label: Berlin, patterns: [berlin]}\n")
+    berlin_only = ("geography:\n"
+                   "  primary: {weight: 30, label: Berlin, patterns: [berlin]}\n")
+    (tmp_path / "search.yaml").write_text(berlin_only, encoding="utf-8")
     config = search.load(tmp_path)
 
     assert [g[1] for g in config.geography] == ["Berlin"]
@@ -327,9 +327,9 @@ def test_an_override_replaces_one_block_and_keeps_the_rest(tmp_path):
 
 
 def test_the_override_changes_the_verdict(tmp_path):
-    (tmp_path / "search.yaml").write_text(
-        "geography:\n"
-        "  primary: {weight: 30, label: Berlin, patterns: [berlin]}\n")
+    berlin_only = ("geography:\n"
+                   "  primary: {weight: 30, label: Berlin, patterns: [berlin]}\n")
+    (tmp_path / "search.yaml").write_text(berlin_only, encoding="utf-8")
     config = search.load(tmp_path)
     berlin = RawPosting(employer="X", title="Research Analyst", url="", source="t",
                         location="Berlin, Germany", description="")
@@ -338,7 +338,7 @@ def test_the_override_changes_the_verdict(tmp_path):
 
 
 def test_a_broken_override_says_which_file(tmp_path):
-    (tmp_path / "search.yaml").write_text("geography: {primary: {weight: 30}}\n")
+    (tmp_path / "search.yaml").write_text("geography: {primary: {weight: 30}}\n", encoding="utf-8")
     with pytest.raises(KeyError, match="data/search.yaml"):
         search.load(tmp_path)
 
@@ -433,7 +433,7 @@ def test_cutting_the_name_out_does_not_move_the_verdict():
 
 
 def _config_for(city: str, tmp_path) -> search.SearchConfig:
-    (tmp_path / "search.yaml").write_text(search.starter(city))
+    (tmp_path / "search.yaml").write_text(search.starter(city), encoding="utf-8")
     search._load_cached.cache_clear()
     return search.load(tmp_path)
 
@@ -500,7 +500,7 @@ def test_the_city_the_wizard_was_given_is_the_one_that_scores(city, location, tm
 
 def test_a_starter_is_configuration_the_loader_accepts(tmp_path):
     for city in ("London", "New York, NY", "St. Louis, MO", "", "Zürich"):
-        (tmp_path / "search.yaml").write_text(search.starter(city, "research"))
+        (tmp_path / "search.yaml").write_text(search.starter(city, "research"), encoding="utf-8")
         search._load_cached.cache_clear()
         config = search.load(tmp_path)                       # compiles without raising
         assert config.thresholds == {"pursue": 70, "maybe": 45}   # untouched blocks

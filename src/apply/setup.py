@@ -80,7 +80,7 @@ class Answers:
 
 
 def persona() -> dict:
-    return yaml.safe_load(EXAMPLE_PROFILE.read_text())
+    return yaml.safe_load(EXAMPLE_PROFILE.read_text(encoding="utf-8"))
 
 
 def profile_from(answers: Answers) -> dict:
@@ -143,7 +143,7 @@ def write_profile(data: dict, path: Path, *, force: bool = False) -> Path:
     if path.exists() and not force:
         raise FileExistsError(f"{path} exists; pass --force to replace it")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
+    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
     return path
 
 
@@ -176,7 +176,7 @@ def write_search(answers: Answers, path: Path, *, force: bool = False) -> Path |
     if path.exists() and not force:
         return None
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(search_mod.starter(answers.city, answers.work))
+    path.write_text(search_mod.starter(answers.city, answers.work), encoding="utf-8")
     return path
 
 

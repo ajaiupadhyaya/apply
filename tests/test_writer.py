@@ -191,9 +191,9 @@ def test_source_material_is_first_and_cached_so_the_audit_reuses_it(profile, ash
 
 
 def test_nothing_private_is_sent(profile, ashcombe_jd, workspace):
-    (workspace / "data" / "profile.private.yaml").write_text(
-        "identity:\n  phone: '+1 555 555 0123'\n  street_address: '1 Main St'\n"
-        "education_private:\n  gpa: '3.91'\n")
+    private = ("identity:\n  phone: '+1 555 555 0123'\n  street_address: '1 Main St'\n"
+               "education_private:\n  gpa: '3.91'\n")
+    (workspace / "data" / "profile.private.yaml").write_text(private, encoding="utf-8")
     from apply.profile import Profile
 
     system, user = writer.prompts(Profile.load(), posting_from(ashcombe_jd), [])

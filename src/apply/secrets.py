@@ -47,7 +47,7 @@ def _from_keychain(name: str) -> str | None:
     result = subprocess.run(
         ["security", "find-generic-password", "-a", os.environ.get("USER", ""),
          "-s", name, "-w"],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return (result.stdout.strip() or None) if result.returncode == 0 else None
 

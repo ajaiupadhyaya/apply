@@ -93,12 +93,12 @@ def conn(workspace):
 
 @pytest.fixture
 def quillon_jd() -> str:
-    return (EXAMPLES / "quillon.txt").read_text()
+    return (EXAMPLES / "quillon.txt").read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def ashcombe_jd() -> str:
-    return (EXAMPLES / "ashcombe.txt").read_text()
+    return (EXAMPLES / "ashcombe.txt").read_text(encoding="utf-8")
 
 
 def posting_from(text: str, **overrides):

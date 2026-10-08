@@ -201,7 +201,7 @@ def test_a_number_from_a_context_document_is_sourced(profile, ashcombe_jd, works
     """A figure the owner put in data/context/ is theirs to cite."""
     directory = workspace / "data" / "context"
     directory.mkdir(exist_ok=True)
-    (directory / "vanilla.md").write_text("The library has 210 tests.")
+    (directory / "vanilla.md").write_text("The library has 210 tests.", encoding="utf-8")
     assert lint("Vanilla has 210 tests.", profile, posting_from(ashcombe_jd)).ok
     assert not lint("Vanilla has 950 tests.", profile, posting_from(ashcombe_jd)).ok
 
@@ -215,23 +215,23 @@ def test_resume_variant_selection():
 
 
 def test_a_hand_edited_body_reads_back_with_its_closing(tmp_path):
-    (tmp_path / "body.md").write_text(
-        "<!-- instructions -->\n\nFirst para.\n\nSecond para.\n\nThe closing.")
+    body = "<!-- instructions -->\n\nFirst para.\n\nSecond para.\n\nThe closing."
+    (tmp_path / "body.md").write_text(body, encoding="utf-8")
     package = package_from_files(tmp_path)
     assert package.paragraphs() == ["First para.", "Second para."]
     assert package.closing == "The closing."
 
 
 def test_extra_hand_edited_paragraphs_are_kept_not_dropped(tmp_path):
-    (tmp_path / "body.md").write_text("\n\n".join(f"P{i}." for i in range(1, 7)) + "\n\nEnd.")
+    (tmp_path / "body.md").write_text("\n\n".join(f"P{i}." for i in range(1, 7)) + "\n\nEnd.", encoding="utf-8")
     package = package_from_files(tmp_path)
     assert "P6." in " ".join(package.paragraphs())
 
 
 def test_answers_read_back_from_answers_md(tmp_path):
-    (tmp_path / "body.md").write_text("Para.\n\nClose.")
-    (tmp_path / "answers.md").write_text(
-        "## Why this role (short)\n\nShort one.\n\n## Why this role (long)\n\nLong one.")
+    (tmp_path / "body.md").write_text("Para.\n\nClose.", encoding="utf-8")
+    answers = "## Why this role (short)\n\nShort one.\n\n## Why this role (long)\n\nLong one."
+    (tmp_path / "answers.md").write_text(answers, encoding="utf-8")
     package = package_from_files(tmp_path)
     assert (package.why_role_short, package.why_role_long) == ("Short one.", "Long one.")
 
