@@ -25,7 +25,7 @@ from rich.table import Table
 from rich.text import Text
 
 from . import (budget as budget_mod, db, digest as digest_mod,
-               discover as discover_mod, generate, notify as notify_mod,
+               discover as discover_mod, generate, host, notify as notify_mod,
                resolve as resolve_mod, run as run_mod, schedule as schedule_mod)
 from .models import Status, Track, TransitionError
 from .parse import parse as parse_jd
@@ -101,12 +101,30 @@ CLIPBOARD_READERS = (
 USE_STDIN = "Pipe the posting in instead:  apply add --stdin < posting.txt"
 
 
+#: PowerShell 5 writes to a pipe in the OEM codepage, which turns an em-dash
+#: into "?". Forcing UTF-8 output is the difference between a pasted posting
+#: and a mangled one.
+POWERSHELL_CLIPBOARD = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
+                        "Get-Clipboard -Raw")
+
+
 class ClipboardUnavailable(RuntimeError):
     """No clipboard reader on PATH, or the one that is there could not read."""
 
 
 def read_clipboard() -> str:
     """The clipboard's text, from whichever reader this machine has."""
+    if sys.platform == "win32":
+        exe = shutil.which("powershell") or shutil.which("pwsh")
+        if exe:
+            done = subprocess.run(
+                [exe, "-NoProfile", "-NonInteractive", "-Command", POWERSHELL_CLIPBOARD],
+                capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if done.returncode != 0:
+                raise ClipboardUnavailable(
+                    "PowerShell could not read the clipboard: "
+                    f"{(done.stderr or '').strip() or f'exit {done.returncode}'}")
+            return done.stdout.replace("\r\n", "\n")
     for name, command in CLIPBOARD_READERS:
         if shutil.which(name) is None:
             continue
@@ -182,12 +200,7 @@ def _deadline_text(row) -> Text:
 
 
 def _open_path(path: Path) -> None:
-    if sys.platform == "darwin":
-        subprocess.run(["open", str(path)], check=False)
-    elif sys.platform.startswith("linux"):
-        subprocess.run(["xdg-open", str(path)], check=False)
-    else:
-        webbrowser.open(path.as_uri())
+    host.open_path(path)
 
 
 # ------------------------------------------------------------ setup / init
@@ -318,6 +331,9 @@ def doctor() -> None:
     else:
         console.print("[bold red]✗[/] pdflatex not on PATH — no PDFs can be built.\n"
                       f"    {generate.tex_hint()}")
+    if generate.miktex_autoinstall() is False:
+        console.print("[yellow]•[/] MiKTeX asks before installing a package, which stalls an "
+                      "unattended run:\n    initexmf --set-config-value=[MPM]AutoInstall=1")
 
     from . import llm as llm_mod
     from . import secrets as secrets_mod
@@ -353,7 +369,7 @@ def add(
                                help="Read the JD from standard input, on any machine."),
     clipboard: bool = typer.Option(False, "--clipboard", "-c",
                                    help="Read the JD from the clipboard "
-                                        "(pbpaste, wl-paste, xclip or xsel)."),
+                                        "(pbpaste, wl-paste, xclip, xsel or PowerShell on Windows)."),
     url: Optional[str] = typer.Option(None, "--url", help="Fetch a company careers page."),
     company: Optional[str] = typer.Option(None, "--company"),
     role: Optional[str] = typer.Option(None, "--role"),
@@ -1425,7 +1441,7 @@ def describe(
     file: Optional[Path] = typer.Option(None, "--file", "-f"),
     clipboard: bool = typer.Option(False, "--clipboard", "-c",
                                    help="Read the posting from the clipboard "
-                                        "(pbpaste, wl-paste, xclip or xsel)."),
+                                        "(pbpaste, wl-paste, xclip, xsel or PowerShell on Windows)."),
     stdin: bool = typer.Option(False, "--stdin",
                                help="Read the posting from standard input."),
 ) -> None:

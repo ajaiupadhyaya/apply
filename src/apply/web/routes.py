@@ -11,8 +11,6 @@ Nothing here contacts an employer. /app/{id}/submit records that the owner did.
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 from urllib.parse import quote
 
@@ -20,7 +18,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .. import db, digest as digest_mod, generate
+from .. import db, digest as digest_mod, generate, host
 from ..models import Status, Track, TransitionError
 from ..parse import parse as parse_jd
 from ..profile import Profile
@@ -289,8 +287,8 @@ def do_folder(app_id: int):
     application = db.get_application_by_id(conn, app_id)
     posting = db.get_posting_by_id(conn, application.posting_id)
     directory = generate.out_dir() / posting.slug
-    if directory.exists() and sys.platform == "darwin":
-        subprocess.run(["open", str(directory)], check=False)
+    if directory.exists():
+        host.open_path(directory)
     return _flash(posting.slug, f"Opened {directory.name}.")
 
 

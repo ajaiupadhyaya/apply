@@ -50,7 +50,21 @@ def tex_hint() -> str:
     if sys.platform.startswith("linux"):
         return ("sudo apt install texlive-latex-recommended texlive-fonts-recommended"
                 "   # or your distribution's texlive")
+    if sys.platform == "win32":
+        return ("winget install MiKTeX.MiKTeX   (then, in a new terminal: "
+                "initexmf --set-config-value=[MPM]AutoInstall=1)")
     return "install a TeX distribution that provides pdflatex"
+
+
+def miktex_autoinstall() -> bool | None:
+    """Whether MiKTeX installs missing packages without asking (1 = yes).
+    'Ask' opens a dialog, and a dialog hangs an unattended run. None when
+    MiKTeX is not the TeX here."""
+    if not shutil.which("initexmf"):
+        return None
+    result = subprocess.run(["initexmf", "--show-config-value=[MPM]AutoInstall"],
+                            capture_output=True, text=True, encoding="utf-8", errors="replace")
+    return result.stdout.strip() == "1"
 
 
 # ------------------------------------------------------------- latex escape
