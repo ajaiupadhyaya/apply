@@ -252,3 +252,50 @@ def test_no_remote_block_when_remote_is_not_ok():
     files = D.to_files(canned(), answers(remote_ok=False))
     assert list(files["search.yaml"]["geography"]) == ["seattle"]
     assert len(_build(files).geography) == 1
+
+
+# ------------------------------------------------ round 2
+
+def test_a_target_firm_is_not_a_source():
+    d = canned()
+    d.experience.append(D.Experience(org="Jane Street", title="Software Intern", start="2025-06",
+                                     end="2025-08", bullets=[]))
+    cleaned, notes = D.ground(d, SOURCES, answers(firms=["Jane Street"], roles="Kubernetes engineer"))
+    assert [e.org for e in cleaned.experience] == ["Acme Robotics"]
+    assert any("Jane Street" in n for n in notes)
+    d = canned()
+    d.skills[0].items.append("Kubernetes")
+    cleaned, _ = D.ground(d, SOURCES, answers(roles="Kubernetes engineer"))
+    assert "Kubernetes" not in cleaned.skills[0].items
+
+
+def test_a_link_and_the_graduation_answer_are_still_sources():
+    d = canned()
+    d.projects[0].url = "https://github.com/jreyes-example"           # from answers.links only
+    d.education[0].start = "2023-09"                                   # 2023 is in no answer
+    cleaned, _ = D.ground(d, SOURCES, answers(availability_full_time="from June 2028"))
+    assert cleaned.projects[0].url == "https://github.com/jreyes-example"
+    assert cleaned.education[0].start == "ASK"
+    d.experience[0].bullets.append("Available from June 2028")
+    cleaned, _ = D.ground(d, SOURCES, answers(availability_full_time="from June 2028"))
+    assert "Available from June 2028" in cleaned.experience[0].bullets
+
+
+def test_a_track_needs_a_name():
+    from pydantic import ValidationError
+    raw = json.loads((FIX / "draft.json").read_text(encoding="utf-8"))
+    with pytest.raises(ValidationError):
+        D.Draft.model_validate({**raw, "tracks": [{**raw["tracks"][0], "name": ""}]})
+    d = canned()
+    d.tracks.append(d.tracks[0].model_copy(update={"name": "  "}))
+    assert list(D.to_files(d, answers())["search.yaml"]["tracks"]["kinds"]) == ["swe"]
+
+
+def test_any_remote_label_goes_when_remote_is_not_ok():
+    d = canned()
+    d.locations[1].label, d.locations[1].title = "Remote (US)", False
+    assert list(D.to_files(d, answers(remote_ok=False))["search.yaml"]["geography"]) == ["seattle"]
+
+
+def test_the_brief_says_to_copy_names_exactly():
+    assert "exactly as the DOCUMENTS write them" in D.SYSTEM

@@ -79,7 +79,7 @@ class Keyword(BaseModel):
 
 
 class TrackDraft(BaseModel):
-    name: str = Field(description="lowercase, one word: 'swe', 'consulting', 'quant'")
+    name: str = Field(min_length=1, description="lowercase, one word: 'swe', 'consulting', 'quant'")
     keywords: list[Keyword]
     resume: Literal["projects_first", "experience_first"]
     code_link: bool
@@ -183,6 +183,8 @@ Hard rules:
   max_years_experience: the smallest required-experience figure they cannot meet (null if
   experienced). Plain phrases, not regular expressions.
 - employers: only firms the person named, with common alternate spellings as aliases.
+- Copy names (employers, schools, projects, skills, titles) exactly as the DOCUMENTS write them:
+  no added suffixes, expansions or parentheticals.
 Return the structured object only."""
 
 
@@ -241,16 +243,22 @@ def ground(d: Draft, sources: str, answers: Answers, note: str = "") -> tuple[Dr
     """Remove what the documents do not support. Deterministic: the model's
     output is a proposal, this is the check.
 
-    The corpus is the documents, the public answers and the user's correction
-    note — a fact the user typed is sourced. Names, titles, organisations,
+    The corpus is the documents and the user's correction note — a fact the
+    user typed is sourced. The other answers are not: `firms` names employers
+    the user wants, not ones they worked for, and the role blurb is a wish. Two
+    exceptions: a link the user gave sources a URL, and the graduation and
+    availability answers source a figure or a date. Names, titles, organisations,
     skills and figures are checked against it; prose without a figure in it
     cannot be, and is left to the user's approval of each section."""
     d = d.model_copy(deep=True)
     notes: list[str] = []
-    corpus = sources + "\n" + json.dumps(answers.public(), ensure_ascii=False) + "\n" + (note or "")
-    allowed = _digit_tokens(corpus)
-    years = set(re.findall(r"\b(?:19|20)\d{2}\b", corpus))
+    corpus = sources + "\n" + (note or "")
+    stated = " ".join(str(v) for v in (answers.grad_expected, answers.availability_full_time,
+                                       answers.availability_internship) if v)
+    allowed = _digit_tokens(corpus + "\n" + stated)
+    years = set(re.findall(r"\b(?:19|20)\d{2}\b", corpus + "\n" + stated))
     low = corpus.lower()
+    links = (low + "\n" + "\n".join(str(v) for v in (answers.links or {}).values())).lower()
 
     def unsourced(text: str) -> list[str]:
         return sorted(t for t in _digit_tokens(text or "") if t not in allowed)
@@ -325,7 +333,7 @@ def ground(d: Draft, sources: str, answers: Answers, note: str = "") -> tuple[Dr
             if bad:
                 notes.append(f"{p.name}: cleared {attr} — {', '.join(bad)} is not in your documents")
                 setattr(p, attr, "" if attr == "technical" else ASK)
-        if p.url and p.url.lower().removeprefix("https://").removeprefix("http://") not in low:
+        if p.url and p.url.lower().removeprefix("https://").removeprefix("http://") not in links:
             notes.append(f"{p.name}: removed the link — it is not in your documents or answers")
             p.url = None
         p.stack = only_sourced(p.stack, f"{p.name} stack")
@@ -400,7 +408,10 @@ def to_files(d: Draft, answers: Answers) -> dict[str, dict]:
     data = persona()
     tracks = {}
     for t in d.tracks:
-        tracks.setdefault(_track(t.name), t)
+        if _track(t.name):
+            tracks.setdefault(_track(t.name), t)
+    if not tracks:
+        raise ValueError("the draft names no track; ask for it again")
     default = _track(d.default_track)
     if default not in tracks:
         default = next(iter(tracks))
@@ -439,7 +450,7 @@ def to_files(d: Draft, answers: Answers) -> dict[str, dict]:
 
     shipped = (yaml.safe_load(DEFAULTS.read_text(encoding="utf-8")) or {}).get("rejects") or {}
     places = [p for p in d.locations
-              if answers.remote_ok or not (p.title or p.label.strip().lower() == "remote")]
+              if answers.remote_ok or not (p.title or "remote" in p.label.lower())]
     abroad = any(country_of(place) == "elsewhere" for place in answers.locations)
     search = {
         "rejects": {"seniority": _rejects(d.reject_seniority, shipped.get("seniority") or []),
