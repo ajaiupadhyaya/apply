@@ -158,7 +158,7 @@ def _mail(profile: Profile) -> list[discover.Message] | None:
 
     password = secrets.lookup("APPLY_IMAP_PASSWORD")
     if password:
-        return discover.fetch_imap(user=profile.email, password=password)
+        return discover.fetch_imap(user=profile.imap_user, password=password)
     drop = data_dir() / "alerts.json"
     if drop.exists():
         return discover.load_messages(drop)

@@ -78,3 +78,27 @@ def test_how_to_store_names_the_secret(monkeypatch):
 
 def _forbidden(*args, **kwargs):
     raise AssertionError("a test shelled out to the platform secret store")
+
+
+REAL_STORE = getattr(secrets, "store", None)   # the genuine function, taken before the conftest block
+
+
+def test_store_writes_through_keyring_under_the_layout_lookup_reads(monkeypatch):
+    import keyring
+    saved = {}
+    monkeypatch.setattr(keyring, "set_password", lambda s, u, v: saved.update({(s, u): v}))
+    REAL_STORE("ANTHROPIC_API_KEY", " sk-x ")
+    assert saved == {("apply", "ANTHROPIC_API_KEY"): "sk-x"}
+
+
+def test_store_refuses_an_empty_secret():
+    import pytest
+    with pytest.raises(ValueError):
+        REAL_STORE("ANTHROPIC_API_KEY", "  ")
+
+
+def test_windows_is_its_own_platform(monkeypatch):
+    monkeypatch.setattr(secrets.sys, "platform", "win32")
+    assert secrets.platform_key() == "windows"
+    assert "apply setup --step key" in secrets.how_to_store("ANTHROPIC_API_KEY")
+    assert "apply setup --step extras" in secrets.how_to_store("APPLY_IMAP_PASSWORD")

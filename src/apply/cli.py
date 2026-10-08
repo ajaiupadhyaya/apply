@@ -1356,7 +1356,7 @@ def ingest(
     if imap:
         from . import secrets
 
-        address = user or profile.email
+        address = user or profile.imap_user
         password = secrets.lookup("APPLY_IMAP_PASSWORD") or ""
         if not password:
             _fail(

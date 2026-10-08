@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.27",
     # Claude writes and audits every letter, so this is not optional.
     "anthropic>=1.7",
+    "keyring>=25.7.0",
 ]
 
 [project.urls]

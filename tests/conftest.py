@@ -133,11 +133,14 @@ def _no_real_api(monkeypatch, tmp_path):
     monkeypatch.setattr(secrets, "lookup", lambda name: None)
     monkeypatch.setattr(secrets, "_from_keychain", lambda name: None)
     monkeypatch.setattr(secrets, "_from_keyring", lambda name: None)
+    monkeypatch.setattr(secrets, "store",
+                        lambda *a, **k: pytest.fail("a test tried to store a real secret"))
 
-    def tripwire(**_):
+    def tripwire(*_, **__):
         raise AssertionError("a test tried to call the real Anthropic API")
 
     monkeypatch.setattr(llm, "call", tripwire)
+    monkeypatch.setattr(llm, "ping", tripwire)
 
 
 # A draft that passes the lint, written from the fixture profile — the persona's

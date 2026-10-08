@@ -7,9 +7,9 @@ user's at all, and the launchd agent runs `zsh -lc`, which reads ~/.zprofile
 but not ~/.zshrc, where the export usually is. Either way the variable is
 simply absent at 06:30.
 
-Nothing here writes a secret anywhere, and no value is ever logged. `keyring`
-is not a dependency of this project: it is reached through `find_spec`, so the
-import is attempted only when the user already has it installed.
+Nothing here writes a secret to a file: `store` hands it to the OS credential
+store through keyring (Windows Credential Manager, the macOS Keychain, or a
+Secret Service), and no value is ever logged.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ INSTRUCTIONS = {
     "darwin": 'security add-generic-password -U -a "$USER" -s {name} -w',
     "linux": ("keyring set apply {name}        # if python-keyring is installed\n"
               "  or: export {name}=...        # in the shell that runs apply"),
+    "windows": "uv run apply setup --step {step}",
     "other": "export {name}=...",
 }
 
@@ -32,12 +33,15 @@ INSTRUCTIONS = {
 def platform_key() -> str:
     if sys.platform == "darwin":
         return "darwin"
+    if sys.platform == "win32":
+        return "windows"
     return "linux" if sys.platform.startswith("linux") else "other"
 
 
 def how_to_store(name: str) -> str:
     """The line to tell the user when a secret is missing."""
-    return INSTRUCTIONS[platform_key()].format(name=name)
+    step = "extras" if name == "APPLY_IMAP_PASSWORD" else "key"
+    return INSTRUCTIONS[platform_key()].format(name=name, step=step)
 
 
 def _from_keychain(name: str) -> str | None:
@@ -71,3 +75,16 @@ def lookup(name: str) -> str | None:
         if value and value.strip():
             return value.strip()
     return None
+
+
+def store(name: str, value: str) -> None:
+    """Hand a secret to the OS credential store. Never to a file, never logged.
+
+    Same service and username `_from_keyring` reads, so `lookup` finds it from a
+    terminal and from a scheduled run alike."""
+    value = (value or "").strip()
+    if not value:
+        raise ValueError(f"refusing to store an empty {name}")
+    import keyring
+
+    keyring.set_password("apply", name, value)

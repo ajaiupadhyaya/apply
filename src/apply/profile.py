@@ -201,6 +201,10 @@ class Profile:
         return self.identity.get("email", "")
 
     @property
+    def imap_user(self) -> str:
+        return (self.raw.get("imap") or {}).get("user") or self.email
+
+    @property
     def phone(self) -> str | None:
         v = self.identity.get("phone")
         return None if v in (None, ASK) else str(v)

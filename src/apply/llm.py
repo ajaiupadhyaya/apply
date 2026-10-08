@@ -243,6 +243,23 @@ def _client():
     return client
 
 
+def ping() -> None:
+    """One free request that proves the key works. Raises LLMUnavailable."""
+    import anthropic
+
+    client = _client()
+    try:
+        client.models.list(limit=1)
+    except anthropic.AuthenticationError as exc:
+        raise LLMUnavailable("the API key was rejected. Check it at console.anthropic.com "
+                             "and store it again: uv run apply setup --step key") from exc
+    except anthropic.APIConnectionError as exc:
+        raise LLMUnavailable("could not reach the API (network).") from exc
+
+
+REAL_PING = ping
+
+
 def _usage(model: str, response) -> Usage:
     u = response.usage
     return Usage(
