@@ -455,3 +455,17 @@ tracks:
         - ["general ledger", 4]
         - ["expense", 2]
         - ["procurement", 3]
+
+
+# ------------------------------------------------------------------ limits
+#
+# Career-stage bars the gate applies to every posting. These defaults are for
+# an undergraduate: a posting asking for three or more years is refused, and so
+# is one whose body requires an advanced degree or whose title names a PhD,
+# MBA or master's programme. An experienced hire raises or nulls the first;
+# a graduate student turns the other two off.
+
+limits:
+  max_years_experience: 3        # null turns the experience bar off
+  advanced_degree_required: true
+  graduate_programs: true

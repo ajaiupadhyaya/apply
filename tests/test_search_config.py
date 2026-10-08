@@ -514,3 +514,63 @@ def test_the_threshold_the_gate_uses_is_the_profiles(tmp_path):
     assert thresholds_in_force(config, {}) == {"pursue": 70, "maybe": 45}
     assert thresholds_in_force(config, {"thresholds": {"pursue": 40}}) == {
         "pursue": 40, "maybe": 45}
+
+
+# ------------------------------------------- a search that is not finance, or not an undergraduate's
+#
+# The experience and degree bars used to be constants in score.py, so a software
+# engineer in Seattle (or an experienced hire, or a graduate student) was gated
+# by an undergraduate-in-finance's limits. They are the `limits:` block now.
+
+SWE_SEATTLE = {
+    "rejects": {"seniority": ["senior", "staff", "principal", "manager"],
+                "off_function": ["sales", "recruiter"], "too_technical": []},
+    "geography": {"primary": {"label": "Seattle", "weight": 25, "patterns": ["seattle", "bellevue"]},
+                  "remote": {"label": "remote", "weight": 10, "patterns": ["remote"], "match_title": True}},
+    "role_fit": [[r"software\s+engineer", 25], [r"backend", 20]],
+    "timing": [[r"new\s+grad", 18]],
+    "title_timing": [[r"\b2027\b", 14]],
+    "tracks": {"default": "swe", "kinds": {"swe": {"resume": "projects_first", "code_link": True,
+                                                    "keywords": [["software engineer", 5], ["backend", 3]]}}},
+    "limits": {"max_years_experience": 2, "advanced_degree_required": True, "graduate_programs": True},
+}
+
+
+def _override(data_dir, body):
+    (data_dir / "search.yaml").write_text(yaml.safe_dump(body), encoding="utf-8")
+    search._load_cached.cache_clear()
+
+
+def _p(title, location="Seattle, WA", body=""):
+    return RawPosting(employer="Co", title=title, url="https://x", source="t",
+                      location=location, description=body, employer_priority=1)
+
+
+def test_a_software_engineering_search_pursues_swe_roles(isolated_data_dir):
+    from apply.score import Verdict
+
+    _override(isolated_data_dir, SWE_SEATTLE)
+    r = score(_p("Software Engineer, New Grad 2027"))
+    assert r.verdict is Verdict.PURSUE, r.reasons
+    assert "Seattle +25" in r.reasons
+    assert score(_p("Backend Engineer")).rejected_by != "technical"
+    assert score(_p("Summer Analyst, Investment Banking")).verdict is not Verdict.PURSUE
+
+
+def test_the_years_bar_is_configurable(isolated_data_dir):
+    _override(isolated_data_dir, SWE_SEATTLE)
+    assert score(_p("Software Engineer", body="2+ years of experience")).rejected_by == "experience"
+    _override(isolated_data_dir, {**SWE_SEATTLE, "limits": {"max_years_experience": None}})
+    assert score(_p("Software Engineer", body="5+ years of experience")).rejected_by != "experience"
+
+
+def test_degree_gates_can_be_turned_off(isolated_data_dir):
+    _override(isolated_data_dir, {**SWE_SEATTLE, "limits": {"advanced_degree_required": False,
+                                                              "graduate_programs": False}})
+    assert score(_p("PhD Software Engineer Intern")).rejected_by != "degree"
+    assert score(_p("Software Engineer", body="A PhD is required.")).rejected_by != "degree"
+
+
+def test_default_limits_are_todays():
+    assert search.load().limits == {"max_years_experience": 3, "advanced_degree_required": True,
+                                    "graduate_programs": True}

@@ -14,7 +14,7 @@ or your own. `apply search` prints which blocks are yours.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
@@ -59,6 +59,10 @@ class TrackSpec:
     code_link: bool = False
 
 
+DEFAULT_LIMITS = {"max_years_experience": 3, "advanced_degree_required": True,
+                  "graduate_programs": True}
+
+
 @dataclass(frozen=True, slots=True)
 class SearchConfig:
     rejects: dict[str, re.Pattern]
@@ -81,6 +85,9 @@ class SearchConfig:
     tracks: tuple[TrackSpec, ...] = ()
     #: The track a posting gets when none matches or several tie.
     default_track: str = "corporate"
+    #: Career-stage bars: `max_years_experience` (None turns it off),
+    #: `advanced_degree_required` and `graduate_programs`. See search.defaults.yaml.
+    limits: dict = field(default_factory=lambda: dict(DEFAULT_LIMITS))
 
     def track(self, name: str) -> TrackSpec:
         """The named track's spec, or the default track's for a name it lacks."""
@@ -177,6 +184,7 @@ def build(raw: dict, sources: dict[str, str]) -> SearchConfig:
         sizes={name: _size(block) for name, block in raw.items()},
         tracks=tracks,
         default_track=default_track,
+        limits={**DEFAULT_LIMITS, **(raw.get("limits") or {})},
     )
 
 

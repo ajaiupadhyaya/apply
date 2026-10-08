@@ -185,7 +185,7 @@ def score(posting: RawPosting, preferences: dict | None = None,
             return reject(f"{reason}: {hit.group(0)!r}", _REJECT_LABEL.get(name, name))
         if name == "seniority" and (grade := _senior_grade(posting, title)):
             return reject(f"{grade!r} is a senior grade at {posting.employer}", "seniority")
-    if GRADUATE_PROGRAM.search(title):
+    if config.limits["graduate_programs"] and GRADUATE_PROGRAM.search(title):
         return reject(f"for graduate students: {GRADUATE_PROGRAM.search(title).group(0)!r}",
                       "degree")
 
@@ -220,9 +220,10 @@ def score(posting: RawPosting, preferences: dict | None = None,
 
     if body:
         years = YEARS.search(body)
-        if years and int(years.group(1)) >= 3:
+        cap = config.limits["max_years_experience"]
+        if years and cap is not None and int(years.group(1)) >= cap:
             return reject(f"asks for {years.group(1)}+ years of experience", "experience")
-        degree = ADVANCED_DEGREE.search(body)
+        degree = ADVANCED_DEGREE.search(body) if config.limits["advanced_degree_required"] else None
         if degree:
             return reject(f"requires an advanced degree: {degree.group(0)[:48]!r}", "degree")
         graduation = preferences.get("graduation")

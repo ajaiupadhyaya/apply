@@ -1580,7 +1580,7 @@ def search() -> None:
     for column in ("block", "entries", "from"):
         table.add_column(column, justify="right" if column == "entries" else "left")
     for name in ("thresholds", "rejects", "class_scoped", "geography", "non_us",
-                 "role_fit", "timing", "title_timing", "tracks"):
+                 "role_fit", "timing", "title_timing", "tracks", "limits"):
         source = config.sources.get(name, "defaults")
         if name == "thresholds" and from_profile:
             source = from_profile
