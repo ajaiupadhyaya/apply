@@ -19,8 +19,8 @@ from pathlib import Path
 
 import yaml
 
-from .generate import repo_root
-from .profile import ASK, GRAD_FORMAT, GRAD_SHAPE
+from ..generate import repo_root
+from ..profile import ASK, GRAD_FORMAT, GRAD_SHAPE
 
 EXAMPLE_PROFILE = repo_root() / "data" / "profile.example.yaml"
 
@@ -171,7 +171,7 @@ def write_search(answers: Answers, path: Path, *, force: bool = False) -> Path |
     None when there is already a search.yaml, because that file is the user's own
     and a re-run of setup is not a reason to overwrite it.
     """
-    from . import search as search_mod
+    from .. import search as search_mod
 
     if path.exists() and not force:
         return None
