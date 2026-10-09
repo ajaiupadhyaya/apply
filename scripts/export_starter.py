@@ -1,0 +1,68 @@
+"""Build the starter repo: every tracked file, none of the author's life.
+
+    uv run python scripts/export_starter.py <target-dir>
+
+Authorship stays (the LICENSE, the repository URL); biography does not. The
+check is the same word list tests/test_setup.py holds the persona to, run over
+every file that ships.
+"""
+
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Iterable
+
+EXCLUDE_PREFIXES = ("docs/superpowers/", ".reviews/")
+BIOGRAPHY = ("ajai", "upadhyaya", "vcu", "virginia commonwealth", "university of virginia",
+             "ohcamel", "richmond", "charlottesville", "bloomberg", "morningstar", "wrds")
+_BIOGRAPHY_RE = re.compile("|".join(rf"\b{re.escape(w)}\b" for w in BIOGRAPHY))
+#: Lines that may name the author: attribution, not biography.
+AUTHORSHIP_LINES = (re.compile(r"^Copyright", re.I), re.compile(r"github\.com/ajaiupadhyaya/apply"),
+                    re.compile(r"LEGACY_LABELS"), re.compile(r"@namespace"))
+
+
+def biography_in(paths: Iterable[Path]) -> list[str]:
+    hits = []
+    for path in paths:
+        if path.name in ("export_starter.py", "test_setup.py"):
+            continue                       # the files that hold the list itself
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for n, line in enumerate(text.splitlines(), 1):
+            if _BIOGRAPHY_RE.search(line.lower()) and not any(p.search(line) for p in AUTHORSHIP_LINES):
+                hits.append(f"{path}:{n}")
+    return hits
+
+
+def export(target: Path, repo: Path) -> list[str]:
+    if target.exists() and any(target.iterdir()):
+        raise SystemExit(f"{target} is not empty")
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=repo, capture_output=True, check=True)
+    names = [n for n in listed.stdout.decode("utf-8").split("\0")
+             if n and not n.startswith(EXCLUDE_PREFIXES)]
+    hits = biography_in(repo / n for n in names)
+    if hits:
+        raise SystemExit("the author's biography is in files that would ship:\n  " + "\n  ".join(hits))
+    for name in names:
+        dest = target / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(repo / name, dest)
+    git = ["git", "-c", "user.name=APPLY", "-c", "user.email=apply@localhost"]
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=target, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=target, check=True)
+    subprocess.run([*git, "commit", "-q", "-m", "APPLY starter"], cwd=target, check=True)
+    return names
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit("usage: export_starter.py <target-dir>")
+    out = export(Path(sys.argv[1]).resolve(), Path(__file__).resolve().parents[1])
+    print(f"exported {len(out)} files to {sys.argv[1]} as one commit.\n"
+          "Publish:  cd <target> && gh repo create apply-starter --private --source . --push")

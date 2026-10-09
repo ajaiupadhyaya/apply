@@ -260,7 +260,7 @@ def jd_anchors(jd: str, company: str | None = None, role: str | None = None,
         offer(f"the {phrase}", 4 if len(phrase.split()) > 1 else 2, m.start())
     for token, n in counts.items():
         # A capitalised word the posting keeps saying is often a named system —
-        # Aladdin, Bloomberg, Athena. But a sentence-initial common noun is not,
+        # Aladdin, Athena, Murex. But a sentence-initial common noun is not,
         # and "Investment is the specific draw" is not a sentence worth sending.
         if n >= 2 and token.lower() not in banned_words \
                 and token.lower() not in _WEAK_SINGLETONS:
