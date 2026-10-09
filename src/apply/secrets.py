@@ -1,7 +1,7 @@
 """Where a secret comes from, in one place and one order.
 
-The order is: the environment, then the macOS Keychain, then a Secret Service
-keyring if the user happens to have one. A scheduled run is why the store
+The order is: the environment, then the OS credential store through keyring
+(Windows Credential Manager, the macOS Keychain, or a Secret Service). A scheduled run is why the store
 lookups exist at all — a systemd timer and a cron line read no profile of the
 user's at all, and the launchd agent runs `zsh -lc`, which reads ~/.zprofile
 but not ~/.zshrc, where the export usually is. Either way the variable is
@@ -23,7 +23,7 @@ from importlib.util import find_spec as _find_spec
 #: How to store a secret so that an unattended run can find it, per platform.
 INSTRUCTIONS = {
     "darwin": 'security add-generic-password -U -a "$USER" -s {name} -w',
-    "linux": ("keyring set apply {name}        # if python-keyring is installed\n"
+    "linux": ("keyring set apply {name}        # needs a Secret Service running\n"
               "  or: export {name}=...        # in the shell that runs apply"),
     "windows": "uv run apply setup --step {step}",
     "other": "export {name}=...",
@@ -57,8 +57,8 @@ def _from_keychain(name: str) -> str | None:
 
 
 def _from_keyring(name: str) -> str | None:
-    """A Secret Service keyring, if the user has python-keyring installed."""
-    if _find_spec("keyring") is None:             # never a dependency of this project
+    """The OS credential store, through keyring."""
+    if _find_spec("keyring") is None:           
         return None
     try:
         import keyring

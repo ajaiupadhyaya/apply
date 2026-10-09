@@ -136,7 +136,7 @@ to write your profile itself.
 
 Needs Python 3.11+, [uv](https://docs.astral.sh/uv/), and TeX if you want PDFs.
 Python 3.11 and 3.13 on Ubuntu, macOS and Windows are what the workflow in
-`.github/workflows/tests.yml` covers. This is the shortest route to something
+`.github/workflows/tests.yml` is set up to run. This is the shortest route to something
 to look at, with no key and no conversation.
 
 ```bash
@@ -150,9 +150,9 @@ uv run apply serve             # the dashboard, at localhost:8787
 `--persona` writes the invented person this repository ships, Rae Mercer of
 Example University, and gives you a profile complete enough to render a letter
 and a resume end to end. When you want your own, `uv run apply setup` is the guided route above;
-`uv run apply setup --quick --force` asks nine questions — name, email, school, degree, graduation month, the city
-you want to work in, the work you want, work authorization, a GitHub link — and
-replaces the persona. It leaves everything it could not ask about marked `ASK`:
+`uv run apply setup --quick --force` asks nine questions — name, email, school,
+degree, graduation month, the city you want to work in, the work you want, work
+authorization, a GitHub link — and replaces the persona. It leaves everything it could not ask about marked `ASK`:
 your experience and your projects, above all. `apply doctor` sorts those into
 what blocks a command, what a document would print, and what nothing is waiting
 on, and `apply gen` refuses to render a document that would carry the word
@@ -175,7 +175,7 @@ needs one, or needs you to write it yourself — see
 uv run apply setup --step key
 # macOS, by hand
 security add-generic-password -U -a "$USER" -s ANTHROPIC_API_KEY -w
-# Linux, if you have python-keyring installed and a Secret Service running
+# Linux, with a Secret Service running
 keyring set apply ANTHROPIC_API_KEY
 # anywhere, in the shell that runs apply
 export ANTHROPIC_API_KEY=...
@@ -195,7 +195,7 @@ Debian or Ubuntu. Without TeX everything else still runs and no PDF is built.
 any folder:
 
 ```bash
-echo "alias apply='uv run --project $(pwd) apply'" >> ~/.zshrc   # or ~/.bashrc
+echo "alias apply='uv run --project $(pwd) apply'" >> ~/.zshrc   # or ~/.bashrc (macOS, Linux)
 ```
 
 ---
@@ -572,8 +572,8 @@ Whoever calls it, it never:
 - moves an application past `generated`
 - regenerates something that already has documents
 - spends past the ledger's ceilings
-- does anything at all while `data/HALT` exists (`touch data/HALT`; on Windows,
-  `type nul > data\HALT`)
+- does anything at all while `data/HALT` exists (`touch data/HALT`; in PowerShell,
+  `New-Item -ItemType File data\HALT`, or `type nul > data\HALT` in cmd)
 
 When an employer is down, a letter fails to compile or the mailbox is
 unreachable, it records the problem and moves on. A run that half-worked beats
@@ -650,7 +650,7 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply followup <slug> "note" [--in N]` | queue a reminder; `--done` clears them |
 | **Unattended** | |
 | `apply run [--dry-run] [--limit N] [--notify]` | one full pass |
-| `apply schedule [--show \| --install \| --remove] [--at HH:MM]` | the morning job: launchd, a systemd user timer, or cron |
+| `apply schedule [--show \| --install \| --remove] [--at HH:MM]` | the morning job: launchd, a systemd user timer, cron, or Task Scheduler on Windows |
 | `apply runs` | what past runs did |
 | **Upkeep** | |
 | `apply setup [--quick \| --persona] [--step S]` | guided setup from your resume and goals; `--quick` without an API key, `--persona` the example person, `--force` only with those |
@@ -739,7 +739,7 @@ data/profile*.yaml, data/employers.yaml, data/search.yaml, data/apply.db, out/
 uv run pytest -q
 ```
 
-529 tests. Without TeX, the five that compile a PDF skip themselves; without
+Without TeX, the tests that compile a PDF skip themselves; without
 the owner's local scoring corpus, one more does. They never touch the Anthropic
 API — the key is stripped, the secret lookup is blocked and the one function
 that makes calls is tripwired — and every one of them runs against a temporary
