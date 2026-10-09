@@ -344,7 +344,7 @@ def doctor() -> None:
         for path in blocking:
             console.print(f"  [bold red]✗[/] {path}")
         console.print("  [dim]Write it into data/profile.yaml, or run "
-                      "`apply setup --force` to be asked again.[/]")
+                      "`apply setup` to be asked again.[/]")
     if in_documents:
         console.print("\n[bold]Still ASK, and a document would print it:[/]")
         for path in in_documents:

@@ -31,7 +31,7 @@ Enforced in code and in tests, not just promised here.
 |---|---|
 | Submit an application | Nothing transmits to an employer. Every module that sends a request is declared in `src/apply/outbound.py` with the reason its hosts are not employers, and the suite fails on an undeclared one. There is no browser driver in the codebase. |
 | Scrape Handshake, LinkedIn or Indeed | Their postings arrive through the alert emails they already send you, or by paste. `apply add --url` refuses all three outright, subdomains included, and names the paste command instead. |
-| Hold a credential in a file | The Anthropic key and the IMAP app password are looked up at call time — the environment, then the macOS Keychain, then a Secret Service keyring — and nothing here ever writes one. |
+| Hold a credential in a file | The Anthropic key and the IMAP app password are looked up at call time — the environment, then the OS credential store (Windows Credential Manager, the macOS Keychain, or a Secret Service keyring). `apply setup` hands the key to that store and never to a file. |
 | Move an application without you | `ready` accepts only the `review` action and `submitted` only `submit`; every other caller is refused by `db.transition`. |
 | Claim what you haven't done | The lint fails any figure written in digits that appears in neither your profile, your context documents nor the posting. Everything else rests on the audit, which is a model reading the draft against those same sources — a judgement, not a rule. Either failure means no PDF. One exception, in the table so you know about it: text you wrote yourself and pass back with `apply gen --from-body` is built on the lint alone when there is no key to audit it, and the letter is recorded `unverified`. |
 
@@ -79,18 +79,65 @@ so it stays on their machine, and a clone starts with an example of the shape.
 
 ---
 
+## Start here
+
+Clone the repository, then run the installer for your system. It checks for
+Python, [uv](https://docs.astral.sh/uv/) and TeX, offers to install what is
+missing, runs `uv sync`, and hands over to `apply setup`. Safe to re-run.
+
+```powershell
+# Windows (PowerShell), from the cloned folder
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+```
+
+```bash
+# macOS or Linux, from the cloned folder
+bash scripts/install.sh
+```
+
+Already have uv? `uv sync && uv run apply setup` does the same job.
+
+`apply setup` is a guided conversation, and it needs an Anthropic API key. It
+checks your toolchain, stores the key in the OS credential store (Windows
+Credential Manager, the macOS Keychain, or a Secret Service keyring) and asks
+about the roles, job type, locations, firms and links you care about. It asks a
+few direct questions as well: work authorization, sponsorship, graduation date,
+availability, and your phone, address and GPA, which stay on your machine. It
+then imports your resume, a cover letter and any other writing you give it
+(PDF, DOCX, TXT or MD), with phone numbers, addresses and SSNs redacted. From
+those, Claude drafts `data/profile.yaml` and `data/search.yaml` (tracks, roles,
+locations, rejects and limits), then strips anything the documents do not
+support. You accept, edit or redo each section. It finds the job boards of the
+firms you named, confirming each one, and offers to set up Gmail alert
+ingestion, a phone push through ntfy and the daily schedule.
+
+The whole conversation is one drafting request, roughly $0.10 to $0.60 at the
+draft model's prices. To redo part of it:
+
+```bash
+uv run apply setup --step about        # the questions, then the draft again
+uv run apply setup --step employers    # the firms and their job boards
+```
+
+The steps are `toolchain`, `key`, `about`, `documents`, `draft`, `review`,
+`employers`, `extras` and `finish`. If you would rather not use a key yet,
+`uv run apply setup --quick` asks nine plain questions and needs none, and
+`uv run apply setup --persona` writes the example person so there is something
+to look at. `--force` replaces an existing profile and goes only with
+`--quick`, `--persona` or `--non-interactive`.
+
+Not a command line person? Open this folder in Cursor or Claude Code and say
+"set this up". `AGENTS.md` tells the agent to run `uv run apply setup` and not
+to write your profile itself.
+
+---
+
 ## Quick start
 
 Needs Python 3.11+, [uv](https://docs.astral.sh/uv/), and TeX if you want PDFs.
-Python 3.11 and 3.13 on Ubuntu and macOS are what the workflow in
-`.github/workflows/tests.yml` covers.
-
-**What a clone gets today.** This document describes the branch it is on, which
-has not been merged. The default branch is an earlier version of this tool — no
-`apply setup`, no `tools/numbers.py`, no frozen corpus, no CI workflow — so the
-third line below is not a command there and the table above does not reproduce.
-Once the branch is merged, a plain clone is what the quick start describes;
-until then it is not, and that is the owner's merge to do, not yours.
+Python 3.11 and 3.13 on Ubuntu, macOS and Windows are what the workflow in
+`.github/workflows/tests.yml` covers. This is the shortest route to something
+to look at, with no key and no conversation.
 
 ```bash
 git clone https://github.com/ajaiupadhyaya/apply && cd apply
@@ -102,8 +149,8 @@ uv run apply serve             # the dashboard, at localhost:8787
 
 `--persona` writes the invented person this repository ships, Rae Mercer of
 Example University, and gives you a profile complete enough to render a letter
-and a resume end to end. When you want your own, `uv run apply setup --quick --force`
-asks nine questions — name, email, school, degree, graduation month, the city
+and a resume end to end. When you want your own, `uv run apply setup` is the guided route above;
+`uv run apply setup --quick --force` asks nine questions — name, email, school, degree, graduation month, the city
 you want to work in, the work you want, work authorization, a GitHub link — and
 replaces the persona. It leaves everything it could not ask about marked `ASK`:
 your experience and your projects, above all. `apply doctor` sorts those into
@@ -111,7 +158,7 @@ what blocks a command, what a document would print, and what nothing is waiting
 on, and `apply gen` refuses to render a document that would carry the word
 `ASK` to an employer.
 
-Setup also writes `data/search.yaml` from the city you gave it, which is how
+Quick setup also writes `data/search.yaml` from the city you gave it, which is how
 the gate learns where you want to work. It writes that file once and never
 again: a second `apply setup` leaves it alone, `--force` included, because a
 tuned search is work and `--force` is about the profile. So if you start from
@@ -124,7 +171,9 @@ needs one, or needs you to write it yourself — see
 [Without an API key](#without-an-api-key).
 
 ```bash
-# macOS
+# any OS: apply setup stores it for you, in the OS credential store
+uv run apply setup --step key
+# macOS, by hand
 security add-generic-password -U -a "$USER" -s ANTHROPIC_API_KEY -w
 # Linux, if you have python-keyring installed and a Secret Service running
 keyring set apply ANTHROPIC_API_KEY
@@ -132,14 +181,14 @@ keyring set apply ANTHROPIC_API_KEY
 export ANTHROPIC_API_KEY=...
 ```
 
-`keyring` is not a dependency of this project — it is imported only if you
-already have it — so on a headless Linux box the exported variable is the
-ordinary route. A scheduled run does not inherit your shell's variables; see
+On Windows the key is stored in Windows Credential Manager by `apply setup`; on
+every OS the storing goes through `apply.secrets.store`. On a headless Linux box
+with no Secret Service the exported variable is the ordinary route. A scheduled run does not inherit your shell's variables; see
 [Running unattended](#running-unattended).
 
 Typesetting needs `pdflatex` and the packages the templates load: geometry,
 titlesec, enumitem, microtype, mathptmx, xcolor, hyperref, parskip and
-`fontenc` with `T1`. `brew install --cask mactex-no-gui` on macOS; `apt install
+`fontenc` with `T1`. `brew install --cask mactex-no-gui` on macOS; `winget install MiKTeX.MiKTeX` on Windows; `apt install
 texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended` on
 Debian or Ubuntu. Without TeX everything else still runs and no PDF is built.
 `uv run apply doctor` says what is missing, at any point. To call `apply` from
@@ -154,8 +203,8 @@ echo "alias apply='uv run --project $(pwd) apply'" >> ~/.zshrc   # or ~/.bashrc
 ## Make it yours
 
 Nothing about your search is tracked by git. Every file below is gitignored.
-`apply setup` writes `profile.yaml` from your answers and `search.yaml` from
-the city among them, and copies the other two from the `*.example.yaml` that
+`apply setup` drafts `profile.yaml` and `search.yaml` from your documents and
+answers (`--quick` writes them from nine answers instead), and copies the other two from the `*.example.yaml` that
 ships beside each one.
 
 | File | Holds |
@@ -509,9 +558,12 @@ supervises the machine:
 | macOS | a launchd agent, `apply.daily` | `out/run.log` |
 | Linux with systemd | a user timer, `apply.timer` and `apply.service` | `journalctl --user -u apply.service` |
 | Linux without systemd | one cron line, marked `# apply` | `out/run.log`, where the line redirects |
+| Windows | a Task Scheduler task, `APPLY daily run`, under your own login | `out\run.log` and `out\run.err` |
 
-launchd and the systemd timer both catch up a run missed while the machine was
-off; cron does not. `apply schedule --show` prints the file that would be
+launchd, the systemd timer and the Windows task (it starts when available) all
+catch up a run missed while the machine was off; cron does not. The Windows task
+runs as you, with your interactive token, so Credential Manager is readable and
+no password is stored. `apply schedule --show` prints the file that would be
 written and writes nothing, `--remove` takes it out again, and a cron removal
 never touches a line without the marker.
 
@@ -520,7 +572,8 @@ Whoever calls it, it never:
 - moves an application past `generated`
 - regenerates something that already has documents
 - spends past the ledger's ceilings
-- does anything at all while `data/HALT` exists
+- does anything at all while `data/HALT` exists (`touch data/HALT`; on Windows,
+  `type nul > data\HALT`)
 
 When an employer is down, a letter fails to compile or the mailbox is
 unreachable, it records the problem and moves on. A run that half-worked beats
@@ -530,13 +583,12 @@ A quiet run sends no notification. A system that pings every morning to say it
 found nothing gets muted within a fortnight, and then the morning it matters,
 nobody sees it. It interrupts only when something is ready, needs reading,
 closes within seven days, or broke — a desktop banner through `osascript` on
-macOS or `notify-send` on Linux. `out/LATEST_RUN.md` is written either way, and
+macOS, `notify-send` on Linux or a PowerShell toast on Windows. `out/LATEST_RUN.md` is written either way, and
 setting `notify.ntfy_topic` adds a push to your phone.
 
 Secrets are looked up in one order on every platform: the environment, then the
-macOS Keychain, then a Secret Service keyring through `keyring` if you happen to
-have it installed — it is reached by `find_spec` and is not a dependency of this
-project. The scheduled run is why the store lookups exist at all. A systemd
+OS credential store through `keyring` — Windows Credential Manager, the macOS
+Keychain, or a Secret Service. The scheduled run is why the store lookups exist at all. A systemd
 timer and a cron line start a shell that reads no profile of yours whatsoever;
 the launchd agent runs `zsh -lc`, which reads `~/.zprofile` but not `~/.zshrc`,
 where an `export` usually lives. Either way the variable you exported in a
@@ -601,7 +653,7 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply schedule [--show \| --install \| --remove] [--at HH:MM]` | the morning job: launchd, a systemd user timer, or cron |
 | `apply runs` | what past runs did |
 | **Upkeep** | |
-| `apply setup [--quick \| --persona] [--step S]` | guided setup from your resume and goals; `--quick` without an API key |
+| `apply setup [--quick \| --persona] [--step S]` | guided setup from your resume and goals; `--quick` without an API key, `--persona` the example person, `--force` only with those |
 | `apply doctor` | what's missing |
 | `apply init` · `apply seed` · `apply rm <slug>` | create the database, load examples, delete |
 
@@ -621,11 +673,13 @@ src/apply/discover.py         polling, alert ingestion, deduplication
 src/apply/writer.py           the write, audit and revise loop
 src/apply/generate.py         lint, typesetting, PDFs
 src/apply/secrets.py          where a secret comes from, in one order
-src/apply/schedule.py         launchd, systemd user timer, cron
+src/apply/schedule.py         launchd, systemd user timer, cron, Task Scheduler
 src/apply/run.py              the unattended pass
 src/apply/outbound.py         every host the system may reach, and why
 templates/letters|resumes/    LaTeX, one letter template per track
 templates/web/                the dashboard
+scripts/install.ps1, .sh      first-run installers: toolchain, uv sync, apply setup
+AGENTS.md                     the rules, for Cursor and other agents
 tools/numbers.py              every figure this README quotes
 tools/synthesize_corpus.py    writes the frozen scoring corpus the tests assert
 tools/freeze_scores.py        writes the owner's own corpus, which stays local

@@ -253,7 +253,7 @@ class Profile:
             f"{problem} Write it in {where} as education[0].grad_expected: "
             f"{GRAD_SHAPE}. The gate derives your class standing and the "
             f"graduation window a posting asks for from that one value, so it "
-            f"cannot run without it. `apply setup --force` will ask again."
+            "cannot run without it. `apply setup` will ask again."
         )
 
     @cached_property

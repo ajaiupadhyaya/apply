@@ -83,3 +83,12 @@ def test_cli_makes_a_cp1252_stdout_utf8(monkeypatch):
     cli.console.print("✓ —")
     fake.flush()
     assert "✓ —".encode("utf-8") in raw.getvalue()
+
+
+def test_docs_point_new_users_at_setup_on_every_os():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    assert "## Start here" in readme
+    assert "scripts\\install.ps1" in readme and "scripts/install.sh" in readme
+    assert "Windows" in readme and "Task Scheduler" in readme
+    assert "apply setup" in agents and "uv run" in agents and "Never" in agents

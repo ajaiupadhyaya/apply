@@ -52,12 +52,12 @@ matters.
 | 5 | `"research analyst" OR "research assistant" OR economist OR econometrics` | New York City Metropolitan Area | Entry level |
 | 6 | `"risk analyst" OR "credit analyst" OR "investment analyst" OR "portfolio analyst"` | New York City Metropolitan Area | Entry level |
 | 7 | `(predoctoral OR "pre-doctoral" OR "research assistant") AND (economics OR finance)` | United States | Internship, Entry level |
-| 8 | `(finance OR investment OR research) AND (intern OR "part-time")` | Richmond, Virginia | Internship, Part-time |
+| 8 | `(finance OR investment OR research) AND (intern OR "part-time")` | Springfield, Illinois | Internship, Part-time |
 | 9 | `("business analyst" OR "strategy analyst" OR "data analyst") NOT engineer` | New York City Metropolitan Area | Entry level |
 
 These mirror what the scorer rewarded for the search it was written for: New
 York first, finance and research roles, 2027 timing, pre-docs anywhere,
-term-time work near Richmond, and technology roles only on the analysis side of
+term-time work near Springfield, and technology roles only on the analysis side of
 the line. `apply search` prints what your own gate is looking for; matching the
 two is the point.
 

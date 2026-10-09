@@ -30,7 +30,7 @@ from . import extract
 STEPS = ("toolchain", "key", "about", "documents", "draft", "review", "employers", "extras", "finish")
 
 #: Setup may redraft several times (redo with a note), so its run ceiling is
-#: higher than a nightly run's. The per-call ceiling is draft.request's business.
+#: higher than a nightly run's. The per-call ceiling is draft.propose's business.
 SETUP_PER_RUN_USD = 5.00
 
 
