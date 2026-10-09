@@ -41,6 +41,10 @@ def test_export_builds_a_clean_single_commit_repo(tmp_path):
     assert len(log.stdout.strip().splitlines()) == 1
     files = [p for p in target.rglob("*") if p.is_file() and ".git" not in p.parts]
     assert export["biography_in"](files) == []
+    for owner_only in export["EXCLUDE_FILES"]:
+        assert owner_only not in copied
+        assert not (target / owner_only).exists()
+    assert export["EXCLUDE_FILES"] == ("scripts/export_starter.py", "tests/test_export.py")
 
 
 def _hit(tmp_path, text):

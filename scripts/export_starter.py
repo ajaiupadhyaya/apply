@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Iterable
 
 EXCLUDE_PREFIXES = ("docs/superpowers/", ".reviews/")
+#: Owner-only tooling: it holds the owner's identifiers as literals, so it never ships.
+EXCLUDE_FILES = ("scripts/export_starter.py", "tests/test_export.py")
 #: Identifiers that embed the owner's name (email local parts, username, home
 #: path, handle-prefixed tokens): matched as substrings, so "ajaiupad@..." hits.
 COMPOUND = ("ajai", "upadhyaya", "ajaiupad", "upadhyayaak", "ajaiupadhyaya", "ohcamel")
@@ -41,8 +43,8 @@ def biography_in(paths: Iterable[Path], skipped: list[Path] | None = None) -> li
     and are appended to `skipped` when a list is given."""
     hits = []
     for path in paths:
-        if path.name in ("export_starter.py", "test_setup.py", "test_export.py"):
-            continue                       # the files that hold the list itself
+        if path.name in ("test_setup.py",):
+            continue                       # holds the older AUTHORS_BIOGRAPHY list, and ships
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
@@ -63,7 +65,7 @@ def export(target: Path, repo: Path) -> list[str]:
         raise SystemExit(f"{target} is not empty")
     listed = subprocess.run(["git", "ls-files", "-z"], cwd=repo, capture_output=True, check=True)
     names = [n for n in listed.stdout.decode("utf-8").split("\0")
-             if n and not n.startswith(EXCLUDE_PREFIXES)]
+             if n and not n.startswith(EXCLUDE_PREFIXES) and n not in EXCLUDE_FILES]
     skipped: list[Path] = []
     hits = biography_in((repo / n for n in names), skipped)
     for path in skipped:
