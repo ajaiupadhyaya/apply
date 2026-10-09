@@ -7,6 +7,8 @@ import runpy
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[1]
 export = runpy.run_path(str(REPO / "scripts" / "export_starter.py"))
 
@@ -39,3 +41,32 @@ def test_export_builds_a_clean_single_commit_repo(tmp_path):
     assert len(log.stdout.strip().splitlines()) == 1
     files = [p for p in target.rglob("*") if p.is_file() and ".git" not in p.parts]
     assert export["biography_in"](files) == []
+
+
+def _hit(tmp_path, text):
+    f = tmp_path / "f.txt"
+    f.write_text(text, encoding="utf-8")
+    return export["biography_in"]([f])
+
+
+def test_compound_identifiers_and_loose_attribution_are_flagged(tmp_path):
+    for text in ("mail ajaiupad@gmail.com", "user ajaiupadhyaya home", "ajaiupadhyayaak",
+                 "/Users/ajaiupadhyaya/x", "ohcamel_x", "github.com/ajaiupadhyaya/other",
+                 "Copyright (c) 2026 Ajai Upadhyaya, VCU",
+                 "@namespace https://github.com/ajaiupadhyaya ajaiupad@x.com"):
+        assert _hit(tmp_path, text), text
+
+
+def test_only_the_exact_attribution_strings_pass(tmp_path):
+    for text in export["ALLOWED_STRINGS"]:
+        assert _hit(tmp_path, text) == [], text
+
+
+def test_export_refuses_a_tracked_biography(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.txt").write_text("I studied at VCU\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "a.txt"], cwd=repo, check=True)
+    with pytest.raises(SystemExit):
+        export["export"](tmp_path / "out", repo)
