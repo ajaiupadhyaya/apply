@@ -26,7 +26,8 @@ from rich.text import Text
 
 from . import (budget as budget_mod, db, digest as digest_mod,
                discover as discover_mod, generate, notify as notify_mod,
-               resolve as resolve_mod, run as run_mod, schedule as schedule_mod)
+               resolve as resolve_mod, run as run_mod, schedule as schedule_mod,
+               stats as stats_mod)
 from .models import Posting, Status, Track, TransitionError, slugify
 from .parse import parse as parse_jd
 from .profile import ASK, Profile, ProfileError, data_dir
@@ -258,7 +259,16 @@ def add(
         console.print(f"[dim]Wrong? apply gen {posting.slug} --track <other>[/]")
     for note in parsed.notes:
         console.print(f"  [yellow]•[/] {note}")
+    _warn_host(posting)
     console.print(f"\nNext: [bold]apply gen {posting.slug}[/]")
+
+
+def _warn_host(posting: Posting) -> None:
+    verdict = resolve_mod.host_check(posting.source_url, posting.company)
+    if verdict and verdict[0] == "unverified":
+        console.print(f"  [bold yellow]⚠ unverified source host:[/] {verdict[1]} is neither "
+                      f"a known job board nor {posting.company}'s own domain. Confirm the "
+                      f"firm and the link are real before writing a letter.")
 
 
 def _read_jd(file, stdin, clipboard, url) -> tuple[str, str | None]:
@@ -581,7 +591,7 @@ def show(slug: str, jd: bool = typer.Option(False, "--jd", help="Print the full 
         f"priority   {posting.priority}\n"
         f"reviewed   {application.reviewed_at or '—'}\n"
         f"submitted  {application.submitted_at or '—'}\n"
-        f"url        {posting.source_url or '—'}",
+        f"url        {posting.source_url or '—'}{_host_label(posting)}",
         title=posting.slug, border_style="blue",
     ))
 
@@ -589,6 +599,21 @@ def show(slug: str, jd: bool = typer.Option(False, "--jd", help="Print the full 
                          ("resume", application.resume_path),
                          ("fieldpack", application.fieldpack_path)):
         console.print(f"  {label:10} {value or '—'}")
+
+    ats_json = generate.out_dir() / posting.slug / "ats.json"
+    if ats_json.exists():
+        record = json.loads(ats_json.read_text())
+        cov = record.get("coverage") or {}
+        console.print("\n[bold]What an ATS sees[/]")
+        for problem in record.get("problems") or []:
+            console.print(f"  [bold red]✗[/] {problem}")
+        if not record.get("problems"):
+            console.print("  [green]✓[/] text layer clean: contact details, dates, no garbled glyphs")
+        for label, key, style in (("on resume", "covered", "green"),
+                                  ("you have, resume omits", "unused", "yellow"),
+                                  ("gap", "gaps", "red")):
+            if cov.get(key):
+                console.print(f"  [{style}]{label:22}[/] {', '.join(cov[key])}")
 
     anchors = generate.jd_anchors(posting.jd_raw, posting.company, posting.role, posting.location)
     if anchors:
@@ -611,6 +636,16 @@ def show(slug: str, jd: bool = typer.Option(False, "--jd", help="Print the full 
     if jd:
         console.print("\n[bold]Job description[/]\n")
         console.print(posting.jd_raw)
+
+
+def _host_label(posting: Posting) -> str:
+    verdict = resolve_mod.host_check(posting.source_url, posting.company)
+    if verdict is None:
+        return ""
+    kind, name = verdict
+    if kind == "unverified":
+        return "  [bold yellow]⚠ unverified host[/]"
+    return f"  [dim]({name if kind == 'ats' else 'employer site'})[/]"
 
 
 # ------------------------------------------------------- review and submit
@@ -756,6 +791,66 @@ def digest(
     """Deadlines, follow-ups, and stale drafts."""
     conn = _conn()
     digest_mod.render(conn, console, horizon=days)
+
+
+@app.command()
+def stats() -> None:
+    """The funnel by channel: submitted, answered, interviewed, offered."""
+    conn = _conn()
+    rows = stats_mod.funnel(conn)
+    if not rows:
+        console.print("[dim]nothing submitted yet. The funnel starts at `apply submit`.[/]")
+        return
+
+    def pct(n: int, d: int) -> str:
+        return f"{n}  [dim]{n / d:.0%}[/]" if d else "—"
+
+    table = Table(header_style="dim", box=None, padding=(0, 2))
+    for col, justify in (("channel", "left"), ("submitted", "right"), ("answered", "right"),
+                         ("interviewed", "right"), ("offer", "right"),
+                         ("median days to answer", "right")):
+        table.add_column(col, justify=justify)
+    for f in rows:
+        median = f"{f.median_days:g}" if f.median_days is not None else "—"
+        table.add_row(f"[bold]{f.channel}[/]" if f.channel == "all" else f.channel,
+                      str(f.submitted), pct(f.responded, f.submitted),
+                      pct(f.interviewed, f.submitted), pct(f.offers, f.submitted), median)
+    console.print(table)
+    console.print("[dim]Stages count as reached: an interview that ended in a rejection "
+                  "still counts as an interview. `answered` includes rejections.[/]")
+
+
+@app.command()
+def gaps(
+    top: int = typer.Option(15, "--top"),
+    pursue_only: bool = typer.Option(False, "--pursue-only",
+                                     help="Ignore postings the scorer only rated `maybe`."),
+) -> None:
+    """Skills your live postings ask for that your profile never mentions.
+
+    Free and deterministic. A gap here is something to learn or to address
+    honestly in a letter — never a word to add to the resume.
+    """
+    from collections import Counter
+
+    from .context import sourced_text
+
+    conn = _conn()
+    found = stats_mod.gaps(conn, sourced_text(_profile()), include_maybe=not pursue_only)
+    if not found:
+        console.print("[green]✓[/] every named skill in your live postings is in your sources.")
+        return
+    table = Table(header_style="dim", box=None, padding=(0, 2))
+    table.add_column("skill"); table.add_column("postings", justify="right")
+    table.add_column("asked for by")
+    for g in found[:top]:
+        firms = Counter(g.firms).most_common()
+        sample = ", ".join(f"{name} ×{n}" if n > 1 else name for name, n in firms[:4])
+        table.add_row(g.term, str(len(g.postings)),
+                      sample + (f", +{len(firms) - 4} more" if len(firms) > 4 else ""))
+    console.print(table)
+    console.print("[dim]Already have one of these? Add it to profile.yaml or data/context/ "
+                  "with the evidence, and it stops being a gap.[/]")
 
 
 @app.command(name="open")

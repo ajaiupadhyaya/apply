@@ -589,7 +589,9 @@ def _resume_context(profile: Profile) -> tuple[dict, list[str]]:
                 f"experience[{i}].start is still ASK — the resume will show "
                 f"\"{end or 'Present'}\" with no start date"
             )
-        dates = " \u2013 ".join(d for d in (start, end) if d) or None
+        # An ASCII hyphen, not the en-dash: an ATS that splits a range on
+        # U+002D only drops the dates of an en-dashed one (see ats.py).
+        dates = " - ".join(d for d in (start, end) if d) or None
         experience.append({
             "org": x.get("org", ""), "title": x.get("title", ""),
             "location": x.get("location"), "dates": dates,
@@ -740,6 +742,7 @@ class Artifacts:
     warnings: list[str] = field(default_factory=list)
     source: str = "api"          # api | body.md | prompt
     written: object | None = None
+    ats: object | None = None     # ats.Report, when a resume was built
 
     @property
     def ok(self) -> bool:
@@ -816,6 +819,19 @@ def _clear_pdfs(directory: Path) -> None:
         for stale in directory.glob(f"*_{kind}_*.pdf"):
             stale.unlink(missing_ok=True)
     (directory / "cover_letter.pdf").unlink(missing_ok=True)
+
+
+def _ats_check(profile: Profile, posting: Posting, resume: Path, directory: Path):
+    """Read the resume the way an ATS does; record what it found in ats.json."""
+    import json
+
+    from . import ats
+    from .context import sourced_text
+
+    report = ats.check(resume, jd=posting.jd_raw, sources=sourced_text(profile),
+                       email=profile.email or None, phone=profile.phone)
+    (directory / "ats.json").write_text(json.dumps(report.as_record(), indent=2) + "\n")
+    return report
 
 
 def build(
@@ -922,6 +938,8 @@ def build(
         compile_pdf(artifacts.resume_tex, max_pages=1).replace(target)
         artifacts.resume_pdf = target
         _sweep(directory, keep=target, kind="Resume")
+        artifacts.ats = _ats_check(profile, posting, target, directory)
+        artifacts.warnings += artifacts.ats.notes()
 
     artifacts.fieldpack = fieldpack_mod.write(
         profile, posting, directory,

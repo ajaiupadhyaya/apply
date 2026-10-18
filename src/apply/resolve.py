@@ -112,3 +112,55 @@ def resolve(url: str, *, check: bool = True, name: str = "probe") -> list[tuple[
     if not check:
         return [(c, None) for c in found]
     return [(c, verify(c, name) if c.supported else None) for c in found]
+
+
+# ------------------------------------------------------ is this host real?
+
+#: apex -> what it is. A posting's link is trusted when its host IS one of these
+#: or a subdomain of one; nothing looser. `evil-greenhouse.io`,
+#: `boards.greenhouse.io.evil.com` and `https://greenhouse.io@evil.com/` all fail.
+KNOWN_HOSTS: dict[str, str] = {
+    "greenhouse.io": "greenhouse", "lever.co": "lever", "ashbyhq.com": "ashby",
+    "myworkdayjobs.com": "workday", "myworkdaysite.com": "workday",
+    "workday.com": "workday", "icims.com": "icims",
+    "smartrecruiters.com": "smartrecruiters", "workable.com": "workable",
+    "taleo.net": "taleo", "oraclecloud.com": "oracle", "eightfold.ai": "eightfold",
+    "phenompeople.com": "phenom", "jobvite.com": "jobvite",
+    "successfactors.com": "successfactors", "successfactors.eu": "successfactors",
+    "linkedin.com": "linkedin", "joinhandshake.com": "handshake",
+    "indeed.com": "indeed", "efinancialcareers.com": "efinancialcareers",
+}
+
+
+def _squash(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def host_check(url: str | None, company: str | None = None) -> tuple[str, str] | None:
+    """('ats', name) | ('employer', host) | ('unverified', host); None without a URL.
+
+    Adapted from ai-job-search's source-host step. A host that is neither a
+    known job board nor plausibly the employer's own domain is named plainly so
+    the owner verifies the firm before spending a letter on it: fake postings
+    for finance internships are a known lure.
+    """
+    from urllib.parse import urlparse
+
+    if not url:
+        return None
+    host = (urlparse(url if "//" in url else f"//{url}").hostname or "").lower().rstrip(".")
+    if not host:
+        return ("unverified", url)
+    for apex, name in KNOWN_HOSTS.items():
+        if host == apex or host.endswith("." + apex):
+            return ("ats", name)
+    if company:
+        # "careers.janestreet.com" for Jane Street. The registrable label must BE
+        # the firm's name, not contain it: "citadel-careers.xyz" is the lure.
+        labels = host.split(".")
+        registrable = labels[-2] if len(labels) >= 2 else host
+        words = [w for w in re.findall(r"[a-z0-9]+", company.lower())
+                 if w not in {"the", "and", "of", "group", "inc", "llc", "lp", "co"}]
+        if words and registrable in {"".join(words), words[0], "".join(words[:2])}:
+            return ("employer", host)
+    return ("unverified", host)
