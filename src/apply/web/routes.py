@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .. import db, digest as digest_mod, generate, host, search as search_mod
-from ..models import Status, Track, TransitionError
+from ..models import CLOSED, Status, Track, TransitionError
 from ..parse import parse as parse_jd
 from ..profile import Profile
 
@@ -27,7 +27,8 @@ router = APIRouter()
 BASE = Path(__file__).resolve().parents[3]
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 
-MARKABLE = ["acknowledged", "assessment", "interviewing", "offer", "rejected", "withdrawn"]
+MARKABLE = ["acknowledged", "assessment", "interviewing", "offer", "rejected", "withdrawn",
+            "no_response"]
 
 
 def _context(page: str, **extra) -> dict:
@@ -47,7 +48,7 @@ def _flash(slug: str, message: str, ok: bool = True) -> RedirectResponse:
 def pipeline(request: Request, track: str | None = None):
     conn = db.connect()
     rows = [r for r in db.rows(conn)
-            if r.application.status not in ("rejected", "withdrawn")
+            if r.application.status not in CLOSED
             and not digest_mod.screened_out(r)]
     by_track = {t: sum(1 for r in rows if r.posting.track == t)
                 for t in (s.name for s in search_mod.load().tracks)}

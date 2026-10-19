@@ -28,7 +28,7 @@ from . import (budget as budget_mod, db, digest as digest_mod,
                discover as discover_mod, generate, host, notify as notify_mod,
                resolve as resolve_mod, run as run_mod, schedule as schedule_mod,
                stats as stats_mod)
-from .models import Posting, Status, Track, TransitionError
+from .models import CLOSED, Posting, Status, Track, TransitionError
 from .parse import parse as parse_jd
 from .profile import Profile, ProfileError, data_dir
 
@@ -200,7 +200,7 @@ STATUS_STYLE = {
     "draft": "dim", "generated": "yellow", "ready": "bold green",
     "submitted": "cyan", "acknowledged": "cyan", "assessment": "magenta",
     "interviewing": "bold magenta", "offer": "bold green",
-    "rejected": "dim red", "withdrawn": "dim",
+    "rejected": "dim red", "withdrawn": "dim", "no_response": "dim",
 }
 
 
@@ -935,11 +935,12 @@ def submit(
 
 @app.command()
 def mark(slug: str, status: str, note: Optional[str] = typer.Option(None, "--note")) -> None:
-    """Record what happened after you submitted: ack, assessment, interviewing, offer, rejected, withdrawn."""
+    """Record what happened after you submitted: ack, assessment, interviewing, offer, rejected, withdrawn, no_response."""
     conn = _conn()
     row = _row(conn, slug)
     aliases = {"ack": Status.ACKNOWLEDGED, "oa": Status.ASSESSMENT,
-               "interview": Status.INTERVIEWING, "reject": Status.REJECTED}
+               "interview": Status.INTERVIEWING, "reject": Status.REJECTED,
+               "ghosted": Status.NO_RESPONSE, "no-response": Status.NO_RESPONSE}
     target = aliases.get(status.lower())
     if target is None:
         try:
@@ -968,7 +969,7 @@ def status(
     conn = _conn()
     rows = db.rows(conn)
     if not all_rows:
-        rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")
+        rows = [r for r in rows if r.application.status not in CLOSED
                 and not digest_mod.screened_out(r)]
     if track:
         try:

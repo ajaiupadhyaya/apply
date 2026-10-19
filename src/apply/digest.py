@@ -17,6 +17,9 @@ from .models import Row, Status
 STALE_DAYS = 5
 #: Submitted this long ago with no reply is worth a nudge.
 SILENT_DAYS = 14
+#: Quiet this long, it has almost certainly been ghosted: say so, and say how
+#: to close it, so the open pipeline stops carrying it.
+GHOSTED_DAYS = 60
 #: The deadline horizon the digest cares about.
 HORIZON_DAYS = 14
 
@@ -85,6 +88,7 @@ class Digest:
     followups: list[tuple] = field(default_factory=list)
     stale: list[Row] = field(default_factory=list)
     silent: list[Row] = field(default_factory=list)
+    ghosted: list[Row] = field(default_factory=list)
     unverified: list[Row] = field(default_factory=list)
     beyond: list[Row] = field(default_factory=list)
     tracks: dict[str, int] = field(default_factory=dict)
@@ -92,7 +96,8 @@ class Digest:
     @property
     def empty(self) -> bool:
         return not any((self.deadlines, self.overdue, self.followups,
-                        self.stale, self.silent, self.unverified, self.beyond))
+                        self.stale, self.silent, self.ghosted, self.unverified,
+                        self.beyond))
 
 
 def build(conn: sqlite3.Connection, horizon: int = HORIZON_DAYS) -> Digest:
@@ -122,9 +127,12 @@ def build(conn: sqlite3.Connection, horizon: int = HORIZON_DAYS) -> Digest:
             if age is not None and age >= STALE_DAYS:
                 result.stale.append(row)
 
-        if row.application.status == Status.SUBMITTED.value:
+        if row.application.status in (Status.SUBMITTED.value, Status.ACKNOWLEDGED.value):
             age = _age_days(row.application.submitted_at)
-            if age is not None and age >= SILENT_DAYS:
+            if age is not None and age >= GHOSTED_DAYS:
+                result.ghosted.append(row)
+            elif (age is not None and age >= SILENT_DAYS
+                  and row.application.status == Status.SUBMITTED.value):
                 result.silent.append(row)
 
     for row in rows:
@@ -201,6 +209,11 @@ def render(conn: sqlite3.Connection, console, horizon: int = HORIZON_DAYS) -> No
             lambda r: named(r, f"  [dim]({esc(r.application.status)})[/]"))
 
     section(f"Submitted {SILENT_DAYS}+ days ago, no reply", d.silent,
+            lambda r: named(r, "  [dim]sent "
+                               f"{(r.application.submitted_at or '')[:10]}[/]"))
+
+    section(f"Quiet for {GHOSTED_DAYS}+ days — close it with "
+            "`apply mark <slug> no_response`", d.ghosted,
             lambda r: named(r, "  [dim]sent "
                                f"{(r.application.submitted_at or '')[:10]}[/]"))
 

@@ -333,6 +333,7 @@ _EVENT_FOR: dict[Status, EventKind] = {
     Status.OFFER: EventKind.OFFER,
     Status.REJECTED: EventKind.REJECT,
     Status.WITHDRAWN: EventKind.WITHDRAWN,
+    Status.NO_RESPONSE: EventKind.NO_RESPONSE,
 }
 
 
