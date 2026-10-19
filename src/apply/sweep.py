@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import time
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -48,6 +49,40 @@ _CLOSED_PHRASES = re.compile(
 class Result:
     state: str          # open | closed | unreachable
     reason: str = ""
+    url: str | None = None   # a working link, when the stored one was broken
+
+
+#: host -> [(tenant, site)], from the registry. Discovery used to store Workday
+#: links with no site in them; the registry is what knows the site.
+Sites = dict[str, list[tuple[str, str]]]
+
+_sleep = time.sleep
+#: The longest a Retry-After is honoured, in seconds.
+MAX_WAIT = 30
+
+
+def registry_sites() -> Sites:
+    from .discover import load_employers
+
+    sites: Sites = {}
+    for entry in load_employers():
+        if entry.get("ats") == "workday" and entry.get("host") and entry.get("site"):
+            sites.setdefault(entry["host"].rstrip("/"), []).append(
+                (str(entry.get("tenant") or ""), str(entry["site"])))
+    return sites
+
+
+def _patient(http: httpx.Client, url: str, **kwargs) -> httpx.Response:
+    """One GET; a 429 is waited out (Retry-After, at most MAX_WAIT) and asked once more."""
+    response = http.get(url, **kwargs)
+    if response.status_code == 429:
+        try:
+            wait = float(response.headers.get("Retry-After", "5"))
+        except ValueError:
+            wait = 5.0
+        _sleep(min(max(wait, 1.0), MAX_WAIT))
+        response = http.get(url, **kwargs)
+    return response
 
 
 def _client() -> httpx.Client:
@@ -65,17 +100,46 @@ def _redirected_up(original: httpx.URL, final: httpx.URL) -> bool:
     return before.startswith(after) or "error" in str(final.query).lower()
 
 
-def check(url: str, *, client: Callable[[], httpx.Client] = _client) -> Result:
-    from .sources.ats import workday_posting_state
+def _siteless(http: httpx.Client, url: str, sites: Sites) -> Result:
+    """A Workday link with no site: try each site the registry has for the host."""
+    from .sources import ats
+
+    host = httpx.URL(url).host or ""
+    candidates = sites.get(host, [])
+    if not candidates:
+        return Result("unreachable", "Workday link has no site, and the registry has "
+                                     "none for this host")
+    verdicts = []
+    for tenant, site in candidates:
+        fixed = ats.repaired_workday_url(url, tenant or host.split(".")[0], site)
+        state = ats.workday_posting_state(
+            http, fixed, get=lambda u: _patient(http, u, headers={"Accept": "application/json"}))
+        if state is None:
+            continue
+        if state[0] == "open":
+            return Result("open", "", fixed)
+        verdicts.append((state, fixed))
+    if verdicts and all(s[0] == "closed" for s, _ in verdicts):
+        (state, reason), fixed = verdicts[0]
+        return Result(state, reason, fixed)
+    return Result("unreachable", verdicts[0][0][1] if verdicts else "no Workday answer")
+
+
+def check(url: str, *, client: Callable[[], httpx.Client] = _client,
+          sites: Sites | None = None) -> Result:
+    from .sources import ats
 
     try:
         with client() as http:
             # A Workday job page is a JavaScript shell that loads whether or not
             # the job exists. Ask the API it renders from instead.
-            workday = workday_posting_state(http, url)
+            if ats.is_siteless_workday(url):
+                return _siteless(http, url, sites if sites is not None else registry_sites())
+            workday = ats.workday_posting_state(
+                http, url, get=lambda u: _patient(http, u, headers={"Accept": "application/json"}))
             if workday is not None:
                 return Result(*workday)
-            response = http.get(url)
+            response = _patient(http, url)
     except httpx.HTTPError as exc:
         return Result("unreachable", f"{type(exc).__name__}")
     if response.status_code in (404, 410):
@@ -106,6 +170,7 @@ class Report:
     closed: list[tuple[Row, Result]] = field(default_factory=list)
     unreachable: list[tuple[Row, Result]] = field(default_factory=list)
     reopened: list[Row] = field(default_factory=list)
+    repaired: list[Row] = field(default_factory=list)
 
 
 def candidates(conn: sqlite3.Connection) -> list[Row]:
@@ -118,9 +183,17 @@ def candidates(conn: sqlite3.Connection) -> list[Row]:
 def run(conn: sqlite3.Connection, *, dry_run: bool = False, limit: int | None = None,
         client: Callable[[], httpx.Client] = _client) -> Report:
     report = Report()
+    sites = registry_sites()
     for row in candidates(conn)[:limit]:
-        result = check(row.posting.source_url, client=client)
+        result = check(row.posting.source_url, client=client, sites=sites)
         report.checked += 1
+        if result.url and result.url != row.posting.source_url:
+            report.repaired.append(row)
+            if not dry_run:
+                row.posting.source_url = result.url
+                db.update_posting(conn, row.posting)
+                db.add_event(conn, row.application.id, "note",
+                             f"link repaired: the stored Workday link had no site ({result.url})")
         was_closed = closed_at_source(conn, row.application.id)
         if result.state == "closed":
             report.closed.append((row, result))

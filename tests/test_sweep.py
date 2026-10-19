@@ -143,3 +143,69 @@ def test_a_workday_posting_is_asked_of_workdays_own_api(status, body, expected):
     assert sweep.check(WD, client=_client(handler)).state == expected
     assert seen == ["https://blackrock.wd1.myworkdayjobs.com/wday/cxs/blackrock/"
                     "BlackRock_Professional/job/New-York-NY/Associate_R265121"]
+
+
+def test_a_shared_host_workday_link_is_asked_of_the_api():
+    from apply.sources.ats import workday_api_url
+
+    url = ("https://wd1.myworkdaysite.com/recruiting/wf/WellsFargoJobs/job/"
+           "SAINT-LOUIS-MO/Analyst_R-575207")
+    assert workday_api_url(url) == ("https://wd1.myworkdaysite.com/wday/cxs/wf/"
+                                    "WellsFargoJobs/job/SAINT-LOUIS-MO/Analyst_R-575207")
+
+
+SITELESS = "https://citi.wd5.myworkdayjobs.com/job/New-York/Wealth-Summer-Analyst_26994367"
+
+
+def test_a_siteless_link_takes_its_site_from_the_registry_and_is_repaired():
+    """Discovery used to store Workday links without the site; they 404 as pages
+    while the posting is live. The registry knows the site."""
+    from apply import sweep
+
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        if request.url.path == "/wday/cxs/citi/2/job/New-York/Wealth-Summer-Analyst_26994367":
+            return httpx.Response(200, json={"jobPostingInfo": {}})
+        return httpx.Response(404)
+
+    result = sweep.check(SITELESS, client=_client(handler),
+                         sites={"citi.wd5.myworkdayjobs.com": [("citi", "2")]})
+    assert result.state == "open"
+    assert result.url == "https://citi.wd5.myworkdayjobs.com/2/job/New-York/Wealth-Summer-Analyst_26994367"
+    assert "/job/New-York/Wealth-Summer-Analyst_26994367" not in seen      # never trusted the page
+
+
+def test_a_siteless_link_with_no_registry_entry_is_unreachable_not_closed():
+    from apply import sweep
+
+    result = sweep.check(SITELESS, client=_client(lambda r: httpx.Response(404)), sites={})
+    assert result.state == "unreachable"
+
+
+def test_the_sweep_repairs_the_stored_link_and_clears_a_false_closed(conn, ashcombe_jd, monkeypatch):
+    from apply import db, sweep
+
+    posting = posting_from(ashcombe_jd, source_url=SITELESS)
+    db.create_posting(conn, posting)
+    row = db.row_for(conn, posting.slug)
+    db.add_event(conn, row.application.id, sweep.CLOSED_EVENT, "HTTP 404")     # yesterday's mistake
+    monkeypatch.setattr(sweep, "registry_sites",
+                        lambda: {"citi.wd5.myworkdayjobs.com": [("citi", "2")]})
+
+    sweep.run(conn, client=_client(lambda r: httpx.Response(200, json={"jobPostingInfo": {}})))
+
+    assert db.row_for(conn, posting.slug).posting.source_url.startswith(
+        "https://citi.wd5.myworkdayjobs.com/2/job/")
+    assert not sweep.closed_at_source(conn, row.application.id)
+
+
+def test_a_rate_limited_page_is_asked_once_more(monkeypatch):
+    from apply import sweep
+
+    monkeypatch.setattr(sweep, "_sleep", lambda s: None)
+    answers = [httpx.Response(429, headers={"Retry-After": "2"}), httpx.Response(404)]
+    result = sweep.check("https://boards.greenhouse.io/x/jobs/1",
+                         client=_client(lambda r: answers.pop(0)))
+    assert result.state == "closed"

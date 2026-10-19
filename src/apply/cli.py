@@ -1238,6 +1238,9 @@ def sweep(
                       f"{esc(row.posting.role)}  [dim]{esc(result.reason)}[/]")
     for row in report.reopened:
         console.print(f"[green]open again[/]   {esc(row.posting.company)} — {esc(row.posting.role)}")
+    if report.repaired:
+        console.print(f"[cyan]{len(report.repaired)} Workday link(s) had no site in them and "
+                      + ("would be repaired" if dry_run else "were repaired") + "[/]")
     console.print(f"\n{report.checked} checked · [red]{len(report.closed)} closed[/] · "
                   f"[yellow]{len(report.unreachable)} unreachable[/]"
                   + ("  [dim](dry run: nothing recorded)[/]" if dry_run else ""))
