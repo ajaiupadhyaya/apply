@@ -35,7 +35,12 @@ _PATTERN = re.compile("|".join([*map(re.escape, COMPOUND),
 ALLOWED_STRINGS = ("Copyright (c) 2026 Ajai Upadhyaya",
                    "@namespace https://github.com/ajaiupadhyaya",
                    "github.com/ajaiupadhyaya/apply",
-                   "com.ajaiupadhyaya.apply")
+                   "com.ajaiupadhyaya.apply",
+                   # Tools a posting asks for, in the ATS vocabulary (src/apply/ats.py):
+                   # the exact entries only, so "interned at Bloomberg" is still caught.
+                   '"Bloomberg": r"bloomberg"',
+                   '"Morningstar": r"morningstar"',
+                   '"WRDS": r"wrds"')
 
 
 def biography_in(paths: Iterable[Path], skipped: list[Path] | None = None) -> list[str]:

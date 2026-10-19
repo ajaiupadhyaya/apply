@@ -66,6 +66,12 @@ def test_only_the_exact_attribution_strings_pass(tmp_path):
         assert _hit(tmp_path, text) == [], text
 
 
+def test_the_ats_vocabulary_entries_pass_but_the_words_alone_do_not(tmp_path):
+    assert _hit(tmp_path, '    "Bloomberg": r"bloomberg",') == []
+    for text in ("interned at Bloomberg", "Morningstar analyst", "WRDS access via school"):
+        assert _hit(tmp_path, text), text
+
+
 def test_export_refuses_a_tracked_biography(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
