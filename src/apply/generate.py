@@ -1024,7 +1024,7 @@ def _ats_check(profile: Profile, posting: Posting, resume: Path, directory: Path
 
     report = ats.check(resume, jd=posting.jd_raw, sources=sourced_text(profile),
                        email=profile.email or None, phone=profile.phone)
-    (directory / "ats.json").write_text(json.dumps(report.as_record(), indent=2) + "\n")
+    (directory / "ats.json").write_text(json.dumps(report.as_record(), indent=2) + "\n", encoding="utf-8")
     return report
 
 

@@ -808,7 +808,7 @@ def show(slug: str, jd: bool = typer.Option(False, "--jd", help="Print the full 
 
     ats_json = generate.out_dir() / posting.slug / "ats.json"
     if ats_json.exists():
-        record = json.loads(ats_json.read_text())
+        record = json.loads(ats_json.read_text(encoding="utf-8"))
         cov = record.get("coverage") or {}
         console.print("\n[bold]What an ATS sees[/]")
         for problem in record.get("problems") or []:

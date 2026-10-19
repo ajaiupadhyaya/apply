@@ -118,7 +118,7 @@ def test_the_built_resume_reads_clean(profile, tmp_path):
     from apply.generate import compile_pdf, render_resume
 
     tex = tmp_path / "resume_quant.tex"
-    tex.write_text(render_resume(profile, "resume_quant")[0])
+    tex.write_text(render_resume(profile, "resume_quant")[0], encoding="utf-8")
     pdf = compile_pdf(tex, max_pages=None)
     text = ats.extract(pdf)
     assert ats.non_ascii_date_ranges(text) == []
