@@ -269,9 +269,7 @@ class Workday:
                             seen[path] = RawPosting(
                                 employer=config["name"],
                                 title=job.get("title", ""),
-                                url=config.get("site_url", "").rstrip("/") + path
-                                    if config.get("site_url")
-                                    else f"https://{config['host']}{path}",
+                                url=workday_page_url(config, path),
                                 source=self.name,
                                 external_id=ids[0] if ids else path,
                                 location=job.get("locationsText") or (places[0] if places else None),
@@ -302,45 +300,97 @@ class Workday:
         posting.description = strip_html(info.get("jobDescription", "") or "")
         posting.posted_at = parse_date(info.get("startDate")) or posting.posted_at
         posting.deadline = parse_date(info.get("endDate")) or posting.deadline
-        if info.get("externalUrl"):
+        # Some tenants' externalUrl has no site in it either; keep the link
+        # fetch() built rather than trade a working one for a 404.
+        if info.get("externalUrl") and not is_siteless_workday(info["externalUrl"]):
             posting.url = info["externalUrl"]
         return posting
 
 
 _LOCALE = re.compile(r"[a-z]{2}-[A-Z]{2}")
+_SHARED_HOST = (".myworkdaysite.com",)
+_WORKDAY_HOSTS = (".myworkdayjobs.com", ".myworkdaysite.com")
 
 
-def workday_api_url(url: str) -> str | None:
-    """The cxs endpoint behind a Workday job page, or None if this is not one.
+def workday_page_url(config: dict, path: str) -> str:
+    """The page a person opens for a Workday posting.
 
-    https://<tenant>.wdN.myworkdayjobs.com/[en-US/]<site>/job/<loc>/<slug>
-      -> https://<tenant>.wdN.myworkdayjobs.com/wday/cxs/<tenant>/<site>/job/<loc>/<slug>
+    `externalPath` ("/job/<loc>/<slug>") carries no site, and a link without one
+    is a 404 in a browser. A tenant host takes the site as its first segment; a
+    shared host (wdN.myworkdaysite.com) serves every tenant under /recruiting/.
     """
+    if config.get("site_url"):
+        return config["site_url"].rstrip("/") + path
+    host = config["host"].rstrip("/")
+    if host.endswith(_SHARED_HOST):
+        return f"https://{host}/recruiting/{config['tenant']}/{config['site']}{path}"
+    return f"https://{host}/{config['site']}{path}"
+
+
+def _workday_parts(url: str) -> tuple[str, list[str]] | None:
     parsed = httpx.URL(url)
     host = parsed.host or ""
-    if not host.endswith((".myworkdayjobs.com", ".myworkdaysite.com")):
+    if not host.endswith(_WORKDAY_HOSTS):
         return None
     parts = [p for p in parsed.path.split("/") if p]
     if parts and _LOCALE.fullmatch(parts[0]):
         parts = parts[1:]
-    if len(parts) < 3 or parts[1] != "job" or parts[0] in ("wday",):
+    return host, parts
+
+
+def workday_api_url(url: str, site: str | None = None, tenant: str | None = None) -> str | None:
+    """The cxs endpoint behind a Workday job page, or None if it cannot be told.
+
+      https://<tenant>.wdN.myworkdayjobs.com/[en-US/]<site>/job/<loc>/<slug>
+      https://wdN.myworkdaysite.com/recruiting/<tenant>/<site>/job/<loc>/<slug>
+        -> https://<host>/wday/cxs/<tenant>/<site>/job/<loc>/<slug>
+
+    A link with no site in it ("/job/..." straight after the host) needs `site`
+    (and, on a shared host, `tenant`) from the registry; without them, None.
+    """
+    found = _workday_parts(url)
+    if found is None:
         return None
-    tenant = host.split(".")[0]
-    return f"https://{host}/wday/cxs/{tenant}/{parts[0]}/" + "/".join(parts[1:])
+    host, parts = found
+    if len(parts) >= 5 and parts[0] == "recruiting" and parts[3] == "job":
+        tenant_, site_, rest = parts[1], parts[2], parts[3:]
+    elif len(parts) >= 3 and parts[1] == "job" and parts[0] not in ("wday", "recruiting"):
+        tenant_, site_, rest = host.split(".")[0], parts[0], parts[1:]
+    elif len(parts) >= 2 and parts[0] == "job" and site:
+        tenant_ = tenant or host.split(".")[0]
+        site_, rest = site, parts
+    else:
+        return None
+    return f"https://{host}/wday/cxs/{tenant_}/{site_}/" + "/".join(rest)
 
 
-def workday_posting_state(client: httpx.Client, url: str) -> tuple[str, str] | None:
+def is_siteless_workday(url: str) -> bool:
+    found = _workday_parts(url)
+    return bool(found) and bool(found[1]) and found[1][0] == "job"
+
+
+def repaired_workday_url(url: str, tenant: str, site: str) -> str:
+    """A site-less link with its site put back, in the form discovery now writes."""
+    host, parts = _workday_parts(url)                       # type: ignore[misc]
+    return workday_page_url({"host": host, "tenant": tenant, "site": site},
+                            "/" + "/".join(parts))
+
+
+def workday_posting_state(client: httpx.Client, url: str,
+                          get=None) -> tuple[str, str] | None:
     """(state, reason) from Workday's own API, or None when `url` is not Workday.
 
     A live posting answers 200. A removed one answers 404, or 403 with Workday's
     error code S22 ("permission denied"): the requisition is no longer public.
-    A 403 without that code is an ordinary block and says nothing.
+    A 403 without that code is an ordinary block and says nothing. `get` is the
+    request to use (the sweep passes one that waits out a 429).
     """
     api = workday_api_url(url)
     if api is None:
         return None
+    get = get or (lambda u: client.get(u, headers={"Accept": "application/json"}))
     try:
-        response = client.get(api, headers={"Accept": "application/json"})
+        response = get(api)
     except httpx.HTTPError as exc:
         return "unreachable", type(exc).__name__
     if response.status_code == 200:

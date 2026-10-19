@@ -496,3 +496,38 @@ def test_a_tenant_with_no_bullets_at_all_falls_back_to_the_path(monkeypatch):
 
     assert got.external_id == "/job/New-York/Investment-Banking-Analyst_R-0012229"
     assert got.location == "2 Locations"
+
+
+def test_a_workday_link_carries_its_site(monkeypatch):
+    """externalPath has no site in it; a link without one is a 404 in a browser."""
+    mock(monkeypatch, workday_list([posting(locationsText="New York")]))
+
+    [got] = ADAPTERS["workday"].fetch(WORKDAY)
+
+    assert got.url == ("https://example.wd1.myworkdayjobs.com/Careers"
+                       "/job/New-York/Investment-Banking-Analyst_R-0012229")
+
+
+def test_a_shared_workday_host_links_through_recruiting(monkeypatch):
+    mock(monkeypatch, workday_list([posting(locationsText="New York")]))
+    shared = {**WORKDAY, "host": "wd1.myworkdaysite.com", "tenant": "wf", "site": "WellsFargoJobs"}
+
+    [got] = ADAPTERS["workday"].fetch(shared)
+
+    assert got.url == ("https://wd1.myworkdaysite.com/recruiting/wf/WellsFargoJobs"
+                       "/job/New-York/Investment-Banking-Analyst_R-0012229")
+
+
+def test_a_siteless_external_url_does_not_replace_a_working_link(monkeypatch):
+    from apply.sources.base import RawPosting
+
+    def handler(request):
+        return httpx.Response(200, json={"jobPostingInfo": {
+            "jobDescription": "<p>Work.</p>",
+            "externalUrl": "https://example.wd1.myworkdayjobs.com/job/New-York/X_R-1"}})
+    mock(monkeypatch, handler)
+    good = "https://example.wd1.myworkdayjobs.com/Careers/job/New-York/X_R-1"
+    raw = RawPosting(employer="Example Bank", title="Analyst", url=good, source="workday",
+                     raw={"_path": "/job/New-York/X_R-1"})
+
+    assert ADAPTERS["workday"].hydrate(raw, WORKDAY).url == good
