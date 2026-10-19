@@ -4,8 +4,8 @@ A Next.js site renders from a JSON blob it embeds in the page as
 `<script id="__NEXT_DATA__">`. When a firm's careers page is built that way and
 has no job-board API behind it, the blob *is* the job board: the same records
 the page draws, public, in one GET. This reads that blob and nothing else — no
-link is followed, no second page is requested, nothing is sent. Check the
-firm's robots.txt before adding one; the page this was written for allows it.
+link is followed, no second page is requested, nothing is sent. The site's
+robots.txt is read first, and a page it disallows is never requested.
 
 The record shape (`displayName`, `jobDescription`, `jobMetadata.jobLocations`)
 is the one the firm this was written for uses. A firm with a different shape
@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.robotparser import RobotFileParser
 
 import httpx
 
@@ -31,6 +32,30 @@ _BLOB = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
 _EMPLOYEES_ONLY = re.compile(r"internal", re.I)
 
 
+def robots_allows(client: httpx.Client, url: str, user_agent: str) -> tuple[bool, str]:
+    """Whether the site's robots.txt lets `user_agent` read `url`, and if not, why.
+
+    RFC 9309: a robots.txt that does not exist (any 4xx) allows everything; one
+    that cannot be read (5xx, or no connection) allows nothing.
+    """
+    target = httpx.URL(url)
+    robots = str(target.copy_with(path="/robots.txt", query=None, fragment=None))
+    try:
+        response = client.get(robots)
+    except httpx.HTTPError as exc:
+        return False, f"{robots} could not be read ({type(exc).__name__}); not reading the page"
+    if 400 <= response.status_code < 500:
+        return True, ""
+    if response.status_code >= 500:
+        return False, f"{robots} answered {response.status_code}; not reading the page"
+    parser = RobotFileParser()
+    parser.parse(response.text.splitlines())
+    agent = user_agent.split("/")[0].split()[0]
+    if parser.can_fetch(agent, url):
+        return True, ""
+    return False, f"{robots} disallows {target.path}"
+
+
 class NextData:
     name = "nextdata"
     DEFAULT_LISTS = ("regularJobs", "internships")
@@ -39,6 +64,9 @@ class NextData:
         url = config["url"]
         try:
             with ats._client() as client:
+                allowed, why = robots_allows(client, url, ats.USER_AGENT)
+                if not allowed:
+                    raise SourceError(f"nextdata/{url}: {why}")
                 client.headers["Accept"] = "text/html"
                 page = _get(client, url).text
         except httpx.HTTPError as exc:

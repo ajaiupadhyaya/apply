@@ -91,11 +91,22 @@ class Candidate:
         return entry
 
 
-def fetch(url: str, timeout: float = 20.0) -> str:
-    response = httpx.get(url, timeout=timeout, follow_redirects=True,
-                         headers={"User-Agent": BROWSER_UA})
-    response.raise_for_status()
-    return response.text
+def _http(timeout: float = 20.0) -> httpx.Client:
+    return httpx.Client(timeout=timeout, follow_redirects=True,
+                        headers={"User-Agent": BROWSER_UA})
+
+
+def fetch(url: str) -> str:
+    """One careers page, if the site's robots.txt allows it to be read."""
+    from .sources.pages import robots_allows
+
+    with _http() as client:
+        allowed, why = robots_allows(client, url, BROWSER_UA)
+        if not allowed:
+            raise PermissionError(why)
+        response = client.get(url)
+        response.raise_for_status()
+        return response.text
 
 
 def candidates(html: str) -> list[Candidate]:

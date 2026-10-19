@@ -304,6 +304,8 @@ def test_a_dropped_connection_does_not_lose_the_careers_page(monkeypatch):
     calls = {"n": 0}
 
     def flaky(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)          # none: everything is allowed
         calls["n"] += 1
         if calls["n"] == 1:
             raise httpx.ReadTimeout("dropped", request=request)
@@ -321,6 +323,8 @@ def test_a_careers_page_that_refuses_is_not_retried(monkeypatch):
     calls = {"n": 0}
 
     def forbidden(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
         calls["n"] += 1
         return httpx.Response(403)
     mock(monkeypatch, forbidden)
