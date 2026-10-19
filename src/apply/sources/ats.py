@@ -16,6 +16,8 @@ employer, set once, and no credential anywhere.
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from .. import __version__
@@ -303,6 +305,56 @@ class Workday:
         if info.get("externalUrl"):
             posting.url = info["externalUrl"]
         return posting
+
+
+_LOCALE = re.compile(r"[a-z]{2}-[A-Z]{2}")
+
+
+def workday_api_url(url: str) -> str | None:
+    """The cxs endpoint behind a Workday job page, or None if this is not one.
+
+    https://<tenant>.wdN.myworkdayjobs.com/[en-US/]<site>/job/<loc>/<slug>
+      -> https://<tenant>.wdN.myworkdayjobs.com/wday/cxs/<tenant>/<site>/job/<loc>/<slug>
+    """
+    parsed = httpx.URL(url)
+    host = parsed.host or ""
+    if not host.endswith((".myworkdayjobs.com", ".myworkdaysite.com")):
+        return None
+    parts = [p for p in parsed.path.split("/") if p]
+    if parts and _LOCALE.fullmatch(parts[0]):
+        parts = parts[1:]
+    if len(parts) < 3 or parts[1] != "job" or parts[0] in ("wday",):
+        return None
+    tenant = host.split(".")[0]
+    return f"https://{host}/wday/cxs/{tenant}/{parts[0]}/" + "/".join(parts[1:])
+
+
+def workday_posting_state(client: httpx.Client, url: str) -> tuple[str, str] | None:
+    """(state, reason) from Workday's own API, or None when `url` is not Workday.
+
+    A live posting answers 200. A removed one answers 404, or 403 with Workday's
+    error code S22 ("permission denied"): the requisition is no longer public.
+    A 403 without that code is an ordinary block and says nothing.
+    """
+    api = workday_api_url(url)
+    if api is None:
+        return None
+    try:
+        response = client.get(api, headers={"Accept": "application/json"})
+    except httpx.HTTPError as exc:
+        return "unreachable", type(exc).__name__
+    if response.status_code == 200:
+        return "open", ""
+    if response.status_code == 404:
+        return "closed", "Workday: no such posting (404)"
+    if response.status_code == 403:
+        try:
+            code = (response.json() or {}).get("errorCode")
+        except ValueError:
+            code = None
+        if code == "S22":
+            return "closed", "Workday: the posting is no longer public (403 S22)"
+    return "unreachable", f"Workday API {response.status_code}"
 
 
 # ----------------------------------------------------------------- oracle

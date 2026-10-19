@@ -66,8 +66,15 @@ def _redirected_up(original: httpx.URL, final: httpx.URL) -> bool:
 
 
 def check(url: str, *, client: Callable[[], httpx.Client] = _client) -> Result:
+    from .sources.ats import workday_posting_state
+
     try:
         with client() as http:
+            # A Workday job page is a JavaScript shell that loads whether or not
+            # the job exists. Ask the API it renders from instead.
+            workday = workday_posting_state(http, url)
+            if workday is not None:
+                return Result(*workday)
             response = http.get(url)
     except httpx.HTTPError as exc:
         return Result("unreachable", f"{type(exc).__name__}")

@@ -117,3 +117,29 @@ def test_show_says_a_posting_closed_at_the_source(conn, ashcombe_jd):
     sweep.run(conn, client=_client(lambda r: httpx.Response(410)))
     result = CliRunner().invoke(app, ["show", row.posting.slug], env={"COLUMNS": "200"})
     assert "closed at the source" in result.output and "HTTP 410" in result.output
+
+
+WD = ("https://blackrock.wd1.myworkdayjobs.com/en-US/BlackRock_Professional/job/"
+      "New-York-NY/Associate_R265121")
+
+
+@pytest.mark.parametrize("status,body,expected", [
+    (200, '{"jobPostingInfo": {"title": "Associate"}}', "open"),
+    (404, '{"errorCode": "S1"}', "closed"),
+    (403, '{"errorCode": "S22", "message": "permission denied"}', "closed"),
+    (403, "<html>blocked</html>", "unreachable"),
+])
+def test_a_workday_posting_is_asked_of_workdays_own_api(status, body, expected):
+    """A Workday job page is a JavaScript shell that loads whether or not the job
+    exists; the cxs API it renders from is the one that knows."""
+    from apply import sweep
+
+    seen = []
+
+    def handler(request):
+        seen.append(str(request.url))
+        return httpx.Response(status, text=body)
+
+    assert sweep.check(WD, client=_client(handler)).state == expected
+    assert seen == ["https://blackrock.wd1.myworkdayjobs.com/wday/cxs/blackrock/"
+                    "BlackRock_Professional/job/New-York-NY/Associate_R265121"]
