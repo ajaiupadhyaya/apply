@@ -1121,15 +1121,22 @@ def followup(
     action: Optional[str] = typer.Argument(None, help="What to do, e.g. 'email the recruiter'."),
     days: int = typer.Option(7, "--in", help="Days from today."),
     done: bool = typer.Option(False, "--done", help="Mark this posting's open follow-ups done."),
+    draft: bool = typer.Option(False, "--draft",
+                               help="Have Claude draft a short follow-up email. Never sent."),
+    to: Optional[str] = typer.Option(None, "--to", help="Who the draft is addressed to."),
 ) -> None:
-    """Queue a follow-up, or mark one done.
+    """Queue a follow-up, mark one done, or draft the note itself.
 
     `apply submit` queues one automatically for 14 days out. Without --done a
     reminder stays in the digest until it is dealt with, which is the point —
-    but it has to be possible to deal with it.
+    but it has to be possible to deal with it. --draft writes the email for
+    you to read and send yourself; APPLY never sends it.
     """
     conn = _conn()
     row = _row(conn, slug)
+    if draft:
+        _draft_followup(conn, row, to)
+        return
     if done:
         pending = db.followups(conn, row.application.id)
         if not pending:
@@ -1147,6 +1154,54 @@ def followup(
     due = _dt.date.today() + _dt.timedelta(days=days)
     db.add_followup(conn, row.application.id, due, action)
     console.print(f"[green]✓[/] {due}: {action}")
+
+
+#: Statuses where something was sent and a reply is owed.
+_CHASEABLE = {Status.SUBMITTED.value, Status.ACKNOWLEDGED.value,
+              Status.ASSESSMENT.value, Status.INTERVIEWING.value}
+
+
+def _draft_followup(conn, row, to: str | None) -> None:
+    from rich.markup import escape as esc
+
+    from . import followup as followup_mod
+
+    application, posting = row.application, row.posting
+    if application.status not in _CHASEABLE:
+        _fail(f"`{posting.slug}` is {application.status} and has not been submitted, or is "
+              "closed — there is no reply to chase.")
+    submitted = (application.submitted_at or "")[:10] or "an earlier date"
+    try:
+        quiet = (_dt.date.today() - _dt.date.fromisoformat(submitted)).days
+    except ValueError:
+        quiet = 0
+    earlier = sum(1 for e in db.events(conn, application.id)
+                  if "follow-up drafted" in (e.detail or ""))
+    profile = _profile()
+    budget = budget_mod.Budget(conn, caps=(profile.raw.get("budget") or {}))
+    try:
+        with console.status("Claude is drafting, then auditing…"):
+            result = followup_mod.draft(profile, posting, submitted_on=submitted,
+                                        days_quiet=quiet, earlier=earlier, to=to,
+                                        budget=budget)
+    except budget_mod.BudgetExceeded as exc:
+        _fail(str(exc))
+    if not result.ok:
+        for problem in result.problems:
+            console.print(f"  [bold red]✗[/] {esc(problem)}")
+        _fail(f"no follow-up drafted ({result.status}): {result.reason}")
+
+    text = followup_mod.text_of(result.note)
+    directory = generate.out_dir() / posting.slug
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"followup-{_dt.date.today().isoformat()}.md"
+    path.write_text(text + "\n", encoding="utf-8")
+    db.add_event(conn, application.id, "note", "follow-up drafted (not sent)")
+    console.print(Panel(esc(text), title="draft — read it, then send it yourself",
+                        border_style="cyan"))
+    if result.note.notes:
+        console.print(f"  [yellow]check[/] {esc(result.note.notes)}")
+    console.print(f"[green]✓[/] {path}")
 
 
 @app.command()
