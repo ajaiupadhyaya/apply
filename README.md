@@ -525,6 +525,25 @@ under `budget:` in `profile.private.yaml`). When a ceiling would be crossed, the
 call doesn't happen and the run carries on without that step. `apply spend`
 shows where it went.
 
+### What an ATS sees
+
+After the resume compiles, `gen` reads it back the way an applicant-tracking
+system does — the PDF's text layer, not the page — and writes `ats.json`.
+`apply show <slug>` prints it.
+
+- **Parse problems:** no text at all, `(cid:NN)` glyphs from a font with no
+  Unicode map, an email or phone that is not literal text, or a date range
+  joined by an en-dash. That last one is why resume dates now read
+  `Aug 2025 - Present`: some Workday imports split ranges on the ASCII hyphen
+  only and drop the dates of an en-dashed one.
+- **Keyword coverage:** each tool or method the posting names, sorted into on
+  the resume, *you have it but the resume omits it*, and a real gap. Gaps are
+  never added to the resume; the letter is where they get an honest bridge.
+
+Postings added by URL are also checked against known job boards and the firm's
+own domain. Anything else — including look-alikes such as
+`citadel-careers.xyz` — is flagged as an unverified host at `add` and in `show`.
+
 ---
 
 ## The human gate
@@ -648,6 +667,8 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply submit <slug>` | you submitted it: `ready → submitted` |
 | `apply mark <slug> <outcome>` | `ack`, `oa`, `interview`, `offer`, `reject`, `withdrawn` |
 | `apply followup <slug> "note" [--in N]` | queue a reminder; `--done` clears them |
+| `apply stats` | the funnel by channel: submitted, answered, interviewed, offered |
+| `apply gaps [--top N] [--pursue-only]` | skills your live postings ask for that your profile never mentions |
 | **Unattended** | |
 | `apply run [--dry-run] [--limit N] [--notify]` | one full pass |
 | `apply schedule [--show \| --install \| --remove] [--at HH:MM]` | the morning job: launchd, a systemd user timer, cron, or Task Scheduler on Windows |
