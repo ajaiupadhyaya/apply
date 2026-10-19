@@ -89,6 +89,7 @@ class Digest:
     stale: list[Row] = field(default_factory=list)
     silent: list[Row] = field(default_factory=list)
     ghosted: list[Row] = field(default_factory=list)
+    closed: list[Row] = field(default_factory=list)
     unverified: list[Row] = field(default_factory=list)
     beyond: list[Row] = field(default_factory=list)
     tracks: dict[str, int] = field(default_factory=dict)
@@ -96,8 +97,8 @@ class Digest:
     @property
     def empty(self) -> bool:
         return not any((self.deadlines, self.overdue, self.followups,
-                        self.stale, self.silent, self.ghosted, self.unverified,
-                        self.beyond))
+                        self.stale, self.silent, self.ghosted, self.closed,
+                        self.unverified, self.beyond))
 
 
 def build(conn: sqlite3.Connection, horizon: int = HORIZON_DAYS) -> Digest:
@@ -134,6 +135,11 @@ def build(conn: sqlite3.Connection, horizon: int = HORIZON_DAYS) -> Digest:
             elif (age is not None and age >= SILENT_DAYS
                   and row.application.status == Status.SUBMITTED.value):
                 result.silent.append(row)
+
+    from .sweep import SWEPT, closed_at_source
+
+    result.closed = [r for r in open_rows if r.application.status in SWEPT
+                     and closed_at_source(conn, r.application.id)]
 
     for row in rows:
         for f in db.followups(conn, row.application.id):
@@ -211,6 +217,9 @@ def render(conn: sqlite3.Connection, console, horizon: int = HORIZON_DAYS) -> No
     section(f"Submitted {SILENT_DAYS}+ days ago, no reply", d.silent,
             lambda r: named(r, "  [dim]sent "
                                f"{(r.application.submitted_at or '')[:10]}[/]"))
+
+    section("Closed at the source (`apply sweep`) — withdraw it with "
+            "`apply mark <slug> withdrawn`", d.closed, lambda r: f"[red]✗[/]  {named(r)}")
 
     section(f"Quiet for {GHOSTED_DAYS}+ days — close it with "
             "`apply mark <slug> no_response`", d.ghosted,

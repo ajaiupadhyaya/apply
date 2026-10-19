@@ -806,6 +806,12 @@ def show(slug: str, jd: bool = typer.Option(False, "--jd", help="Print the full 
                          ("fieldpack", application.fieldpack_path)):
         console.print(f"  {label:10} {value or '—'}")
 
+    from .sweep import closed_at_source
+
+    gone = closed_at_source(conn, application.id)
+    if gone:
+        console.print(f"  [bold red]closed at the source[/] [dim]({gone}; last `apply sweep`)[/]")
+
     ats_json = generate.out_dir() / posting.slug / "ats.json"
     if ats_json.exists():
         record = json.loads(ats_json.read_text(encoding="utf-8"))
@@ -1203,6 +1209,41 @@ def _draft_followup(conn, row, to: str | None) -> None:
     if result.note.notes:
         console.print(f"  [yellow]check[/] {esc(result.note.notes)}")
     console.print(f"[green]✓[/] {path}")
+
+
+@app.command()
+def sweep(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Check and report; record nothing."),
+    limit: Optional[int] = typer.Option(None, "--limit", help="Check at most N postings."),
+) -> None:
+    """Re-check each posting you have not sent yet: is it still open at the source?
+
+    Closed means positive evidence — 404/410, a redirect back to the board, or
+    the page saying so. It is recorded and shown in the digest; no status
+    changes. A blocked or slow page is unreachable, which tells you nothing.
+    """
+    from rich.markup import escape as esc
+
+    from . import sweep as sweep_mod
+
+    conn = _conn()
+    total = len(sweep_mod.candidates(conn))
+    with console.status(f"checking {min(total, limit or total)} posting(s) at the source…"):
+        report = sweep_mod.run(conn, dry_run=dry_run, limit=limit)
+    for row, result in report.closed:
+        console.print(f"[red]closed[/]       {esc(row.posting.company)} — {esc(row.posting.role)}"
+                      f"  [dim]{esc(result.reason)}[/]\n             [dim]{row.posting.slug}[/]")
+    for row, result in report.unreachable:
+        console.print(f"[yellow]unreachable[/]  {esc(row.posting.company)} — "
+                      f"{esc(row.posting.role)}  [dim]{esc(result.reason)}[/]")
+    for row in report.reopened:
+        console.print(f"[green]open again[/]   {esc(row.posting.company)} — {esc(row.posting.role)}")
+    console.print(f"\n{report.checked} checked · [red]{len(report.closed)} closed[/] · "
+                  f"[yellow]{len(report.unreachable)} unreachable[/]"
+                  + ("  [dim](dry run: nothing recorded)[/]" if dry_run else ""))
+    if report.closed and not dry_run:
+        console.print("Nothing was withdrawn. Withdraw a closed one with "
+                      "[bold]apply mark <slug> withdrawn[/].")
 
 
 @app.command()

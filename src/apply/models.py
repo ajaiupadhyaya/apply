@@ -156,6 +156,8 @@ class EventKind(str, Enum):
     REJECT = "reject"
     WITHDRAWN = "withdrawn"
     NO_RESPONSE = "no_response"
+    SOURCE_CLOSED = "source_closed"
+    SOURCE_OPEN = "source_open"
     NOTE = "note"
 
 

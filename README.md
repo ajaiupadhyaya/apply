@@ -651,6 +651,7 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply add --clipboard \| --stdin \| --file F \| --url U` | add one posting by hand; `--stdin` is the route on a machine with no clipboard |
 | `apply describe <slug> --clipboard \| --stdin \| --file F` | attach the full posting to a title-only one |
 | `apply rescore [--dry-run]` | run the gate again over filed drafts after it changes |
+| `apply sweep [--dry-run] [--limit N]` | re-check each posting you have not sent: closed at the source (404, a redirect back to the board, "no longer accepting") shows in the digest; no status changes |
 | `apply resolve <careers-url> --name N` | find a firm's job board and print its registry entry |
 | `apply targets` | the registry |
 | `apply search` | the gate's vocabulary, and which blocks `data/search.yaml` overrides |
