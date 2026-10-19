@@ -10,7 +10,6 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import time
-from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
@@ -20,12 +19,16 @@ from apply.score import Verdict, score
 from apply.sources import ADAPTERS, ats, pages
 from apply.sources.base import RawPosting, SourceError, parse_local_date
 
-EASTERN = ZoneInfo("America/New_York")
+#: Eastern daylight time, as a fixed offset: Windows ships no tz database, and
+#: ZoneInfo there needs the tzdata package. Every date below falls in EDT.
+EASTERN = _dt.timezone(_dt.timedelta(hours=-4), "EDT")
 
 
 @pytest.fixture
 def eastern(monkeypatch):
     """Run as if on a machine in the owner's timezone."""
+    if not hasattr(time, "tzset"):
+        pytest.skip("time.tzset is POSIX-only; the local zone cannot be changed here")
     monkeypatch.setenv("TZ", "America/New_York")
     time.tzset()
     yield
