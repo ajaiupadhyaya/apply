@@ -28,7 +28,7 @@ from . import (budget as budget_mod, db, digest as digest_mod,
                discover as discover_mod, generate, host, notify as notify_mod,
                resolve as resolve_mod, run as run_mod, schedule as schedule_mod,
                stats as stats_mod)
-from .models import Posting, Status, Track, TransitionError, slugify
+from .models import Posting, Status, Track, TransitionError
 from .parse import parse as parse_jd
 from .profile import Profile, ProfileError, data_dir
 
