@@ -15,7 +15,7 @@ import pytest
 from apply.score import Verdict, score
 from apply.sources.base import RawPosting
 
-FIXTURES = pathlib.Path(__file__).parent / "fixtures"
+FIXTURES = pathlib.Path(__file__).parents[1] / "data" / "examples"
 
 
 def make(title="Investment Analyst", location="New York, NY", body="", priority=1):
@@ -83,11 +83,11 @@ def test_required_advanced_degrees_are_rejected():
 def test_both_seed_postings_clear_the_pursue_bar():
     """If either of these stops being `pursue`, the weights have drifted."""
     cases = [
-        ("vcimco.txt", "Investment Intern", "Richmond, Virginia"),
-        ("blackrock.txt", "2027 Full-Time Analyst Program (AMRS)", "New York, NY"),
+        ("ashcombe.txt", "Investment Intern", "Hudson, New York"),
+        ("quillon.txt", "2027 Full-Time Analyst Program (Americas)", "New York, NY"),
     ]
     for name, title, location in cases:
-        body = (FIXTURES / name).read_text()
+        body = (FIXTURES / name).read_text(encoding="utf-8")
         result = score(make(title=title, location=location, body=body))
         assert result.verdict is Verdict.PURSUE, f"{name} fell to {result.value}"
 
@@ -126,7 +126,7 @@ def test_thresholds_are_configurable():
     "Freshman Insight Programme",
 ])
 def test_roles_scoped_to_another_class_year_are_rejected(title):
-    """The Federal Reserve alone runs nine separate sophomore programmes."""
+    """One employer can run a dozen separate sophomore programmes."""
     result = score(make(title=title), standing="senior")
     assert result.verdict is Verdict.REJECT
     assert result.rejected_by == "class year"

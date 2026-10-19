@@ -31,7 +31,7 @@ def test_describe_attaches_the_text_and_rescores(conn, tmp_path):
     assert discover._NO_DESCRIPTION in before.jd_raw
 
     source = tmp_path / "jd.txt"
-    source.write_text(FULL)
+    source.write_text(FULL, encoding="utf-8")
     result = CliRunner().invoke(app, ["describe", slug, "--file", str(source)])
     assert result.exit_code == 0, result.output
 
@@ -47,7 +47,7 @@ def test_describe_attaches_the_text_and_rescores(conn, tmp_path):
 def test_describe_refuses_something_too_short(conn, tmp_path):
     slug = _title_only(conn)
     source = tmp_path / "jd.txt"
-    source.write_text("Great job, apply now.")
+    source.write_text("Great job, apply now.", encoding="utf-8")
     result = CliRunner().invoke(app, ["describe", slug, "--file", str(source)])
     assert result.exit_code != 0
     assert discover._NO_DESCRIPTION in db.get_posting(conn, slug).jd_raw
@@ -57,7 +57,8 @@ def test_the_full_text_can_disqualify_what_the_title_did_not(conn, tmp_path):
     """The body is where the disqualifiers live."""
     slug = _title_only(conn, title="Investment Analyst")
     source = tmp_path / "jd.txt"
-    source.write_text("Investment Analyst in New York. We require 5+ years of relevant "
-                      "experience in credit research and portfolio management. " * 4)
+    jd = ("Investment Analyst in New York. We require 5+ years of relevant "
+          "experience in credit research and portfolio management. " * 4)
+    source.write_text(jd, encoding="utf-8")
     CliRunner().invoke(app, ["describe", slug, "--file", str(source)])
     assert db.get_posting(conn, slug).score_verdict == "reject"

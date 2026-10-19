@@ -3,8 +3,9 @@
 A source is anything that can hand back job postings without a credential and
 without pretending to be a browser: a public ATS job-board API, a company's own
 careers JSON, or the owner's own inbox. There is deliberately no scraper here.
-Adding one would put the VCU-provisioned Handshake account at risk, and would
-make every other source's data less trustworthy by association.
+Adding one would put the user's university-provisioned Handshake account at
+risk, and would make every other source's data less trustworthy by
+association.
 """
 
 from __future__ import annotations
@@ -31,6 +32,9 @@ class RawPosting:
     deadline: _dt.date | None = None  # rarely present; never invented
     employer_priority: int = 3
     employer_tracks: tuple[str, ...] = ()
+    #: Words that mark a senior grade at this employer specifically. A bank's
+    #: "Associate" is a post-MBA grade; a fund's often is not.
+    employer_senior_grades: tuple[str, ...] = ()
     raw: dict = field(default_factory=dict, repr=False)
 
     @property
@@ -53,13 +57,17 @@ class RawPosting:
 #: Workday writes a location as "NY7 - 50 Hudson Yards, New York"; Greenhouse
 #: writes "New York, New York, United States". The same desk, two strings, so
 #: the fingerprint matches on the city rather than on the label.
+#:
+#: These are the places the shipped search already names — the `geography` and
+#: `non_us` blocks of search.defaults.yaml — and nobody's home town. A city
+#: missing from the list is not a bug: an unrecognised location falls through to
+#: the whole string, normalised, which only makes the fingerprint stricter.
 _CITIES = [
     "new york", "jersey city", "stamford", "greenwich", "boston", "chicago",
     "san francisco", "philadelphia", "charlotte", "atlanta", "dallas", "houston",
     "los angeles", "miami", "austin", "seattle", "denver", "washington",
-    "arlington", "richmond", "charlottesville", "mclean", "reston", "wilmington",
-    "london", "hong kong", "singapore", "tokyo", "amsterdam", "mumbai",
-    "bengaluru", "sydney", "toronto", "dublin", "shanghai", "remote",
+    "wilmington", "london", "hong kong", "singapore", "tokyo", "amsterdam",
+    "mumbai", "bengaluru", "sydney", "toronto", "dublin", "shanghai", "remote",
 ]
 
 
@@ -135,6 +143,26 @@ def parse_date(value) -> _dt.date | None:
         return _dt.datetime.fromisoformat(text.replace("Z", "+00:00")).date()
     except ValueError:
         return None
+
+
+def parse_local_date(value, tz: _dt.tzinfo | None = None) -> _dt.date | None:
+    """A timestamp's date where the owner is, not where the server is.
+
+    Oracle writes a deadline of 11:55 pm Eastern as `2026-10-01T03:55:00+00:00`.
+    Taking the date straight off that string files the deadline a day late,
+    which is the one direction a deadline must never be wrong in. Aware
+    timestamps are converted to `tz` (default: this machine's zone) first;
+    anything without an offset falls through to `parse_date`.
+    """
+    if not value:
+        return None
+    try:
+        moment = _dt.datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+    except ValueError:
+        return parse_date(value)
+    if moment.tzinfo is None:
+        return moment.date()
+    return moment.astimezone(tz).date()
 
 
 #: Workday says "Posted 30+ Days Ago"; that is a bucket, not a date, so it stays None.

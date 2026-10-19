@@ -250,7 +250,7 @@ def _first_lines(text: str, n: int = 8) -> list[str]:
     return lines
 
 
-#: "Richmond, VA", "Richmond, Virginia", "Remote" — a place, not an employer.
+#: "Hartford, CT", "Hartford, Connecticut", "Remote" — a place, not an employer.
 _LOOKS_LOCATION = re.compile(
     rf"^(remote|hybrid|on-?site)\b|,\s*(?:{_STATE_ALT})\.?$", re.I)
 
@@ -260,8 +260,9 @@ _MINOR_WORDS = {"of", "and", "the", "for", "at", "in", "a", "an", "&", "de", "la
 def _title_ish(line: str) -> bool:
     """Every word capitalised, ignoring connectives.
 
-    str.istitle() is no help here: it says False for BlackRock, JPMorgan, VCIMCO
-    and eBay, which is most of the list of places worth applying to.
+    str.istitle() is no help here: it says False for BlackRock, JPMorgan and
+    eBay, and False again for a board that shouts — QUILLON ASSET MANAGEMENT.
+    Firms capitalise their names however they like, and all of it has to parse.
     """
     words = line.split()
     if not words:

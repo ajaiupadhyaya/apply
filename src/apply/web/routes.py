@@ -11,8 +11,6 @@ Nothing here contacts an employer. /app/{id}/submit records that the owner did.
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 from urllib.parse import quote
 
@@ -20,7 +18,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .. import db, digest as digest_mod, generate
+from .. import db, digest as digest_mod, generate, host, search as search_mod
 from ..models import Status, Track, TransitionError
 from ..parse import parse as parse_jd
 from ..profile import Profile
@@ -46,13 +44,21 @@ def _flash(slug: str, message: str, ok: bool = True) -> RedirectResponse:
 
 
 @router.get("/", response_class=HTMLResponse)
-def pipeline(request: Request):
+def pipeline(request: Request, track: str | None = None):
     conn = db.connect()
-    rows = [r for r in db.rows(conn) if r.application.status not in ("rejected", "withdrawn")]
+    rows = [r for r in db.rows(conn)
+            if r.application.status not in ("rejected", "withdrawn")
+            and not digest_mod.screened_out(r)]
+    by_track = {t: sum(1 for r in rows if r.posting.track == t)
+                for t in (s.name for s in search_mod.load().tracks)}
+    current = track if track in by_track else None     # an unknown track shows everything
+    if current:
+        rows = [r for r in rows if r.posting.track == current]
     return templates.TemplateResponse(
         request,
         "web/pipeline.html",
-        _context("pipeline", rows=rows, counts=digest_mod.headline(conn)),
+        _context("pipeline", rows=rows, counts=digest_mod.headline(conn),
+                 tracks=by_track, current_track=current),
     )
 
 
@@ -67,7 +73,7 @@ def detail(request: Request, slug: str, m: str | None = None, ok: str = "1"):
     fieldpack = None
     pack_path = directory / "fieldpack.json"
     if pack_path.exists():
-        fieldpack = json.loads(pack_path.read_text())
+        fieldpack = json.loads(pack_path.read_text(encoding="utf-8"))
 
     def _name(path: str | None) -> str | None:
         return Path(path).name if path and Path(path).exists() else None
@@ -76,7 +82,7 @@ def detail(request: Request, slug: str, m: str | None = None, ok: str = "1"):
     audit_path = directory / "verification.json"
     if audit_path.exists():
         try:
-            audit = json.loads(audit_path.read_text())
+            audit = json.loads(audit_path.read_text(encoding="utf-8"))
         except ValueError:
             audit = None
 
@@ -130,7 +136,7 @@ def add_parse(request: Request, jd: str = Form(...)):
         "web/confirm.html",
         _context("add",
             parsed=parsed, jd_escaped=jd, notes=parsed.notes,
-            tracks=[t.value for t in Track],
+            tracks=[s.name for s in search_mod.load().tracks],
             top_score=max(scores.values()) or 1,
         ),
     )
@@ -141,7 +147,7 @@ def add_create(
     jd: str = Form(...),
     company: str = Form(...),
     role: str = Form(...),
-    track: str = Form("corporate"),
+    track: str | None = Form(None),
     deadline: str = Form(""),
     location: str = Form(""),
     comp: str = Form(""),
@@ -156,7 +162,7 @@ def add_create(
     parsed.company, parsed.role = company.strip(), role.strip()
     parsed.location = location.strip() or None
     parsed.comp = comp.strip() or None
-    parsed.classification.track = Track.parse(track)
+    parsed.classification.track = Track.parse(track or search_mod.load().default_track)
     parsed.deadline = _dt.date.fromisoformat(deadline) if deadline else None
 
     posting = parsed.to_posting()
@@ -282,8 +288,8 @@ def do_folder(app_id: int):
     application = db.get_application_by_id(conn, app_id)
     posting = db.get_posting_by_id(conn, application.posting_id)
     directory = generate.out_dir() / posting.slug
-    if directory.exists() and sys.platform == "darwin":
-        subprocess.run(["open", str(directory)], check=False)
+    if directory.exists():
+        host.open_path(directory)
     return _flash(posting.slug, f"Opened {directory.name}.")
 
 

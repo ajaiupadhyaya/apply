@@ -55,6 +55,12 @@ def _month_year(value) -> str | None:
     return f"{months[int(m.group(2)) - 1]} {m.group(1)}"
 
 
+def _one_line(text: str) -> str:
+    # Not inlined into the f-strings that use it: a backslash inside an f-string
+    # expression is a SyntaxError before Python 3.12, and this supports 3.11.
+    return re.sub(r"\s+", " ", text or "").strip()
+
+
 def authorization_statement(profile: Profile) -> str:
     """The one sentence that must be exactly right in every application."""
     if not profile.work_authorized:
@@ -103,10 +109,8 @@ def render_profile(profile: Profile) -> str:
         dates = " – ".join(d for d in (start, end) if d) or "dates not recorded"
         out.append(f"- {x.get('title', '')}, {x.get('org', '')} ({dates})"
                    + (f", {x['location']}" if x.get("location") else ""))
-        for b in x.get("bullets") or []:
-            out.append(f"  - {re.sub(chr(10) + r'|\s+', ' ', b).strip()}")
-        for d in x.get("detail") or []:
-            out.append(f"  - {re.sub(r'\s+', ' ', d).strip()}")
+        for line in [*(x.get("bullets") or []), *(x.get("detail") or [])]:
+            out.append("  - " + _one_line(line))
 
     out += ["", "## Projects"]
     for p in profile.projects.values():
@@ -120,7 +124,7 @@ def render_profile(profile: Profile) -> str:
             out.append(f"  Suited to: {', '.join(p.tracks)}")
         for text in (p.three_line, p.technical):
             if text:
-                out.append("  " + re.sub(r"\s+", " ", text).strip())
+                out.append("  " + _one_line(text))
 
     skills = {k: v for k, v in (profile.raw.get("skills") or {}).items() if v}
     if skills:
@@ -164,7 +168,7 @@ def load_documents(directory: Path | None = None) -> list[tuple[str, str]]:
     for path in sorted(directory.glob("*.md")):
         if path.name.lower() == "readme.md":
             continue                      # the folder's own instructions
-        text = path.read_text(errors="replace").strip()
+        text = path.read_text(encoding="utf-8", errors="replace").strip()
         if not text:
             continue
         text = text[:MAX_DOC_CHARS]
@@ -242,7 +246,7 @@ def pull_readme(repo: str, *, name: str | None = None) -> Path:
     came from, so a stale one can be recognised and refreshed.
     """
     result = subprocess.run(["gh", "api", f"repos/{repo}/readme"],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or f"could not read {repo}")
     payload = json.loads(result.stdout)
@@ -256,5 +260,5 @@ def pull_readme(repo: str, *, name: str | None = None) -> Path:
     header = (f"<!-- source: https://github.com/{repo} — README, digested: intro, "
               f"every heading, and each section's opening. {len(raw):,} chars -> "
               f"{len(digest):,}. Re-pull to refresh. -->\n\n")
-    path.write_text(header + digest + "\n")
+    path.write_text(header + digest + "\n", encoding="utf-8")
     return path

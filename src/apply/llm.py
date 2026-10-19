@@ -6,8 +6,8 @@ usage accounting. Modules above this one decide *what* to ask; this one decides
 how asking works, so that policy cannot drift between the writer and the
 verifier.
 
-The key is read from the environment (which ~/.zshrc fills from the macOS
-Keychain) and never written anywhere.
+The key is read through `apply.secrets` — environment, then the platform's own
+store — and never written anywhere.
 """
 
 from __future__ import annotations
@@ -18,9 +18,13 @@ from typing import Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
-DEFAULT_MODEL = "claude-opus-5"
+from . import secrets
 
-#: Opus 5's safety classifiers can decline a request. With this beta and
+#: Sonnet 5.5: the letters are grounded, linted and audited either way, and it
+#: costs 40% of Opus 5 per token. `--model claude-opus-5` still selects Opus.
+DEFAULT_MODEL = "claude-sonnet-5-5"
+
+#: The model's safety classifiers can decline a request. With this beta and
 #: `fallbacks="default"`, a declined request is re-run server-side on the
 #: recommended model instead of coming back as a refusal — which matters most
 #: for a run nobody is watching.
@@ -31,6 +35,7 @@ FALLBACK_BETA = "server-side-fallback-2026-07-01"
 PRICING: dict[str, tuple[float, float]] = {
     "claude-opus-5": (5.00, 25.00),
     "claude-opus-4-8": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
     "claude-sonnet-5": (2.00, 10.00),
     "claude-haiku-4-5": (1.00, 5.00),
 }
@@ -46,13 +51,40 @@ class Refused(LLMUnavailable):
     """The request was declined even after the server-side fallback."""
 
 
+class Truncated(LLMUnavailable):
+    """The response stopped before its structure closed, and was billed anyway.
+
+    Carries a pessimistic `usage` — the whole output allowance — so the budget
+    ledger records a cost for a call that returned nothing usable, rather than
+    none at all.
+    """
+
+    def __init__(self, message: str, usage: "Usage"):
+        super().__init__(message)
+        self.usage = usage
+
+
 # ------------------------------------------------------------------ schemas
+
+
+class ResumeRole(BaseModel):
+    """One experience entry's bullets, rewritten for this posting. The title,
+    employer, dates and location are facts and are printed from the profile."""
+
+    entry: int = Field(description="The experience entry's number as the TASK lists it, from 1.")
+    bullets: list[str] = Field(
+        description="Two to four bullets for this entry, most relevant to the posting first.")
+
+
+class ResumeProject(BaseModel):
+    key: str = Field(description="The project's key as the TASK lists it.")
+    line: str = Field(description="One sentence describing the project for this posting.")
 
 
 class Package(BaseModel):
     """Everything written for one application, in a single request so the
-    letter and the portal answers are drafted from the same reading of the
-    posting."""
+    letter, the portal answers and the resume are drafted from the same reading
+    of the posting."""
 
     paragraph_1: str = Field(description="The role, when you graduate, and in one clause why this firm.")
     paragraph_2: str = Field(description="One piece of work, in operational detail.")
@@ -63,6 +95,10 @@ class Package(BaseModel):
     anchor_used: str = Field(description="The exact phrase from the posting that paragraph 4 cites.")
     why_role_short: str = Field(description="Portal answer to 'Why this role / firm?', about 80 words.")
     why_role_long: str = Field(description="The same answer at about 200 words.")
+    resume_experience: list[ResumeRole] = Field(
+        description="The resume's bullets for every experience entry, tailored to the posting.")
+    resume_projects: list[ResumeProject] = Field(
+        description="The projects the resume lists for this posting, in the order to print them.")
     notes: str = Field(description="Anything the owner should check before sending. Empty if nothing.")
 
     def paragraphs(self) -> list[str]:
@@ -84,7 +120,7 @@ class Review(BaseModel):
 
     verdict: Literal["send", "revise"]
     unsupported_claims: list[str] = Field(
-        description="Every claim, figure, name or date in the letter or answers that "
+        description="Every claim, figure, name or date in the letter, answers or resume that "
                     "appears in neither the profile, the context documents, nor the posting.")
     authorization_correct: bool = Field(
         description="Whether any statement about work authorization or sponsorship "
@@ -152,9 +188,10 @@ def estimate(input_chars: int, *, output_tokens: int = 3500,
 
 NO_CREDENTIAL = (
     "no Anthropic credential found.\n"
-    "  Add the key to the Keychain (it prompts, so the key never enters history):\n"
-    "      security add-generic-password -U -a \"$USER\" -s ANTHROPIC_API_KEY -w\n"
-    "  then open a new terminal. ~/.zshrc reads it from there on every login."
+    "  Store it where an unattended run can find it too (this prompts, so the\n"
+    "  key never enters your shell history):\n"
+    f"      {secrets.how_to_store('ANTHROPIC_API_KEY')}\n"
+    "  An exported ANTHROPIC_API_KEY works for a run you start yourself."
 )
 
 
@@ -171,32 +208,18 @@ KEYCHAIN_SERVICE = "ANTHROPIC_API_KEY"
 def _keychain_key(service: str = KEYCHAIN_SERVICE) -> str | None:
     """The key from the macOS login Keychain, if it is there.
 
-    This is what makes the scheduled run work. launchd starts a non-interactive
-    shell, which never reads ~/.zshrc, so the environment variable the terminal
-    sees is simply absent at 06:30. Reading the Keychain directly works from
-    launchd, cron, an IDE or a terminal alike, and keeps the key out of every
-    file and every command line.
+    One line of `apply.secrets` kept under its old name: the test suite blocks
+    the Keychain by patching this, and the platform-agnostic order now lives in
+    that module.
     """
-    import shutil
-    import subprocess
-    import sys
-
-    if sys.platform != "darwin" or not shutil.which("security"):
-        return None
-    result = subprocess.run(
-        ["security", "find-generic-password", "-a", os.environ.get("USER", ""),
-         "-s", service, "-w"],
-        capture_output=True, text=True,
-    )
-    key = result.stdout.strip() if result.returncode == 0 else ""
-    return key or None
+    return secrets._from_keychain(service)
 
 
 def available() -> bool:
     """True when a call would have something to authenticate with."""
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+    if os.environ.get("ANTHROPIC_AUTH_TOKEN"):
         return True
-    return _profile_dir().exists() or _keychain_key() is not None
+    return _profile_dir().exists() or secrets.lookup(KEYCHAIN_SERVICE) is not None
 
 
 def _client():
@@ -205,8 +228,8 @@ def _client():
     except ImportError as exc:
         raise LLMUnavailable("the anthropic SDK is not installed. Run `uv sync`.") from exc
     options = {}
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
-        key = _keychain_key()
+    if not os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        key = secrets.lookup(KEYCHAIN_SERVICE)
         if key:
             options["api_key"] = key
     try:
@@ -218,6 +241,27 @@ def _client():
     if not (client.api_key or getattr(client, "auth_token", None) or _profile_dir().exists()):
         raise LLMUnavailable(NO_CREDENTIAL)
     return client
+
+
+def ping() -> None:
+    """One free request that proves the key works. Raises LLMUnavailable."""
+    import anthropic
+
+    client = _client()
+    try:
+        client.models.list(limit=1)
+    except anthropic.AuthenticationError as exc:
+        raise LLMUnavailable("the API key was rejected. Check it at console.anthropic.com "
+                             "and store it again: uv run apply setup --step key") from exc
+    except anthropic.APIStatusError as exc:
+        # A 429 or a 5xx: the key may be fine, the API is busy or down.
+        raise LLMUnavailable(f"the API answered {exc.status_code} — it is busy or unavailable "
+                             "right now. Wait a minute and try again.") from exc
+    except anthropic.APIConnectionError as exc:
+        raise LLMUnavailable("could not reach the API (network).") from exc
+
+
+REAL_PING = ping
 
 
 def _usage(model: str, response) -> Usage:
@@ -238,11 +282,14 @@ def call(
     schema: type[T],
     model: str = DEFAULT_MODEL,
     effort: str = "high",
-    max_tokens: int = 16000,
+    # Thinking bills against this too. 16,000 cut a long package off mid-JSON;
+    # much past 21,000 the SDK insists on streaming for a request this size.
+    max_tokens: int = 20000,
 ) -> tuple[T, Usage]:
     """One structured request. Raises LLMUnavailable or Refused; never returns
     a half-parsed result."""
     import anthropic
+    import pydantic
 
     client = _client()
     try:
@@ -258,14 +305,24 @@ def call(
             messages=[{"role": "user", "content": user}],
         )
     except anthropic.AuthenticationError as exc:
-        raise LLMUnavailable("the API key was rejected. Rotate it in the Console and "
-                             "re-run the `security add-generic-password -U` command.") from exc
+        raise LLMUnavailable("the API key was rejected. Rotate it in the Console, then "
+                             f"store the new one:\n      "
+                             f"{secrets.how_to_store('ANTHROPIC_API_KEY')}") from exc
     except anthropic.RateLimitError as exc:
         raise LLMUnavailable("rate limited by the API; the next run will retry.") from exc
     except anthropic.APIConnectionError as exc:
         raise LLMUnavailable("could not reach the API (network).") from exc
     except anthropic.APIStatusError as exc:
         raise LLMUnavailable(f"API error {exc.status_code}: {exc.message}") from exc
+    except pydantic.ValidationError as exc:
+        # The SDK parses while it builds the response, so output cut off at
+        # max_tokens surfaces here as invalid JSON, before stop_reason can be read.
+        chars = sum(len(b.get("text", "")) for b in system) + len(user)
+        raise Truncated(
+            "the response was cut off before it finished (it ran out of tokens); "
+            "try again, or lower --effort.",
+            Usage(model=model, input_tokens=int(chars / 3.2), output_tokens=max_tokens),
+        ) from exc
 
     # A refusal is HTTP 200 with no usable content — check before reading it.
     if response.stop_reason == "refusal":

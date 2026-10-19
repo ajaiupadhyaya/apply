@@ -133,5 +133,5 @@ def write(profile: Profile, posting: Posting, directory: Path,
           answers: dict | None = None) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / "fieldpack.json"
-    path.write_text(json.dumps(build(profile, posting, answers), indent=2) + "\n")
+    path.write_text(json.dumps(build(profile, posting, answers), indent=2) + "\n", encoding="utf-8")
     return path

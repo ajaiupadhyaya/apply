@@ -1,0 +1,15 @@
+<# Any track without a template of its own. Offers the code only when the track sets code_link. #>
+<% extends "letters/base.tex.j2" %>
+<% block body %>
+<<paragraphs[0]>>
+
+<<paragraphs[1]>>
+<% if proof_url %>
+
+{\small\color{quiet}The work is public: \href{<<proof_url>>}{<<proof_url>>}}
+<% endif %>
+<% for paragraph in paragraphs[2:] %>
+
+<<paragraph>>
+<% endfor %>
+<% endblock %>

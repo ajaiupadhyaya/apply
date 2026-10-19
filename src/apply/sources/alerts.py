@@ -9,11 +9,13 @@ for an unattended run, a JSON drop when Claude does the fetching through a
 connector — because the parsing is the part that is hard, and the part worth
 testing. Both paths call `parse_alert`.
 
-What the emails actually look like was established by reading two real ones on
-2026-09-20; the fixtures in tests/fixtures/alerts/ are those two, lightly
-redacted. Handshake will change the format eventually. When it does,
-`is_job_email` will keep returning True and `parse_alert` will start returning
-nothing, which is the failure mode to watch for.
+What the emails actually look like was established by reading real ones. The
+fixtures in tests/fixtures/alerts/ are not those: they are invented mail written
+to the same layout, because somebody else's inbox is not this repository's to
+ship and a layout is all a parser test needs. Handshake will change the format
+eventually. When it does, `is_job_email` will keep returning True and
+`parse_alert` will start returning nothing, which is the failure mode to watch
+for.
 """
 
 from __future__ import annotations
@@ -42,10 +44,6 @@ LINKEDIN_JOB_SENDERS = (
     "jobs-noreply@linkedin.com",
 )
 
-#: Kept for callers that only needed "is this Handshake".
-SENDERS = HANDSHAKE_SENDERS
-
-
 def source_of(sender: str = "", body: str = "") -> str | None:
     """"handshake", "linkedin", or None for mail this module does not read."""
     sender = (sender or "").lower()
@@ -64,6 +62,8 @@ JOB_SUBJECTS = [
     r"sees you as a top applicant",          # weekly round-up
     r"new matches for your saved search",
     r'^"?search on ',                        # a saved search, named by its date
+    r'^"[^"]+": .+ and more$',               # a saved search the user named
+    r"^new .+ at \S",                        # "New <title> at <firm>": one match
     r"added to collections you follow",
     r"is about to close",                    # carries a deadline
     r"flexible jobs near you",
@@ -245,7 +245,8 @@ def parse_handshake(
 
 # ----------------------------------------------------------------- LinkedIn
 #
-# Established against a real LinkedIn job email on 2026-09-21. A card is:
+# Established against LinkedIn's own digests; the fixture that pins it is
+# invented mail in the same shape. A card is:
 #
 #     <title>
 #     <company>

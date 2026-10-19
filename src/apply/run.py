@@ -113,7 +113,8 @@ def run(
             report.steps.append(Step(
                 "discover", True,
                 f"{found.fetched} fetched, {found.rejected} rejected, "
-                f"{len(found.created)} filed"))
+                f"{len(found.created)} filed"
+                + (f", {found.deferred} deferred to the next run" if found.deferred else "")))
         except Exception as exc:                        # noqa: BLE001
             report.steps.append(Step("discover", False, f"{type(exc).__name__}: {exc}"))
             report.errors.append(traceback.format_exc(limit=2))
@@ -150,15 +151,14 @@ def run(
 
 def _mail(profile: Profile) -> list[discover.Message] | None:
     """Alert mail, if a transport is configured. None means 'not set up'."""
-    import os
+    # Same reason as the API key: a scheduled run's shell never reads a login
+    # profile, so the exported variable is absent at 06:30. The platform's
+    # secret store is not.
+    from . import secrets
 
-    # Same reason as the API key: launchd never reads ~/.zshrc, so the
-    # environment variable is absent at 06:30. The Keychain is not.
-    from .llm import _keychain_key
-
-    password = os.environ.get("APPLY_IMAP_PASSWORD") or _keychain_key("APPLY_IMAP_PASSWORD")
+    password = secrets.lookup("APPLY_IMAP_PASSWORD")
     if password:
-        return discover.fetch_imap(user=profile.email, password=password)
+        return discover.fetch_imap(user=profile.imap_user, password=password)
     drop = data_dir() / "alerts.json"
     if drop.exists():
         return discover.load_messages(drop)
@@ -269,7 +269,7 @@ def summarise(conn, report: RunReport) -> str:
     counts = digest_mod.headline(conn)
     d = digest_mod.build(conn)
     lines = [
-        f"# apply — {report.started_at.strftime('%A %-d %B, %H:%M')}",
+        f"# apply — {report.started_at:%A} {report.started_at.day} {report.started_at:%B, %H:%M}",
         "",
         f"{report.discovered} new from the registry · {report.ingested} from alerts · "
         f"{len(report.generated)} written · ${report.usd:.2f} spent · "

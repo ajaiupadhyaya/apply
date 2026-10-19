@@ -1,9 +1,10 @@
 """LinkedIn job-alert mail.
 
-The fixture is a real LinkedIn job email (2024-03-20) with every tracking
-parameter replaced by REDACTED — its links carried one-time sign-in tokens, and
-this repository is public. The card layout it establishes is what the parser
-anchors on.
+The fixture is invented mail: no firm in it exists, the job ids are made up,
+and there is no inbox behind it. What it reproduces exactly is the card layout
+LinkedIn's digests use, because that is what the parser anchors on — including
+the tracking query string, whose `otpToken` is a one-time sign-in token and the
+reason every stored URL is cut back to its bare /jobs/view/<id>/ form.
 """
 
 from __future__ import annotations
@@ -14,20 +15,20 @@ import pathlib
 import pytest
 
 from apply import db, discover
-from apply.discover import Aliases, employer_key
-from apply.score import Verdict, score
+from apply.discover import Aliases
+from apply.score import score
 from apply.sources.alerts import (
     clean_linkedin_url, is_job_email, parse_alert, parse_linkedin, source_of,
 )
 from apply.sources.base import RawPosting
 
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "alerts" / "linkedin_digest.txt"
-SENT = _dt.date(2024, 3, 20)
+SENT = _dt.date(2026, 3, 20)
 LI = "jobs-listings@linkedin.com"
 
 
 def cards():
-    return parse_linkedin(FIXTURE.read_text(), SENT)
+    return parse_linkedin(FIXTURE.read_text(encoding="utf-8"), SENT)
 
 
 # ------------------------------------------------------------- which mail
@@ -41,7 +42,7 @@ def test_job_senders_are_read(sender):
 
 
 @pytest.mark.parametrize("sender", [
-    "messages-noreply@linkedin.com",          # "Ajai, add Sebastian ..."
+    "messages-noreply@linkedin.com",          # connection suggestions
     "notifications-noreply@linkedin.com",     # "3 searches included you"
     "editors-noreply@linkedin.com",           # newsletters
     "linkedin@e.linkedin.com",                # marketing
@@ -52,7 +53,7 @@ def test_the_rest_of_linkedin_s_mail_is_ignored(sender):
 
 def test_a_new_sender_address_is_still_recognised_by_its_cards():
     """Addresses change; a card with a /jobs/view/ link does not look like anything else."""
-    body = FIXTURE.read_text()
+    body = FIXTURE.read_text(encoding="utf-8")
     assert source_of("some-new-address@linkedin.com", body) == "linkedin"
 
 
@@ -63,11 +64,12 @@ def test_every_card_is_read():
 
 
 def test_title_company_and_location_come_from_the_top_of_the_card():
-    ubs = cards()[0]
-    assert ubs.title == "2025 Summer Analyst Program - Global Markets (Sales and Trading)"
-    assert ubs.employer == "UBS"
-    assert ubs.location == "New York"
-    assert ubs.source == "linkedin"
+    markets = cards()[0]
+    assert markets.title == ("2027 Summer Analyst Program - Global Markets "
+                             "(Sales and Trading)")
+    assert markets.employer == "Fenwold Securities"
+    assert markets.location == "New York"
+    assert markets.source == "linkedin"
 
 
 def test_insight_lines_never_become_the_location():
@@ -86,14 +88,14 @@ def test_urls_are_stripped_of_every_tracking_parameter():
 
 def test_the_url_cleaner_handles_the_raw_form():
     url, job_id = clean_linkedin_url(
-        "https://www.linkedin.com/comm/jobs/view/3843944532/?trackingId=a&otpToken=b")
-    assert (url, job_id) == ("https://www.linkedin.com/jobs/view/3843944532/", "3843944532")
+        "https://www.linkedin.com/comm/jobs/view/4200000001/?trackingId=a&otpToken=b")
+    assert (url, job_id) == ("https://www.linkedin.com/jobs/view/4200000001/", "4200000001")
 
 
 def test_a_re_poster_is_flagged_rather_than_mistaken_for_the_firm():
     reposted = [c for c in cards() if c.raw["reposted_by"]]
     assert len(reposted) == 2
-    assert all(c.raw["reposted_by"] == "eFinancialCareers" for c in reposted)
+    assert all(c.raw["reposted_by"] == "Ledgerline Careers" for c in reposted)
 
 
 def test_a_saved_search_alert_parses_with_the_same_logic():
@@ -118,9 +120,9 @@ def test_nothing_in_the_email_no_postings():
 # ------------------------------------------------------ what the gate did
 
 def test_sales_and_trading_is_finance_not_sales():
-    """The real UBS card was rejected as off-function until this was fixed."""
-    ubs = cards()[0]
-    assert score(ubs, {"class_standing": "senior"}).rejected_by != "function"
+    """A real card in this shape was rejected as off-function until this was fixed."""
+    markets = cards()[0]
+    assert score(markets, {"class_standing": "senior"}).rejected_by != "function"
 
 
 @pytest.mark.parametrize("title", ["Sales & Trading Summer Analyst",
@@ -132,13 +134,13 @@ def test_sales_and_trading_variants_survive(title):
 
 
 def test_a_real_sales_role_is_still_off_function():
-    iheart = next(c for c in cards() if c.employer == "iHeartMedia")
-    assert score(iheart).rejected_by == "function"
+    media = next(c for c in cards() if c.employer == "Marrowfield Media")
+    assert score(media).rejected_by == "function"
 
 
 def test_software_engineering_is_caught_as_well_as_software_engineer():
-    mtsi = next(c for c in cards() if "MTSI" in c.employer)
-    assert score(mtsi).rejected_by == "technical"
+    engineering = next(c for c in cards() if "VTSI" in c.employer)
+    assert score(engineering).rejected_by == "technical"
 
 
 @pytest.mark.parametrize("location", ["Chantilly", "Boise, Idaho", "United States",
@@ -218,7 +220,7 @@ def test_ingestion_files_linkedin_postings_and_names_unknown_firms(conn):
 
 
 def test_stored_linkedin_postings_carry_no_token(conn):
-    body = FIXTURE.read_text()
+    body = FIXTURE.read_text(encoding="utf-8")
     result = discover.ingest_alerts(conn, [discover.Message(
         subject="x", body=body, received=SENT, sender=LI)], employers=[])
     for slug in result.created:
@@ -227,7 +229,7 @@ def test_stored_linkedin_postings_carry_no_token(conn):
 
 
 def test_old_alerts_are_skipped_when_a_limit_is_set(conn):
-    old = discover.Message(subject="x", body=FIXTURE.read_text(), received=SENT, sender=LI)
+    old = discover.Message(subject="x", body=FIXTURE.read_text(encoding="utf-8"), received=SENT, sender=LI)
     result = discover.ingest_alerts(conn, [old], employers=[], max_age_days=21)
     assert result.skipped_old == 1 and result.fetched == 0
 

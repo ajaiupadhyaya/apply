@@ -14,19 +14,39 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
-class Track(str, Enum):
-    QUANT = "quant"
-    BANKING = "banking"
-    ALLOCATOR = "allocator"
-    CORPORATE = "corporate"
+class _TrackKind(type):
+    """Iterating `Track` yields the tracks in force, as the enum it replaced did."""
+
+    def __iter__(cls):
+        from .search import load
+
+        return iter([cls(t.name) for t in load().tracks])
+
+
+class Track(str, metaclass=_TrackKind):
+    """A track name, validated against the search configuration's `tracks`
+    (search.defaults.yaml, or data/search.yaml) — a user in another field
+    defines their own."""
+
+    __slots__ = ()
+
+    @property
+    def value(self) -> str:
+        return str(self)
 
     @classmethod
     def parse(cls, value: str) -> "Track":
-        try:
-            return cls(value.strip().lower())
-        except ValueError as exc:
-            valid = ", ".join(t.value for t in cls)
-            raise ValueError(f"unknown track {value!r}; expected one of: {valid}") from exc
+        from .search import load
+
+        names = [t.name for t in load().tracks]
+        key = str(value).strip().lower()
+        if key not in names:
+            raise ValueError(f"unknown track {value!r}; expected one of: {', '.join(names)}")
+        return cls(key)
+
+
+Track.QUANT, Track.BANKING, Track.ALLOCATOR, Track.CORPORATE = (
+    Track("quant"), Track("banking"), Track("allocator"), Track("corporate"))
 
 
 class Status(str, Enum):
@@ -174,18 +194,6 @@ class Event:
 
 
 @dataclass(slots=True)
-class Contact:
-    name: str
-    id: int | None = None
-    posting_id: int | None = None
-    title: str | None = None
-    email: str | None = None
-    linkedin: str | None = None
-    last_touch: _dt.date | None = None
-    notes: str | None = None
-
-
-@dataclass(slots=True)
 class Followup:
     application_id: int
     due_on: _dt.date
@@ -225,7 +233,7 @@ def slugify(company: str, role: str, year: int | str | None = None) -> str:
         if word.strip(".,()") not in filler
         and (slugged := _SLUG_STRIP.sub("-", word).strip("-"))
     ]
-    # Don't say the year twice: "blackrock-2027-analyst-2027" reads like a bug.
+    # Don't say the year twice: "quillon-2027-analyst-2027" reads like a bug.
     year_s = str(year) if year else None
     if year_s:
         words = [w for w in words if w != year_s]

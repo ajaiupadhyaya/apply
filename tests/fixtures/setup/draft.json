@@ -1,0 +1,164 @@
+{
+ "identity": {
+  "legal_first": "Jordan",
+  "legal_last": "Reyes",
+  "preferred_name": "Jordan",
+  "email": "jreyes@example.edu",
+  "city": "Seattle",
+  "state": "WA"
+ },
+ "education": [
+  {
+   "institution": "Blue Ridge University",
+   "degree": "B.S.",
+   "major": "Computer Science",
+   "start": "ASK",
+   "current": true
+  }
+ ],
+ "experience": [
+  {
+   "org": "Acme Robotics",
+   "title": "Software Intern",
+   "start": "2025-06",
+   "end": "2025-08",
+   "location": "",
+   "bullets": [
+    "Cut test time 40% by parallelising the CI suite",
+    "Wrote the fleet telemetry ingest service in Python"
+   ],
+   "detail": [],
+   "tags": [
+    "software"
+   ]
+  }
+ ],
+ "projects": [
+  {
+   "key": "kestrel",
+   "name": "Kestrel",
+   "url": "https://github.com/jreyes-example/kestrel",
+   "tracks": [
+    "swe"
+   ],
+   "one_line": "Kestrel is an order-book simulator written in OCaml.",
+   "three_line": "Kestrel simulates an order book. It is written in OCaml.",
+   "resume_line": "Order-book simulator in OCaml.",
+   "technical": "",
+   "stack": [
+    "OCaml"
+   ]
+  }
+ ],
+ "skills": [
+  {
+   "group": "Languages",
+   "items": [
+    "Python",
+    "OCaml",
+    "SQL"
+   ]
+  },
+  {
+   "group": "Tools",
+   "items": [
+    "Git"
+   ]
+  }
+ ],
+ "voice": "Plain and specific; concrete nouns and verbs, no enthusiasm for its own sake.",
+ "letter_length": "250 to 350 words. One page.",
+ "letter_structure": "Four body paragraphs and a closing. Paragraph 2 carries one piece of work in operational detail.",
+ "why_role": "Say what in the posting matches the work already done, and what is to be learned.",
+ "avoid": [
+  "restating the resume line by line"
+ ],
+ "tracks": [
+  {
+   "name": "swe",
+   "keywords": [
+    {
+     "phrase": "software engineer",
+     "weight": 5
+    },
+    {
+     "phrase": "backend",
+     "weight": 3
+    },
+    {
+     "phrase": "python",
+     "weight": 2
+    }
+   ],
+   "resume": "projects_first",
+   "code_link": true,
+   "proof_asset": "Kestrel — lead with what the simulator models and how."
+  }
+ ],
+ "default_track": "swe",
+ "roles": [
+  {
+   "match": "software engineer",
+   "weight": 25
+  },
+  {
+   "match": "backend engineer",
+   "weight": 22
+  }
+ ],
+ "timing": [
+  {
+   "match": "new grad",
+   "weight": 16
+  }
+ ],
+ "title_timing": [
+  {
+   "match": "2027",
+   "weight": 14
+  }
+ ],
+ "locations": [
+  {
+   "label": "Seattle",
+   "weight": 25,
+   "match": [
+    "seattle",
+    "bellevue"
+   ],
+   "title": false
+  },
+  {
+   "label": "remote",
+   "weight": 10,
+   "match": [
+    "remote"
+   ],
+   "title": true
+  }
+ ],
+ "reject_seniority": [
+  "senior",
+  "staff",
+  "principal",
+  "manager"
+ ],
+ "reject_functions": [
+  "sales",
+  "recruiter"
+ ],
+ "reject_technical": [],
+ "max_years_experience": 2,
+ "reject_advanced_degree": true,
+ "reject_graduate_programs": true,
+ "employers": [
+  {
+   "name": "Acme Robotics",
+   "aliases": [],
+   "tracks": [
+    "swe"
+   ],
+   "priority": 1
+  }
+ ]
+}

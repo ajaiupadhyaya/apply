@@ -1,0 +1,5257 @@
+{
+ "note": "Synthesised from src/apply/search.defaults.yaml by tools/synthesize_corpus.py. Every firm here is invented and every title is assembled from a configured pattern; nothing in this file comes from a real posting or a real pipeline.",
+ "graduation": [
+  2027,
+  5
+ ],
+ "class_standing": "senior",
+ "cases": [
+  {
+   "entry": [
+    "rejects.seniority",
+    "(?<!rising\\s)senior(?!\\s+year)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Senior, Global Markets",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Senior'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "sr\\.?"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "2027 Sr. Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Sr.'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "vice\\s+president"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Vice President - Americas",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Vice President'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "\\bvp\\b"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "VP, Global Markets",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'VP'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "director"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "2027 Director Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Director'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "principal"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Principal - Americas",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Principal'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "staff"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Staff, Global Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Staff'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "lead"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "2027 Lead Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Lead'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "head\\s+of"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Head Of - Americas",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Head Of'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "chief"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Chief, Global Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Chief'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "executive"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Executive Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Executive'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "managing\\s+director"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Managing Director - Americas",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Managing Director'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "\\bmd\\b"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "MD, Global Markets",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'MD'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "partner"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "2027 Partner Programme",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Partner'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "manager"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Manager - Americas",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Manager'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "supervisor"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Supervisor, Global Markets",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Supervisor'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "president"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "2027 President Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'President'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "sales(?!\\s*(?:and|&)\\s*trading)"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Sales - Americas",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Sales'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "account\\s+executive"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Account Executive, Global Markets",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Executive'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "recruit\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "2027 Recruiter Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Recruiter'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "talent"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Talent - Americas",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Talent'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "marketing"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Marketing, Global Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Marketing'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "human\\s+resources"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "2027 Human Resources Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Human Resources'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "\\bhr\\b"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "HR - Americas",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'HR'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "facilities"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Facilities, Global Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Facilities'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "custodian"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Custodian Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Custodian'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "janitor"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Janitor - Americas",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Janitor'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "nurse"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Nurse, Global Markets",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Nurse'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "physician"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "2027 Physician Programme",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Physician'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "paralegal"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Paralegal - Americas",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Paralegal'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "attorney"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Attorney, Global Markets",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Attorney'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "counsel"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "2027 Counsel Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Counsel'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "executive\\s+assistant"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Executive Assistant - Americas",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Executive'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "receptionist"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Receptionist, Global Markets",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Receptionist'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "copywriter"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "2027 Copywriter Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Copywriter'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "designer"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Designer - Americas",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Designer'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "video"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Video, Global Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Video'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "social\\s+media"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "2027 Social Media Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Social Media'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "community\\s+manager"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Community Manager - Americas",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Manager'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "support\\s+specialist"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Support Specialist, Global Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Support Specialist'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "coordinator"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Coordinator Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Coordinator'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "administrator"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Administrator - Americas",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Administrator'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "office\\s+manager"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Office Manager, Global Markets",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Manager'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "workplace\\s+services"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "2027 Workplace Services Programme",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Workplace Services'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "recruiter"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Recruiter - Americas",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Recruiter'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "chef"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Chef, Global Markets",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Chef'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "barista"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "2027 Barista Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Barista'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "events?"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Events - Americas",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Events'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "recepti\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Receptionist, Global Markets",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Receptionist'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "software\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "2027 Software Engineering Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Software Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bswe\\b"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "SWE - Americas",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'SWE'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "backend"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Backend, Global Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Backend'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "back-end"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "2027 Back-End Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Back-End'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "frontend"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Frontend - Americas",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Frontend'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "front-end"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Front-End, Global Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Front-End'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "full[\\s-]?stack"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Full-Stack Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Full-Stack'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "mobile\\s+engineer"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Mobile Engineer - Americas",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Mobile Engineer'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bios\\b"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "IOS, Global Markets",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'IOS'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "android"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "2027 Android Programme",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Android'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "devops"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Devops - Americas",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Devops'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bsre\\b"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "SRE, Global Markets",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'SRE'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "site\\s+reliability"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "2027 Site Reliability Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Site Reliability'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "security\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Security Engineering - Americas",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Security Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "infrastructure\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Infrastructure Engineering, Global Markets",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Infrastructure Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "platform\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "2027 Platform Engineering Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Platform Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "systems\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Systems Engineering - Americas",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Systems Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "network\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Network Engineering, Global Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Network Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "firmware"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "2027 Firmware Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Firmware'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "embedded"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Embedded - Americas",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Embedded'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bqa\\b"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "QA, Global Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'QA'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "quality\\s+assurance"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Quality Assurance Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Quality Assurance'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "data\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Data Engineering - Americas",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Data Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "machine\\s+learning\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Machine Learning Engineering, Global Markets",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Machine Learning Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "computer\\s+science\\s+intern"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "2027 Computer Science Intern Programme",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Computer Science Intern'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bml\\s+engineer\\b"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "ML Engineer - Americas",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'ML Engineer'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "solutions\\s+architect"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Solutions Architect, Global Markets",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Solutions Architect'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "web\\s+developer"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "2027 Web Developer Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Web Developer'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "hardware\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Hardware Engineering - Americas",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Hardware Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bfpga\\b"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "FPGA, Global Markets",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'FPGA'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\basic\\b"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "2027 ASIC Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'ASIC'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "electrical\\s+engineer\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Electrical Engineering - Americas",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Electrical Engineering'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bsysadmin\\b"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Sysadmin, Global Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Sysadmin'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "database\\s+administrator"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "2027 Database Administrator Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "function",
+   "reasons": [
+    "off-function: 'Administrator'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "compiler"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Compiler - Americas",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Compiler'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "kernel"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Kernel, Global Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Kernel'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "software\\s+develop\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Software Developer Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Software Developer'"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "developers?"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Developers - Americas",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "technical",
+   "reasons": [
+    "engineering role: 'Developers'"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.freshman",
+    "freshman"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Freshman Summer Analyst Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "class year",
+   "reasons": [
+    "aimed at freshman students; you are a senior ('Freshman')"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.freshman",
+    "first[\\s-]?year\\s+(student|intern)"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "First-Year Student Summer Analyst Programme",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "class year",
+   "reasons": [
+    "aimed at freshman students; you are a senior ('First-Year Student')"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.sophomore",
+    "sophomore"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Sophomore Summer Analyst Programme",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "class year",
+   "reasons": [
+    "aimed at sophomore students; you are a senior ('Sophomore')"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.junior",
+    "rising\\s+junior(?!\\s+or)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Rising Junior Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "class year",
+   "reasons": [
+    "aimed at junior students; you are a senior ('Rising Junior')"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.junior",
+    "junior\\s+year"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Junior Year Summer Analyst Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "class year",
+   "reasons": [
+    "aimed at junior students; you are a senior ('Junior Year')"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.senior",
+    "rising\\s+senior(?!\\s+or)"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Rising Senior Summer Analyst Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 48,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "timing +16",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.primary",
+    "new\\s+york"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "New York",
+   "priority": 2,
+   "body": "",
+   "value": 52,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.primary",
+    "\\bnyc\\b"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "NYC",
+   "priority": 1,
+   "body": "",
+   "value": 56,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.primary",
+    "manhattan"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Manhattan",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 56,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "geography.primary",
+    "\\bny\\b"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "NY",
+   "priority": 2,
+   "body": "",
+   "value": 52,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.primary",
+    "hudson\\s+yards"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Hudson Yards",
+   "priority": 3,
+   "body": "",
+   "value": 48,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.home",
+    "your\\s+home\\s+city"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Your Home City",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 42,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "your home city +15",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "geography.home",
+    "your\\s+home\\s+state"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Your Home State",
+   "priority": 1,
+   "body": "",
+   "value": 46,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "your home city +15",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.remote",
+    "remote"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst (Remote)",
+   "location": "",
+   "priority": 1,
+   "body": "",
+   "value": 41,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "remote +10",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.remote",
+    "work\\s+from\\s+home"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst (Work From Home)",
+   "location": "",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "geography.remote",
+    "virtual"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst (Virtual)",
+   "location": "",
+   "priority": 3,
+   "body": "",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "remote +10",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.remote",
+    "anywhere"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst (Anywhere)",
+   "location": "",
+   "priority": 2,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "boston"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Boston",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "chicago"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Chicago",
+   "priority": 1,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "san\\s+francisco"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "San Francisco",
+   "priority": 2,
+   "body": "",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "stamford"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Stamford",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 29,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +4"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "greenwich"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Greenwich",
+   "priority": 2,
+   "body": "",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "jersey\\s+city"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Jersey City",
+   "priority": 1,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "philadelphia"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Philadelphia",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "charlotte"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Charlotte",
+   "priority": 2,
+   "body": "",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "atlanta"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Atlanta",
+   "priority": 3,
+   "body": "",
+   "value": 29,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "dallas"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Dallas",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "houston"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Houston",
+   "priority": 1,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "los\\s+angeles"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Los Angeles",
+   "priority": 1,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "miami"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Miami",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "austin"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Austin",
+   "priority": 3,
+   "body": "",
+   "value": 29,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "seattle"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Seattle",
+   "priority": 2,
+   "body": "",
+   "value": 33,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.hub",
+    "denver"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Denver",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "london"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "London",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'London'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "hong\\s+kong"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Hong Kong",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Hong Kong'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "singapore"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Singapore",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Singapore'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "tokyo"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Tokyo",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Tokyo'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "shanghai"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Shanghai",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Shanghai'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "mumbai"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Mumbai",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Mumbai'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "bengaluru"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Bengaluru",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Bengaluru'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "bangalore"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Bangalore",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Bangalore'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "gurgaon"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Gurgaon",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Gurgaon'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "hyderabad"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Hyderabad",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Hyderabad'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "amsterdam"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Amsterdam",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Amsterdam'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "dublin"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Dublin",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Dublin'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "paris"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Paris",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Paris'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "frankfurt"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Frankfurt",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Frankfurt'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "munich"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Munich",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Munich'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "zurich"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Zurich",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Zurich'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "geneva"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Geneva",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Geneva'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "milan"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Milan",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Milan'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "madrid"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Madrid",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Madrid'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "toronto"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Toronto",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Toronto'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "montreal"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Montreal",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Montreal'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "vancouver"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Vancouver",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Vancouver'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "sydney"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Sydney",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Sydney'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "melbourne"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Melbourne",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Melbourne'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "sao\\s+paulo"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Sao Paulo",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Sao Paulo'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "mexico\\s+city"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Mexico City",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Mexico City'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "budapest"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Budapest",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Budapest'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "warsaw"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Warsaw",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Warsaw'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "tel\\s+aviv"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Tel Aviv",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Tel Aviv'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "dubai"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Dubai",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Dubai'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "seoul"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Seoul",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Seoul'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "taipei"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Taipei",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Taipei'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "manila"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Manila",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Manila'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "kuala\\s+lumpur"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Kuala Lumpur",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Kuala Lumpur'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "bucharest"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Bucharest",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Bucharest'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "edinburgh"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Edinburgh",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Edinburgh'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "glasgow"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Glasgow",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Glasgow'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "united\\s+kingdom"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "United Kingdom",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'United Kingdom'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "india"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "India",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'India'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "china"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "China",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'China'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "japan"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Japan",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Japan'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "germany"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Germany",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Germany'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "france"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "France",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'France'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "netherlands"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Netherlands",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Netherlands'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "ireland"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Ireland",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Ireland'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "switzerland"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Switzerland",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Switzerland'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "canada"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Canada",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Canada'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "australia"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Australia",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Australia'"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "brazil"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Brazil",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "outside the US: 'Brazil'"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "quantitative[\\s\\w]{0,18}(research\\w*|analyst|trader|trading)"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Quantitative Research",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 43,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "quantitative\\s+(research\\w*|trad\\w*|analyst)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Quantitative Research",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 62,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "graduate\\s+(program|programme|scheme|analyst)"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Graduate Program",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 56,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +23",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "sales\\s+and\\s+trading"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Sales And Trading",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 32,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "analyst\\s+program"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Analyst Program",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 40,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "summer\\s+analyst"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Summer Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 40,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "investment\\s+bank\\w*\\s+(analyst|associate|intern)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Investment Banking Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 59,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "investment\\s+(analyst|associate|intern)"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Investment Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 53,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +20",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "equity\\s+research"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Equity Research",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 30,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +20",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "research\\s+(analyst|associate|assistant)"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "econometric\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Econometrics",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "risk\\s+(analyst|management|intern)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Risk Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 55,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +18",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "portfolio\\s+(analyst|management|operations)"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Portfolio Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 51,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +18",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "financial\\s+analyst"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Financial Analyst",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 28,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +18",
+    "US finance hub +6",
+    "target firm +4"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "credit\\s+analyst"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Credit Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 36,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +18",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "economist"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Economist",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 35,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +17",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "investment\\s+management"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Investment Management",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 56,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "private\\s+(equity|credit|bank\\w*)"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Private Equity",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 52,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\bm&a\\b"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "M&A",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 29,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "corporate\\s+bank\\w*"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Corporate Banking",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 36,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +18",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "capital\\s+markets"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Capital Markets",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 35,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +17",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "asset\\s+management"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Asset Management",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 54,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +17",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "wealth\\s+management"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Wealth Management",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 47,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +14",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "treasury"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Treasury",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 24,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +14",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "actuarial"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Actuarial",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 31,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +13",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "trading\\s+(analyst|assistant|intern)"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Trading Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 35,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +17",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\btrader\\b"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Trader",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 53,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +16",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "corporate\\s+development"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Corporate Development",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 49,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +16",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "strategy\\s+(analyst|associate|intern)"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Strategy Analyst",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 24,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +14",
+    "US finance hub +6",
+    "target firm +4"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "business\\s+analyst"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Business Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 32,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +14",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "data\\s+analyst"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Data Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 31,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +13",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "financial\\s+planning"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Financial Planning",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 50,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +13",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\banalyst\\b"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 45,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\bassociate\\b"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Associate",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 19,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +9",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\bintern(ship)?\\b"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Internship",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 34,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +8",
+    "timing +8",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "pre[\\s-]?doctoral|predoc"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Pre-Doctoral",
+   "value": 57,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +20",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "summer\\s+20(26|27)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Summer 2026",
+   "value": 74,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +18",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "20(26|27)\\s+(summer|full[\\s-]?time|analyst)"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. 2026 Summer",
+   "value": 70,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +18",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "class\\s+of\\s+20(27|28)"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Class Of 2027",
+   "value": 47,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +18",
+    "US finance hub +6",
+    "target firm +4"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "full[\\s-]?time\\s+analyst"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Full-Time Analyst",
+   "value": 54,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +17",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "campus|university\\s+(hire|program|recruit)|early\\s+career"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Campus",
+   "value": 53,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +16",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "new\\s+grad(uate)?"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. New Graduate",
+   "value": 72,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +16",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "rising\\s+(junior|senior)"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Rising Junior",
+   "value": 68,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +16",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "research\\s+assistant"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Research Assistant",
+   "value": 44,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +15",
+    "US finance hub +6",
+    "target firm +4"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "rotational\\s+program"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Rotational Program",
+   "value": 51,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +14",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "undergraduate"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Undergraduate",
+   "value": 49,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +12",
+    "US finance hub +6",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "graduating\\s+(student|in)"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Graduating Student",
+   "value": 68,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +12",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "\\bjunior\\s+or\\s+senior\\b"
+   ],
+   "kind": "entry",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Junior Or Senior",
+   "value": 64,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +12",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "part[\\s-]?time"
+   ],
+   "kind": "entry",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Part-Time",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +8",
+    "US finance hub +6",
+    "target firm +4"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "\\bintern(ship)?\\b"
+   ],
+   "kind": "entry",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Internship",
+   "value": 45,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +8",
+    "remote +10",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "title_timing",
+    "\\b20(26|27)\\b"
+   ],
+   "kind": "entry",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst, 2026",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 51,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +14",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "title_timing",
+    "\\bclass\\s+of\\b"
+   ],
+   "kind": "entry",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst, Class Of",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 70,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +14",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "(?<!rising\\s)senior(?!\\s+year)"
+   ],
+   "kind": "near-miss",
+   "employer": "Quillon Asset Management",
+   "title": "Rising Senior Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 75,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "timing +16",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "(?<!rising\\s)senior(?!\\s+year)"
+   ],
+   "kind": "near-miss",
+   "employer": "Ashcombe Trust",
+   "title": "Senior Year Placement, Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 35,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "sales(?!\\s*(?:and|&)\\s*trading)"
+   ],
+   "kind": "near-miss",
+   "employer": "Fenwold Securities",
+   "title": "Global Markets (Sales and Trading) Summer Analyst Programme",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 32,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "sales(?!\\s*(?:and|&)\\s*trading)"
+   ],
+   "kind": "near-miss",
+   "employer": "Brindlemere Capital",
+   "title": "Sales & Trading Summer Analyst, 2027",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 54,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "timing +14",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.junior",
+    "rising\\s+junior(?!\\s+or)"
+   ],
+   "kind": "near-miss",
+   "employer": "Calderwell Advisors",
+   "title": "Rising Junior or Senior Investment Intern",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "title is senior: 'Senior'"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.senior",
+    "rising\\s+senior(?!\\s+or)"
+   ],
+   "kind": "near-miss",
+   "employer": "Quillon Asset Management",
+   "title": "Rising Senior or Junior Summer Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 75,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "timing +16",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "lead"
+   ],
+   "kind": "near-miss",
+   "employer": "Ashcombe Trust",
+   "title": "Leadership Development Analyst Programme",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 55,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "partner"
+   ],
+   "kind": "near-miss",
+   "employer": "Fenwold Securities",
+   "title": "Limited Partnerships Analyst",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 22,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "staff"
+   ],
+   "kind": "near-miss",
+   "employer": "Brindlemere Capital",
+   "title": "Staffing Levels Analyst, Operations",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 30,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "director"
+   ],
+   "kind": "near-miss",
+   "employer": "Calderwell Advisors",
+   "title": "Directory Services Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 30,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.seniority",
+    "\\bmd\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Quillon Asset Management",
+   "title": "Analyst, MDM Reference Data",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 49,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.off_function",
+    "\\bhr\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Ashcombe Trust",
+   "title": "HRIS Reporting Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 45,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\basic\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Fenwold Securities",
+   "title": "Basic Materials Equity Research",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 30,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +20",
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "developers?"
+   ],
+   "kind": "near-miss",
+   "employer": "Brindlemere Capital",
+   "title": "Developing Markets Research Analyst",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 37,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "rejects.too_technical",
+    "\\bios\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Calderwell Advisors",
+   "title": "Biosciences Coverage Analyst",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 30,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "class_scoped.freshman",
+    "first[\\s-]?year\\s+(student|intern)"
+   ],
+   "kind": "near-miss",
+   "employer": "Quillon Asset Management",
+   "title": "First Year Review Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 49,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +12",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\banalyst\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Ashcombe Trust",
+   "title": "Analytics Placement, Markets",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 35,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\bintern(ship)?\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Fenwold Securities",
+   "title": "Internal Audit Placement",
+   "location": "Boston, MA",
+   "priority": 3,
+   "body": "",
+   "value": 12,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "US finance hub +6",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "role_fit",
+    "\\btrader\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Brindlemere Capital",
+   "title": "Traded Products Control Placement",
+   "location": "Remote - United States",
+   "priority": 2,
+   "body": "",
+   "value": 20,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "remote +10",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "title_timing",
+    "\\bclass\\s+of\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Calderwell Advisors",
+   "title": "Multi-Asset Class Placement",
+   "location": "Chicago, IL",
+   "priority": 1,
+   "body": "",
+   "value": 20,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "US finance hub +6",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "title_timing",
+    "\\b20(26|27)\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst, 2029 Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 56,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "timing",
+    "part[\\s-]?time"
+   ],
+   "kind": "near-miss",
+   "employer": "Ashcombe Trust",
+   "title": "Partial Coverage Research Analyst",
+   "location": "NY-New York",
+   "priority": 2,
+   "body": "",
+   "value": 52,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.primary",
+    "\\bny\\b"
+   ],
+   "kind": "near-miss",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "Sunnyvale, CA",
+   "priority": 3,
+   "body": "",
+   "value": 23,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "geography.home",
+    "your\\s+home\\s+city"
+   ],
+   "kind": "near-miss",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "Your Home Cityscape, NY",
+   "priority": 2,
+   "body": "",
+   "value": 52,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "china"
+   ],
+   "kind": "near-miss",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Chinatown, New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 56,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "non_us",
+    "india"
+   ],
+   "kind": "near-miss",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Indianapolis, IN",
+   "priority": 1,
+   "body": "",
+   "value": 31,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Quillon Asset Management",
+   "title": "Quantitative Analyst, Ph.D. Intern",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "degree",
+   "reasons": [
+    "for graduate students: 'Ph.D'"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Ashcombe Trust",
+   "title": "MBA Summer Associate, Investment Banking",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "degree",
+   "reasons": [
+    "for graduate students: 'MBA'"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Fenwold Securities",
+   "title": "Pre-Doctoral Research Assistant, Economics",
+   "location": "New York, NY",
+   "priority": 3,
+   "body": "",
+   "value": 68,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "timing +20",
+    "New York +25",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Brindlemere Capital",
+   "title": "Research Analyst",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Candidates need 5+ years of relevant experience.",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "experience",
+   "reasons": [
+    "asks for 5+ years of experience"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. A master's degree is required for this position.",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "degree",
+   "reasons": [
+    "requires an advanced degree: \"master's degree is required\""
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Quillon Asset Management",
+   "title": "2027 Markets Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Expected graduation date of December 2027 - June 2028.",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "graduation",
+   "reasons": [
+    "graduates 2027-12 to 2028-06; you graduate 2027-05"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Ashcombe Trust",
+   "title": "2027 Markets Full-Time Analyst Programme",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. Graduating between December 2026 and June 2027.",
+   "value": 72,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "timing +17",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Fenwold Securities",
+   "title": "Quantitative Research - Markets - Associate",
+   "location": "New York, NY",
+   "priority": 3,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "seniority",
+   "reasons": [
+    "'associate' is a senior grade at Fenwold Securities"
+   ],
+   "senior_grades": [
+    "associate"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Brindlemere Capital",
+   "title": "Quantitative Research - Markets - Associate",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "",
+   "value": 58,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Calderwell Advisors",
+   "title": "Research Analyst",
+   "location": "Boise, Idaho",
+   "priority": 1,
+   "body": "",
+   "value": 31,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Quillon Asset Management",
+   "title": "Research Analyst",
+   "location": "Kyiv, Ukraine",
+   "priority": 1,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "geography",
+   "reasons": [
+    "location not recognised as US: 'Kyiv, Ukraine'"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Ashcombe Trust",
+   "title": "Research Analyst",
+   "location": "Chantilly",
+   "priority": 2,
+   "body": "",
+   "value": 27,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Fenwold Securities",
+   "title": "Research Analyst",
+   "location": "",
+   "priority": 3,
+   "body": "",
+   "value": 23,
+   "verdict": "reject",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +19",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Brindlemere Capital",
+   "title": "Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 59,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Calderwell Advisors",
+   "title": "Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "",
+   "value": 55,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +8",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Quillon Asset Management",
+   "title": "Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 3,
+   "body": "",
+   "value": 51,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +4",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Ashcombe Trust",
+   "title": "Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 0,
+   "body": "",
+   "value": 47,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Fenwold Securities",
+   "title": "Analyst Programme",
+   "location": "New York, NY",
+   "priority": 3,
+   "body": "The analyst supports deal execution across mergers and acquisitions: comparable company analysis, discounted cash flow work, and the pitchbook that goes with it. Recent work includes a leveraged buyout and a capital raise for a coverage group client. ",
+   "value": 59,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +4",
+    "reads as banking +8"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Brindlemere Capital",
+   "title": "Analyst Programme",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 55,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +8"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Calderwell Advisors",
+   "title": "Quantitative Research Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 66,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "New York +25",
+    "target firm +12",
+    "matches the firm's declared track +4"
+   ],
+   "tracks": [
+    "quant"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Quillon Asset Management",
+   "title": "Quantitative Research Analyst",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 62,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "New York +25",
+    "target firm +12"
+   ],
+   "tracks": [
+    "banking"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Ashcombe Trust",
+   "title": "Quantitative Research Summer Analyst Programme, Summer 2027",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 79,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "timing +18",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Fenwold Securities",
+   "title": "Quantitative Research Summer Analyst Programme, Summer 2027",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "This role sits with the investment team and supports the written record that goes to the committee. The work is measured, documented and reviewed by the people who rely on it. Notes are circulated once a week and filed with the rest of the record, and questions are welcome at any point. ",
+   "value": 80,
+   "verdict": "pursue",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +25",
+    "timing +18",
+    "New York +25",
+    "target firm +12"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Brindlemere Capital",
+   "title": "Sophomore Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 2,
+   "body": "",
+   "value": 0,
+   "verdict": "reject",
+   "rejected_by": "class year",
+   "reasons": [
+    "aimed at sophomore students; you are a senior ('Sophomore')"
+   ]
+  },
+  {
+   "entry": [
+    "algorithm",
+    ""
+   ],
+   "kind": "algorithm",
+   "employer": "Calderwell Advisors",
+   "title": "Sophomore Summer Analyst Programme",
+   "location": "New York, NY",
+   "priority": 1,
+   "body": "",
+   "value": 59,
+   "verdict": "maybe",
+   "rejected_by": null,
+   "reasons": [
+    "role fit +22",
+    "New York +25",
+    "target firm +12",
+    "not hydrated: capped pending the full description"
+   ],
+   "standing": "sophomore"
+  }
+ ]
+}

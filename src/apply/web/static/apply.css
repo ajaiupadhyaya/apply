@@ -108,6 +108,13 @@ a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .masthead nav a { color: var(--ink-2); }
 .masthead nav a[aria-current="page"] { color: var(--ink); }
 
+.tracks { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0 0 1rem;
+          font-size: var(--t-s); }
+.tracks a { color: var(--ink-2); }
+.tracks a span { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tracks a[aria-current="page"] { color: var(--ink); text-decoration: underline;
+                                 text-underline-offset: 0.2em; }
+
 /* ------------------------------------------------------------ layout */
 
 main { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad) 5rem; }

@@ -14,7 +14,6 @@ from typing import Iterable
 
 from .models import (
     Application,
-    Contact,
     Event,
     EventKind,
     Followup,
@@ -69,13 +68,6 @@ CREATE TABLE IF NOT EXISTS event (
   kind           TEXT NOT NULL,
   occurred_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   detail         TEXT
-);
-
-CREATE TABLE IF NOT EXISTS contact (
-  id         INTEGER PRIMARY KEY,
-  posting_id INTEGER REFERENCES posting(id) ON DELETE SET NULL,
-  name       TEXT, title TEXT, email TEXT, linkedin TEXT,
-  last_touch DATE, notes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS followup (
@@ -283,6 +275,15 @@ def update_description(conn: sqlite3.Connection, p: Posting) -> None:
         )
 
 
+def update_score(conn: sqlite3.Connection, p: Posting) -> None:
+    """The gate's verdict and nothing else. Used by `apply rescore`."""
+    with conn:
+        conn.execute(
+            "UPDATE posting SET score=?, score_verdict=?, score_reasons=? WHERE id=?",
+            (p.score, p.score_verdict, p.score_reasons, p.id),
+        )
+
+
 def delete_posting(conn: sqlite3.Connection, slug: str) -> bool:
     with conn:
         cur = conn.execute("DELETE FROM posting WHERE slug = ?", (slug,))
@@ -319,11 +320,6 @@ def set_documents(
                fieldpack_path=? WHERE id=?""",
             (resume_variant, letter_path, resume_path, fieldpack_path, app_id),
         )
-
-
-def set_notes(conn: sqlite3.Connection, app_id: int, notes: str | None) -> None:
-    with conn:
-        conn.execute("UPDATE application SET notes=? WHERE id=?", (notes, app_id))
 
 
 #: Which event a status change writes into the log.
@@ -448,35 +444,6 @@ def followups(
 def complete_followup(conn: sqlite3.Connection, followup_id: int) -> None:
     with conn:
         conn.execute("UPDATE followup SET done = 1 WHERE id = ?", (followup_id,))
-
-
-# ---------------------------------------------------------------- contacts
-
-
-def add_contact(conn: sqlite3.Connection, c: Contact) -> int:
-    with conn:
-        cur = conn.execute(
-            """INSERT INTO contact (posting_id, name, title, email, linkedin, last_touch, notes)
-               VALUES (?,?,?,?,?,?,?)""",
-            (c.posting_id, c.name, c.title, c.email, c.linkedin,
-             _date_str(c.last_touch), c.notes),
-        )
-    return cur.lastrowid
-
-
-def contacts(conn: sqlite3.Connection, posting_id: int | None = None) -> list[Contact]:
-    sql = "SELECT * FROM contact"
-    params: list = []
-    if posting_id is not None:
-        sql += " WHERE posting_id = ?"
-        params.append(posting_id)
-    sql += " ORDER BY name"
-    return [
-        Contact(id=r["id"], posting_id=r["posting_id"], name=r["name"], title=r["title"],
-                email=r["email"], linkedin=r["linkedin"],
-                last_touch=_as_date(r["last_touch"]), notes=r["notes"])
-        for r in conn.execute(sql, params).fetchall()
-    ]
 
 
 # -------------------------------------------------------------- pipeline

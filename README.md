@@ -2,89 +2,406 @@
 
 Everything up to the submit button.
 
-Paste a job description, get back a tailored cover letter, the right resume
-variant, a filled field pack for the portal, and a tracked record with a
-deadline. Then read it yourself and submit it yourself.
+APPLY watches the job boards of firms you name and the alert emails Handshake
+and LinkedIn already send you. It throws away what doesn't fit, for free, and
+says why. For what does fit, Claude writes a cover letter and the portal
+answers from your own record, and a second, independent request audits every
+claim against that record before a PDF exists. Then it stops. You read it, and
+you submit it.
 
 ```
-apply discover                 # poll every target firm; file what is worth reading
-apply gen <slug>               # letter + resume + field pack
-apply review <slug>            # you read it; this is the gate
-apply submit <slug>            # you submitted it; this records that
-apply serve                    # the dashboard, localhost:8787
+find     firms' own job boards, plus Handshake and LinkedIn alert mail    free
+gate     seniority, geography, function, fit — every rejection says why   free
+write    Claude drafts the letter and portal answers from your profile    ~$0.50
+audit    a second request checks each claim against your sources
+you      read it (apply review), then submit it yourself (apply submit)
 ```
 
-`apply add --clipboard` still takes a pasted posting, and always will — it is the
-only way Handshake-hosted listings get in.
+It runs on your machine. The database is a SQLite file, the documents are PDFs
+in a folder, and nothing about you leaves the laptop except the part of your
+profile a letter is written from.
 
 ---
 
 ## What it will not do
 
-These are enforced in code, not just documented.
+Enforced in code and in tests, not just promised here.
 
-| Never | Where it is enforced |
+| Never | How |
 |---|---|
-| Submit an application | Nothing in `src/` can make an outbound write. There is no HTTP POST, no browser driver, no scheduler. A test greps for them. |
-| Scrape or log into Handshake | `apply add --url` rejects `*.joinhandshake.com` with a message telling you to paste instead. The userscript excludes the domain. |
-| Store credentials, SSN, DOB, or bank details | They are not in `profile.yaml`, so they cannot reach a document or a field pack. The API key is read from the environment and never written. |
-| Promote an application without a human | `ready` accepts only the `review` action; `submitted` accepts only the `submit` action. Every other caller is refused by `db.transition`. |
-| Put a fact in a letter that is not in `profile.yaml` | The lint fails the build on any number or date sourced from neither the profile nor the posting. |
+| Submit an application | Nothing transmits to an employer. Every module that sends a request is declared in `src/apply/outbound.py` with the reason its hosts are not employers, and the suite fails on an undeclared one. There is no browser driver in the codebase. |
+| Scrape Handshake, LinkedIn or Indeed | Their postings arrive through the alert emails they already send you, or by paste. `apply add --url` refuses all three outright, subdomains included, and names the paste command instead. |
+| Hold a credential in a file | The Anthropic key and the IMAP app password are looked up at call time — the environment, then the OS credential store (Windows Credential Manager, the macOS Keychain, or a Secret Service keyring). `apply setup` hands the key to that store and never to a file. |
+| Move an application without you | `ready` accepts only the `review` action and `submitted` only `submit`; every other caller is refused by `db.transition`. |
+| Claim what you haven't done | The lint fails any figure written in digits that appears in neither your profile, your context documents nor the posting. Everything else rests on the audit, which is a model reading the draft against those same sources — a judgement, not a rule. Either failure means no PDF. One exception, in the table so you know about it: text you wrote yourself and pass back with `apply gen --from-body` is built on the lint alone when there is no key to audit it, and the letter is recorded `unverified`. |
 
 ---
 
-## Setup
+## What it has done so far
 
-Needs Python 3.11+, [uv](https://docs.astral.sh/uv/), and a TeX install.
+`uv run python tools/numbers.py` reads the registry and the database and prints
+the table below. This is one person's search, as of 2026-09-23. Run it against
+your own pipeline and you get your own figures; nothing in this section is a
+number anyone typed by hand.
 
-```bash
-uv sync                                        # or: uv sync --all-extras, for the API path
-brew install --cask mactex-no-gui              # if pdflatex is missing
-uv run apply init
-uv run apply doctor                            # what is still missing
+| figure                | value |
+|-----------------------|---|
+| registry              | 152 firms — 75 workday, 64 greenhouse, 6 oracle, 3 ashby, 2 lever, 1 eightfold, 1 nextdata |
+| gate                  | pursue ≥ 70, maybe ≥ 45 |
+| vocabulary            | 87 reject patterns, 4 places, 49 non-US places, 35 role patterns, 15 timing patterns, 6 class-year patterns |
+| postings filed        | 826 — 95 pursue, 535 maybe, 196 since screened out by a gate change |
+| boards they came from | 319 oracle, 273 greenhouse, 195 workday, 19 nextdata, 8 eightfold, 5 lever, 4 alert, 3 ashby |
+| last unattended pass  | 1232 fetched, 1022 rejected for free, 106 filed from boards, 4 from alert mail, 4 letters written |
+| documents built       | 14 letters generated, 0 promoted past the human gate |
+| model spend           | $6.04 over 41 calls for 12 letters — $0.50 a letter, audit included |
+
+Four of those rows are the argument. **1232 fetched, 1022 rejected for free**
+is the shape of the problem: one Workday employer alone can return four hundred
+openings. The gate is regular expressions and arithmetic, it runs before any
+model is called, and so none of those rejections cost anything.
+**0 promoted past the human gate** is not an oversight — `ready` and
+`submitted` are reached by a person typing `apply review` and `apply submit`,
+and there is no other way in. The **196** rejects are postings filed under an
+earlier version of the gate that `apply rescore` has since screened out; a
+rejection is normally not stored at all. The **$0.50** is the whole cost of a
+letter: the draft, the audit that checks it, and the revision the audit asked
+for.
+
+What this is not: it was built for one person's search, a 2027 finance hunt
+centred on New York, and the shipped defaults are tuned for that search — which
+titles are refused, which roles score, the graduating years it looks for.
+`apply setup` writes the geography from the city you give it, but the rest is
+still someone else's vocabulary until you edit it. It is a YAML file rather
+than source code, `apply search` prints what is in force and where each block
+came from, and [Make it yours](#make-it-yours) is how to change it. The registry
+above is not shipped either: `data/employers.yaml` is one person's target list,
+so it stays on their machine, and a clone starts with an example of the shape.
+
+---
+
+## Start here
+
+Clone the repository, then run the installer for your system. It checks for
+Python, [uv](https://docs.astral.sh/uv/) and TeX, offers to install what is
+missing, runs `uv sync`, and hands over to `apply setup`. Safe to re-run.
+
+```powershell
+# Windows (PowerShell), from the cloned folder
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
-Then fill in the two files that hold your facts:
-
 ```bash
-cp data/profile.private.example.yaml data/profile.private.yaml
-$EDITOR data/profile.private.yaml              # phone, address, GPA. gitignored.
-$EDITOR data/profile.yaml                      # everything else
+# macOS or Linux, from the cloned folder
+bash scripts/install.sh
 ```
 
-`apply doctor` lists every value still marked `ASK`. Generation refuses to render
-one into a document, so the list is the to-do list.
+Already have uv? `uv sync && uv run apply setup` does the same job.
 
-Seed the pipeline with two real-shaped postings:
+`apply setup` is a guided conversation, and it needs an Anthropic API key. It
+checks your toolchain, stores the key in the OS credential store (Windows
+Credential Manager, the macOS Keychain, or a Secret Service keyring) and asks
+about the roles, job type, locations, firms and links you care about. It asks a
+few direct questions as well: work authorization, sponsorship, graduation date,
+availability, and your phone, address and GPA, which stay on your machine. It
+then imports your resume, a cover letter and any other writing you give it
+(PDF, DOCX, TXT or MD), with phone numbers, addresses and SSNs redacted. From
+those, Claude drafts `data/profile.yaml` and `data/search.yaml` (tracks, roles,
+locations, rejects and limits), then strips anything the documents do not
+support. You accept, edit or redo each section. It finds the job boards of the
+firms you named, confirming each one, and offers to set up Gmail alert
+ingestion, a phone push through ntfy and the daily schedule.
+
+The whole conversation is one drafting request, roughly $0.10 to $0.60 at the
+draft model's prices. To redo part of it:
 
 ```bash
-uv run apply seed
+uv run apply setup --step about        # the questions, then the draft again
+uv run apply setup --step employers    # the firms and their job boards
+```
+
+The steps are `toolchain`, `key`, `about`, `documents`, `draft`, `review`,
+`employers`, `extras` and `finish`. If you would rather not use a key yet,
+`uv run apply setup --quick` asks nine plain questions and needs none, and
+`uv run apply setup --persona` writes the example person so there is something
+to look at. `--force` replaces an existing profile and goes only with
+`--quick`, `--persona` or `--non-interactive`.
+
+Not a command line person? Open this folder in Cursor or Claude Code and say
+"set this up". `AGENTS.md` tells the agent to run `uv run apply setup` and not
+to write your profile itself.
+
+---
+
+## Quick start
+
+Needs Python 3.11+, [uv](https://docs.astral.sh/uv/), and TeX if you want PDFs.
+Python 3.11 and 3.13 on Ubuntu, macOS and Windows are what the workflow in
+`.github/workflows/tests.yml` is set up to run. This is the shortest route to something
+to look at, with no key and no conversation.
+
+```bash
+git clone https://github.com/ajaiupadhyaya/apply && cd apply
+uv sync
+uv run apply setup --persona   # the example person, so there is something to read
+uv run apply seed              # two invented postings, so there is a pipeline
+uv run apply serve             # the dashboard, at localhost:8787
+```
+
+`--persona` writes the invented person this repository ships, Rae Mercer of
+Example University, and gives you a profile complete enough to render a letter
+and a resume end to end. When you want your own, `uv run apply setup` is the guided route above;
+`uv run apply setup --quick --force` asks nine questions — name, email, school,
+degree, graduation month, the city you want to work in, the work you want, work
+authorization, a GitHub link — and replaces the persona. It leaves everything it could not ask about marked `ASK`:
+your experience and your projects, above all. `apply doctor` sorts those into
+what blocks a command, what a document would print, and what nothing is waiting
+on, and `apply gen` refuses to render a document that would carry the word
+`ASK` to an employer.
+
+Quick setup also writes `data/search.yaml` from the city you gave it, which is how
+the gate learns where you want to work. It writes that file once and never
+again: a second `apply setup` leaves it alone, `--force` included, because a
+tuned search is work and `--force` is about the profile. So if you start from
+the persona, the gate starts out looking for London, which is where she lives —
+edit the city in `data/search.yaml`, or delete the file and run setup again.
+`uv run apply search` prints what the gate is looking for and which file said so.
+
+Finding and gating postings costs nothing and needs no key. Writing a letter
+needs one, or needs you to write it yourself — see
+[Without an API key](#without-an-api-key).
+
+```bash
+# any OS: apply setup stores it for you, in the OS credential store
+uv run apply setup --step key
+# macOS, by hand
+security add-generic-password -U -a "$USER" -s ANTHROPIC_API_KEY -w
+# Linux, with a Secret Service running
+keyring set apply ANTHROPIC_API_KEY
+# anywhere, in the shell that runs apply
+export ANTHROPIC_API_KEY=...
+```
+
+On Windows the key is stored in Windows Credential Manager by `apply setup`; on
+every OS the storing goes through `apply.secrets.store`. On a headless Linux box
+with no Secret Service the exported variable is the ordinary route. A scheduled run does not inherit your shell's variables; see
+[Running unattended](#running-unattended).
+
+Typesetting needs `pdflatex` and the packages the templates load: geometry,
+titlesec, enumitem, microtype, mathptmx, xcolor, hyperref, parskip and
+`fontenc` with `T1`. `brew install --cask mactex-no-gui` on macOS; `winget install MiKTeX.MiKTeX` on Windows; `apt install
+texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended` on
+Debian or Ubuntu. Without TeX everything else still runs and no PDF is built.
+`uv run apply doctor` says what is missing, at any point. To call `apply` from
+any folder:
+
+```bash
+echo "alias apply='uv run --project $(pwd) apply'" >> ~/.zshrc   # or ~/.bashrc (macOS, Linux)
 ```
 
 ---
 
-## How the letters get written
+## Make it yours
 
-**Claude writes every letter and portal answer. Nothing is pasted from a
-template.** A second, independent request audits each draft before a PDF exists.
+Nothing about your search is tracked by git. Every file below is gitignored.
+`apply setup` drafts `profile.yaml` and `search.yaml` from your documents and
+answers (`--quick` writes them from nine answers instead), and copies the other two from the `*.example.yaml` that
+ships beside each one.
+
+| File | Holds |
+|---|---|
+| `data/profile.yaml` | your facts — education, experience, projects, skills, work authorization, availability — and a writing brief under `writing:` that sets voice, structure and emphasis. `data/profile.example.yaml` is a persona, Rae Mercer, who does not exist. |
+| `data/profile.private.yaml` | phone, street address, GPA, budget ceilings, and a `search: thresholds:` block that overrides the gate's. Never sent to the API. |
+| `data/employers.yaml` | which firms to poll, which board each uses, and any firm-specific rules. |
+| `data/search.yaml` | the gate's vocabulary, as far as it is yours. Written once by setup, from the city you gave it; there is no `search.example.yaml`, because `apply search` prints the shipped blocks to copy. |
+
+### The gate's vocabulary
+
+The defaults live in `src/apply/search.defaults.yaml` and ship with the
+package. `data/search.yaml` overrides them, one block at a time. A block
+replaces the default whole rather than merging into it, because half a list of
+rejects is harder to reason about than either the whole default or your own.
+
+```yaml
+# data/search.yaml — Berlin instead of New York.
+#
+# `geography` is replaced whole, so every place you still want a score for has
+# to be here: `apply search` reports four places by default and two after this.
+geography:
+  primary: {weight: 25, label: Berlin, patterns: ['berlin']}
+  remote:  {weight: 10, label: remote, match_title: true, patterns: ['remote']}
+
+# Locations that disqualify. Named for the search it was written for; what it
+# means is "somewhere I am not looking".
+non_us: ['new\s+york', 'chicago', 'singapore']
+
+# Adding a role pattern means restating the ones you are keeping. Copy the
+# block out of src/apply/search.defaults.yaml and add your line to it.
+role_fit:
+  - ['climate\s+(research\w*|analyst)', 25]
+  - ['quantitative[\s\w]{0,18}(research\w*|analyst|trader|trading)', 25]
+  - ['graduate\s+(program|programme|scheme|analyst)', 23]
+  # ... the other 32 pairs, or not, as you like
+```
+
+With that file in place, a Climate Research Analyst in Berlin scores 54 on
+title alone and is filed; a Research Analyst in New York is rejected on
+location. `uv run apply search` prints every block, how many entries it holds,
+and whether it came from the defaults or from your file:
 
 ```
-apply gen <slug>                    # Claude writes, lints, fits, audits, revises
-apply gen <slug> --from-body        # check and render your own edits to body.md
-apply check <slug>                  # audit the current letter again, change nothing
-apply gen <slug> --llm manual       # write PROMPT.md to paste into Claude by hand
+  block           entries    from
+  thresholds            2    defaults
+  rejects              87    defaults
+  class_scoped          6    defaults
+  geography             2    data/search.yaml
+  non_us                3    data/search.yaml
+  role_fit              3    data/search.yaml
+  timing               15    defaults
+  title_timing          2    defaults
+
+places, first match wins: Berlin +25, remote +10
+thresholds: pursue ≥ 70, maybe ≥ 45.
+Override any block in data/search.yaml.
 ```
 
-What Claude reads, all of it yours:
+Thresholds move the same way: `thresholds: {pursue: 70, maybe: 45}`. They can
+also be set under `search:` in `data/profile.private.yaml`, which is where the
+shipped example puts them, and that copy wins — `apply search` prints the pair
+in force and names the file it came from, because `pursue` is the bar an
+unattended run spends money on. After any change, `uv run apply rescore
+--dry-run` shows what the new vocabulary would do to the postings already
+filed, and `apply rescore` applies it.
 
-- **`data/profile.yaml`** — the facts (education, experience, projects, skills,
-  work authorization, availability) and a **writing brief** under `writing:`:
-  instructions about voice, structure and emphasis, never sentences. Edit the
-  brief and every future letter changes.
+---
+
+## Finding postings
+
+`apply discover` polls every firm in `data/employers.yaml` through the public
+API behind its careers page — Greenhouse, Lever, Ashby, Workday, Oracle
+Recruiting Cloud, Eightfold, or the JSON a Next.js careers page embeds. It
+calls no model, so it costs nothing. A firm behind bot protection is not
+polled: getting past that would mean pretending to be a browser, which is the
+line this project doesn't cross.
+
+To register a firm, `apply resolve <careers page> --name "Firm"` reads the
+page, works out which board is behind it, confirms the board answers, and
+prints the block to paste into `data/employers.yaml`. `apply targets` lists
+what is registered.
+
+`apply ingest` reads Handshake and LinkedIn alert mail over IMAP or from an
+export. Those postings carry a title and no description, so they are filed for
+you to look at and never written up automatically; `apply describe <slug>`
+attaches the full text once you have copied it. Which searches to save, and how
+to get the mail somewhere APPLY can read it, are in
+[docs/handshake-alerts.md](docs/handshake-alerts.md) and
+[docs/linkedin-alerts.md](docs/linkedin-alerts.md).
+
+`apply add` takes a posting by `--clipboard`, `--stdin`, `--file` or `--url`,
+and refuses Handshake, LinkedIn and Indeed URLs outright.
+
+Which board is which, what each endpoint costs, and how the paste routes behave
+on a machine with no clipboard: [docs/finding-postings.md](docs/finding-postings.md).
+
+---
+
+## The gate
+
+A Workday employer can return four hundred openings, of which perhaps three are
+plausible. Paying a model to read the rest is how a small balance disappears in
+a week, so the gate runs first, and free:
+
+```
+fetch     one request per employer
+dedupe    by fingerprint, across sources and against what is already stored
+score     titles and locations
+hydrate   fetch the full description — only for postings still standing,
+          best first, up to --hydrate (60); the rest wait for the next run
+re-score  with the description, where the disqualifiers live
+record    pursue and maybe are filed; reject never is
+```
+
+The hard rejects are regular expressions, not judgements. Most of them read the
+title and nothing else, they match the words they were given and no synonyms,
+and every one of them is a line in `src/apply/search.defaults.yaml` that
+`data/search.yaml` can replace. Each names itself when it fires:
+
+- **rank** (*title is senior*) — senior, sr., VP, director, principal, staff,
+  lead, head of, chief, managing director, partner, manager, supervisor.
+  "Rising Senior" and "senior year" are excluded, because they describe a
+  student, not a job level.
+- **off function** (*off-function*) — sales, but not "sales and trading";
+  account executive, recruiting, talent, marketing, HR, facilities, events,
+  coordinator, administrator, and about twenty more.
+- **software and infrastructure titles**, which the reason line calls an
+  engineering role: software engineer, SWE, backend, frontend, full stack,
+  devops, SRE, security/infrastructure/platform/systems engineer, data
+  engineer, ML engineer, developer, firmware, QA. Not every title with the word
+  *Engineer* in it — the line these patterns draw is *building the product*, so
+  "Privacy & Civil Liberties Engineer - New Grad" matches none of them, and one
+  in New York came through the live pipeline as a `maybe`. If that is the wrong
+  call for your search, the block to widen is `rejects.too_technical`.
+- **somewhere you are not looking** (*outside the US*) — a location that
+  matches no `geography` block and is on the `non_us` list. A location matching
+  none and naming a region that is not a US state is refused too, but only
+  while `country: us`: the fifty states are the one piece of geography the gate
+  knows by heart rather than from your file. For a city outside the United
+  States `apply setup` writes `country: elsewhere` and an empty `non_us`, so a
+  search the shipped vocabulary has nothing true to say about refuses nothing
+  for free.
+- **out of reach on the description** — three or more years of required
+  experience, a required advanced degree, or a title naming one ("Ph.D.
+  Intern", "MBA Associate"; pre-doctoral roles pass). These need the full
+  posting, so they run after hydrate.
+- **a class year other than yours**, derived from your graduation date rather
+  than stored, because a stored class year is wrong within a year.
+
+A posting that states a graduation window ("expected graduation date of
+December 2027 – June 2028") is rejected when your `grad_expected` falls outside
+it. That is the real eligibility line for campus programmes: a May 2027
+graduate is outside every 2027 summer analyst window and inside every 2027
+full-time one. Only a window with a month on both ends counts; "the 2026–2027
+academic year" and "June 2028 or earlier" are left for you to judge.
+
+Some seniority is a firm's own vocabulary: at a bank "Associate" is the grade
+above analyst, at a fund it is often the graduate hire. A registry entry's
+`senior_grades: ["associate"]` rejects that word in that firm's titles only.
+
+When the gate or the registry changes, `apply rescore` runs it again over the
+discovered postings still in draft. One it now rejects leaves the pipeline but
+stays in the database with its reason; postings you added by hand and anything
+with a letter written are never touched.
+
+Verdicts: `pursue` (70+, worth a letter), `maybe` (45–69, filed for you to look
+at), `reject` (dropped, with the reason). The patterns and thresholds behind all
+of this are configuration, not code: see [Make it yours](#make-it-yours).
+
+---
+
+## Writing
+
+Claude writes every letter, every portal answer and every resume's bullets,
+for the posting in front of it. Nothing is pasted from a template.
+
+The register is formal business English, and that is a hard rule rather than
+part of the brief: no contractions, no sentence fragments, no colloquialisms,
+no volunteering what you have not done. The brief can make the writing plainer
+or more specific; it cannot make it less formal.
+
+On the resume, Claude writes the bullets and the project lines. It rewrites
+each role's bullets for the posting, leads with the most relevant, and chooses
+which projects to list. Titles, employers, dates, education and skills are
+printed from your profile exactly as written. The tailored text is saved to
+`out/<slug>/resume.json`, where you can edit it and rebuild with `--from-body`.
+
+What it reads, all of it yours:
+
+- **`data/profile.yaml`** — the facts, and a writing brief under `writing:` that
+  describes voice, structure and emphasis. The brief is instructions, never
+  sentences, and editing it changes every future letter.
 - **`data/context/`** — longer source material. `apply context pull owner/repo`
-  files a GitHub README in your own words (introduction, every heading, each
-  section's opening). Everything here is something a letter may claim, so curate
-  it like a reference list.
+  files a GitHub README in the author's own words: the introduction, every
+  heading, and each section's opening. Anything here is something a letter may
+  claim, so curate it like a reference list.
 - **the posting**, verbatim.
 
 Phone, street address and GPA are never sent to the API.
@@ -92,231 +409,144 @@ Phone, street address and GPA are never sent to the API.
 ### The loop
 
 ```
-write    one request drafts the letter and both portal answers
-lint     free — banned phrases, unsourced figures, sponsorship wording
-fit      free — typeset it; it must be one page
-audit    paid — a separate request checks every sentence against your sources
-revise   paid — the writer gets its draft back with the exact problems
+write    one request drafts the letter, both portal answers and the resume
+lint     free: banned phrases, informal register, unsourced figures,
+         sponsorship wording, the resume's shape
+fit      free: typeset the letter and the resume; each must be one page
+audit    paid: a separate request checks every sentence against your sources
+revise   paid: the writer gets its draft back with the exact problems
 ```
 
-Free checks run first, so nobody pays to audit a draft that runs to two pages.
-Up to three drafts. If an **unsupported claim**, a **wrong authorization
-statement**, or a **blocking** finding survives the last one, no PDF is built —
-the draft stays in `body.md` for you to fix by hand. Style findings never block:
-"correct" is the auditor's job and "good" is yours, so they are recorded and
-shown at review time instead.
+The free checks run first, so nothing is paid to audit a draft that runs to two
+pages. There are up to three drafts. If an unsupported claim, a wrong
+authorization statement or a blocking finding survives the last one, no PDF is
+built, and the draft stays in `body.md` for you to fix. Style findings never
+block. Being correct is the auditor's job and being good is yours, so style
+findings are shown to you at review time instead.
 
-Your own edits to `body.md` are audited but never rewritten.
+Your own edits are audited, when there is a key to audit with, but never
+rewritten:
 
-The first live run caught exactly the failure this exists for: the writer kept
-inventing "starting in May" because the brief asked for availability and the
-profile held none. The auditor refused it three drafts running. That is why
-`availability:` now exists in the profile, and why the writer is told explicitly
-to state no start date while it is empty.
+```
+apply gen <slug>                  # write, check, audit, revise
+apply gen <slug> --from-body      # check and render your edits to body.md
+apply check <slug>                # audit again, change nothing
+apply gen <slug> --llm manual     # write PROMPT.md to paste into Claude by hand
+```
 
-### What it costs
+With no key, that second line is still the way to a PDF — see
+[Without an API key](#without-an-api-key).
 
-Measured on Opus 5 at high effort: **about $0.42 for a letter verified on the
-first draft**, most of it the model's reasoning, which bills as output. A draft
-needing revisions costs more — the refused run above was $0.81 for three. At the
-default $15/month ceiling that is roughly 30–35 letters. `--effort medium` cuts
-the reasoning roughly in half; whether that is worth it is your call.
-
-The shared source block is cached, so an audit or a revision re-reads your
-profile and context at about a tenth of the price.
+The first live run showed why the audit exists. The brief asked the closing to
+state availability, and the profile held none, so the writer kept inventing a
+start date. The audit refused it three drafts running, which is why
+`availability:` is now a profile field, and why the writer is told explicitly to
+give no start date while it is empty.
 
 ### The lint
 
-Runs on the prose before it becomes a PDF, on every draft and every answer.
+It runs on every draft, every portal answer and every resume bullet, before
+anything is typeset.
 
-- The banned words: *passionate, dynamic, synergy, leverage my skills,
+- the banned phrases: *passionate, dynamic, synergy, leverage my skills,
   fast-paced environment, I believe I would be a great fit*
-- Any superlative about the firm the posting did not use first
-- Any figure in neither your profile, your context documents, nor the posting
-- Any sentence about sponsorship that contradicts your profile
-- More than one page after compilation
+- a superlative about the firm that the posting didn't use first
+- a figure written in digits that is in neither your profile, your context
+  documents nor the posting. Digits only: "twenty percent" is a claim, not a
+  token, and it is the audit that has to catch it
+- a contraction (*I'm, don't, it's*) outside a quotation from the posting, or
+  casual phrasing (*a lot of, stuff, kind of, basically*)
+- a sentence about sponsorship that contradicts your profile
+- a resume that misses a role, gives a role fewer than two or more than four
+  bullets, runs a bullet past 30 words, uses the first person, or names a
+  project that does not exist
+- more than one page
+
+### Without an API key
+
+Finding and gating postings need no key. Writing a letter needs one — or needs
+you to write the letter yourself, in a chat window, and hand it back:
+
+```
+apply gen <slug> --llm manual     # writes out/<slug>/PROMPT.md and stops
+                                  # paste it into Claude; save the reply to
+                                  # out/<slug>/body.md, paragraphs separated by
+                                  # blank lines, the closing last
+apply gen <slug> --from-body      # lint, one-page check, then the PDFs
+```
+
+The reply also carries the two portal answers. Save them in
+`out/<slug>/answers.md` under `## Why this role (short)` and `## Why this role
+(long)` and `--from-body` reads them too; without that file you still get the
+letter and the resume, and the portal answers stay empty. A reply's resume
+bullets go in `out/<slug>/resume.json`; without it, the resume prints your
+profile's own bullets.
+
+PROMPT.md is the exact request the API would have received: the same system
+prompt, the same extracts from your profile and context documents, the posting
+verbatim, the same instructions about structure and sponsorship. So what you
+paste into a chat window is what the tool would have sent itself, and there is
+nothing else to keep in your head.
+
+`--from-body` never rewrites your prose. With no credential anywhere it skips
+the audit, records the letter `unverified` in `out/<slug>/verification.json`,
+and builds both PDFs on the free checks alone. If APPLY finds a credential that
+then fails — an expired key, a stale `~/.config/anthropic` — it stops rather
+than quietly skipping the audit, and says so. Adding `--llm manual` to that
+command renders anyway, `unverified` in the same way.
+
+What you give up is the half that reads the letter against your record.
+Nothing checks it but you, so read the draft for exactly what the auditor would
+have looked for:
+
+- a claim your profile and context documents do not support — an employer, a
+  degree, a responsibility, a result
+- a number written in words, which the lint does not see
+- the work-authorization sentence, against what your profile says
+- paragraph 4's citation: that the posting really says what you have it saying
+
+### Cost
+
+The ledger above says $0.50 a letter over twelve letters, on Claude Opus 5 at
+high effort: 13 write calls, 16 audits and 12 revisions for $6.04. A letter the
+audit passes first time is about $0.42, most of it the model's reasoning, which
+bills as output; most letters take one revision, which is where the rest goes.
+The source material is cached, so an audit or a revision re-reads your profile
+at about a tenth of the price, and `--effort medium` roughly halves the
+reasoning.
+
+The default model is now Claude Sonnet 5.5, at $2 in and $10 out per million
+tokens against Opus 5's $5 and $25, so the same letter costs about 40% of the
+figures above. `--model claude-opus-5` switches back for a single run.
+
+A ledger checks three ceilings before every call and records the cost after
+it: per call, per run and per month (defaults $0.50, $2.00 and $15.00, set
+under `budget:` in `profile.private.yaml`). When a ceiling would be crossed, the
+call doesn't happen and the run carries on without that step. `apply spend`
+shows where it went.
+
+### What an ATS sees
+
+After the resume compiles, `gen` reads it back the way an applicant-tracking
+system does — the PDF's text layer, not the page — and writes `ats.json`.
+`apply show <slug>` prints it.
+
+- **Parse problems:** no text at all, `(cid:NN)` glyphs from a font with no
+  Unicode map, an email or phone that is not literal text, or a date range
+  joined by an en-dash. That last one is why resume dates now read
+  `Aug 2025 - Present`: some Workday imports split ranges on the ASCII hyphen
+  only and drop the dates of an en-dashed one.
+- **Keyword coverage:** each tool or method the posting names, sorted into on
+  the resume, *you have it but the resume omits it*, and a real gap. Gaps are
+  never added to the resume; the letter is where they get an honest bridge.
+
+Postings added by URL are also checked against known job boards and the firm's
+own domain. Anything else — including look-alikes such as
+`citadel-careers.xyz` — is flagged as an unverified host at `add` and in `show`.
 
 ---
 
-## Finding the postings
-
-`apply discover` polls every firm in the employer registry and files anything
-worth reading. It calls no model and writes no document, so it costs nothing and
-can run as often as you like.
-
-```
-apply targets                  # who gets polled, and how
-apply discover --dry-run       # score everything, write nothing
-apply discover --show-rejects  # and explain what was dropped
-```
-
-Sources are public job-board APIs, not scrapers:
-
-| ATS | Endpoint | Notes |
-|---|---|---|
-| Greenhouse | `boards-api.greenhouse.io` | one request per firm, descriptions included |
-| Lever | `api.lever.co/v0/postings` | one request per firm |
-| Ashby | `api.ashbyhq.com/posting-api` | one request per firm |
-| Workday | the `/wday/cxs/` endpoint its own careers page calls | two steps: list, then one request per posting |
-
-Measured on 2026-09-20: Jane Street returned 228 postings through Greenhouse,
-BlackRock 50 analyst hits through Workday. Greenhouse leaves
-`application_deadline` empty almost always; Workday carries a real deadline in
-`endDate`, which appears after hydration.
-
-Each firm is configured once, by hand, in `data/employers.yaml` — the slug or the
-Workday tenant and site. `data/employers.example.yaml` explains where to find
-them. That file is gitignored: the list of firms you are targeting is strategy,
-not code.
-
-### The gate
-
-A Workday employer will return four hundred openings, of which perhaps three are
-plausible. Paying a model to read the other three hundred and ninety-seven is how
-a twenty-dollar balance disappears in a week, so `score.py` runs first and runs
-free:
-
-```
-fetch     one request per employer
-dedupe    by fingerprint, across sources and against what is already stored
-score     free, on titles and locations
-hydrate   one request per posting — only for the ones still standing
-re-score  now with the body, where the disqualifiers live
-record    pursue and maybe become postings; reject never does
-```
-
-Hard rejects, each of which names itself: senior titles, engineering roles,
-off-function roles, anything outside the US, three or more years of required
-experience, a required advanced degree. Positive weight goes to role fit, timing
-(summer 2027, campus, new grad, pre-doc), the employer's priority, and above all
-**New York**, which is the single heaviest signal in the model.
-
-Verdicts: `pursue` (≥70, worth a letter), `maybe` (45–69, filed and shown to
-you), `reject` (dropped, with a reason).
-
-On a live four-employer pass: 555 fetched, 497 unique, 447 rejected for free.
-
-### Handshake
-
-`apply ingest` reads the job-alert mail Handshake already sends you and files
-the postings out of it. APPLY never logs into Handshake and never fetches a page from it. Handshake
-emails you job matches, and reading your own inbox is not automated access — so
-the route in is saved-search alerts funnelled into one Gmail label.
-
-```
-apply ingest --imap            # read the mailbox directly; what an unattended run uses
-apply ingest --file x.json     # read an export, when Claude does the fetching
-```
-
-Two transports, one parser. `--imap` needs a Gmail app password and runs from
-cron; `--file` takes an export and is the fallback when a Workspace forbids app
-passwords. The parsing is the part that is hard, and it is shared.
-
-An alert carries a title, an employer, a location and sometimes a deadline — but
-never a description. So nothing from this channel can reach `pursue` on the
-strength of a title, by construction: it is filed for you to open, not fed to a
-letter writer. That is the deliberate cost of not scraping.
-
-**[docs/handshake-alerts.md](docs/handshake-alerts.md)** covers which saved
-searches to create. Ignore its Gmail-filter section — the ingester queries the
-mailbox directly and needs no labels.
-
-### LinkedIn
-
-The same pipeline reads LinkedIn's job-alert mail. **[docs/linkedin-alerts.md](docs/linkedin-alerts.md)**
-has the nine saved searches to create and the one setting to switch on.
-
-Alert postings arrive as titles only. Target firms are recognised under
-LinkedIn's spellings and collapse with the copy from the firm's own board; firms
-you haven't registered are listed after each ingest with the command to add
-them; re-posts ("Jobs via eFinancialCareers") are flagged; and every link is
-stripped of LinkedIn's one-time sign-in token before anything is stored.
-
-```
-apply describe <slug> --clipboard   # attach the full posting to a title-only one
-```
-
-It appends the text, reads the deadline and pay out of it, and re-scores the
-posting against the full description — which is where the disqualifiers live.
-
----
-
-## Running it while you are away
-
-`apply run` is one unattended pass: discover, ingest the alert mail, write
-documents for what earned one, report. It is what the scheduled job runs.
-
-```
-apply run --dry-run            # score everything, write nothing
-apply run                      # the real pass, free (deterministic letters)
-apply run --llm api --notify   # Claude writes them; notify when something needs you
-apply runs                     # what the scheduled passes have done
-```
-
-What it will never do, whoever calls it:
-
-- move an application past `generated` — `ready` and `submitted` belong to the
-  review and submit actions, and this code path does not call them
-- regenerate something that already has documents, so running it twice costs
-  nothing the second time
-- spend past the ledger's ceilings; a refused call ends that step, not the run
-- do anything at all if `data/HALT` exists
-
-One employer being down, one letter failing to compile, or the mailbox being
-unreachable are recorded and stepped over. A run that half-worked beats a run
-that raised.
-
-### On a schedule
-
-```
-apply schedule --show                    # print the LaunchAgent, install nothing
-apply schedule --install --at 06:30
-apply schedule                           # what is currently scheduled
-apply schedule --remove
-touch data/HALT                          # pause tonight without uninstalling
-```
-
-launchd rather than cron: it survives reboots, needs no terminal open, and
-catches up a missed run after the laptop wakes. The job runs through `zsh -lc`
-so `~/.zshrc` is sourced and the Keychain-held API key is actually present —
-a bare invocation would silently fall back to the free path.
-
-### Notifications
-
-A quiet run notifies nothing. A system that pings every morning to say it found
-nothing gets muted within a fortnight, and then the one morning it matters the
-notification is invisible too. It interrupts only when something is ready, needs
-reading, closes within seven days, or broke.
-
-`out/LATEST_RUN.md` is always written either way. Set `notify.ntfy_topic` in
-`profile.private.yaml` to get a push on your phone as well.
-
----
-
-## What it costs to run
-
-The discovery pass is free. Letter writing and verification are not, so
-`budget.py` keeps a ledger and three ceilings — per call, per run, per month —
-checked before every request and recorded after every one. When a ceiling would
-be crossed the call does not happen, and the run continues without that step.
-Running out of money should look like a smaller overnight run, not a broken
-system.
-
-```
-apply spend                    # month to date, by purpose
-apply spend --ledger           # every individual call
-```
-
-Defaults are $0.50 per call, $2.00 per run, $15.00 per month — deliberately under
-the $20 of credits, so a runaway month cannot eat the balance before you notice.
-Change them under `budget:` in `profile.private.yaml`.
-
-Rough costs: a letter on Opus 5 runs $0.10–0.20 because thinking bills as output;
-a verification pass is $0.05–0.10. Discovery and scoring are $0.00.
-
----
-
-## The state machine
+## The human gate
 
 ```
 draft ──generate──> generated ──YOU read it──> ready ──YOU submit it──> submitted
@@ -327,29 +557,83 @@ submitted ──> acknowledged ──> assessment ──> interviewing ──> o
 any ──> withdrawn
 ```
 
-Regenerating a `ready` application returns it to `generated` and clears
-`reviewed_at`. A re-write requires a re-read. Every transition writes an `event`
-row, so the log is an audit trail rather than a summary.
+Regenerating a `ready` application sends it back to `generated` and clears the
+review: a re-write needs a re-read. Every transition writes an event row, so the
+log is an audit trail. `apply submit` records that you submitted the application
+in the employer's portal. It contacts no one.
 
-`apply submit` records that **you** submitted the application in the employer's
-portal. It does not contact the employer.
+---
+
+## Running unattended
+
+`apply run` is one full pass: discover, read the alert mail, write documents for
+whatever earned them, report.
+
+`apply schedule --install --at 06:30` installs the morning job with whatever
+supervises the machine:
+
+| Platform | What gets installed | Where its output goes |
+|---|---|---|
+| macOS | a launchd agent, `apply.daily` | `out/run.log` |
+| Linux with systemd | a user timer, `apply.timer` and `apply.service` | `journalctl --user -u apply.service` |
+| Linux without systemd | one cron line, marked `# apply` | `out/run.log`, where the line redirects |
+| Windows | a Task Scheduler task, `APPLY daily run`, under your own login | `out\run.log` and `out\run.err` |
+
+launchd, the systemd timer and the Windows task (it starts when available) all
+catch up a run missed while the machine was off; cron does not. The Windows task
+runs as you, with your interactive token, so Credential Manager is readable and
+no password is stored. `apply schedule --show` prints the file that would be
+written and writes nothing, `--remove` takes it out again, and a cron removal
+never touches a line without the marker.
+
+Whoever calls it, it never:
+
+- moves an application past `generated`
+- regenerates something that already has documents
+- spends past the ledger's ceilings
+- does anything at all while `data/HALT` exists (`touch data/HALT`; in PowerShell,
+  `New-Item -ItemType File data\HALT`, or `type nul > data\HALT` in cmd)
+
+When an employer is down, a letter fails to compile or the mailbox is
+unreachable, it records the problem and moves on. A run that half-worked beats
+a run that crashed.
+
+A quiet run sends no notification. A system that pings every morning to say it
+found nothing gets muted within a fortnight, and then the morning it matters,
+nobody sees it. It interrupts only when something is ready, needs reading,
+closes within seven days, or broke — a desktop banner through `osascript` on
+macOS, `notify-send` on Linux or a PowerShell toast on Windows. `out/LATEST_RUN.md` is written either way, and
+setting `notify.ntfy_topic` adds a push to your phone.
+
+Secrets are looked up in one order on every platform: the environment, then the
+OS credential store through `keyring` — Windows Credential Manager, the macOS
+Keychain, or a Secret Service. The scheduled run is why the store lookups exist at all. A systemd
+timer and a cron line start a shell that reads no profile of yours whatsoever;
+the launchd agent runs `zsh -lc`, which reads `~/.zprofile` but not `~/.zshrc`,
+where an `export` usually lives. Either way the variable you exported in a
+terminal is absent at 06:30, and the Keychain is not.
 
 ---
 
 ## The dashboard
 
-`apply serve` → http://localhost:8787
+`apply serve` opens it at http://localhost:8787, and prints nothing while it
+runs. `--port` and `--host` move it, `--no-open` stops it opening a browser.
 
-The table is sorted by deadline and drawn as a time axis: one hairline down the
-left gutter, one tick per posting, an accent tick inside seven days, and a hollow
-ring below the measure for a posting whose deadline is unknown. `ready` is the
-only state that needs your hands, so it is the only thing on the page with
-colour.
+The pipeline is sorted by deadline and drawn as a time axis: one hairline down
+the left, one tick per posting, an accent tick inside seven days, and a hollow
+ring below the line for a posting with no known deadline. `ready` is the only
+state that needs you, so it's the only thing on the page in colour. Each
+posting's page carries the description verbatim, the letter as a PDF, what the
+audit found, and your portal answers as a column of copy buttons.
 
-The detail page carries the posting verbatim, an inline PDF preview, and the
-field pack as a column of copy buttons in roughly the order Workday and
-Greenhouse ask for things. That last part is the least glamorous feature here
-and it saves the most time.
+![The pipeline, deadline first](docs/img/pipeline.png)
+
+![One posting: the description verbatim, the facts parsed out of it, and the
+log](docs/img/posting.png)
+
+Both are a fresh clone: `apply setup --persona && apply seed && apply serve`.
+The person is the invented Rae Mercer and the two firms do not exist.
 
 ---
 
@@ -357,102 +641,151 @@ and it saves the most time.
 
 | | |
 |---|---|
-| `apply init` | create `apply.db`, scaffold the profile |
-| `apply discover [--dry-run] [--hydrate N] [--show-rejects]` | poll every target firm and file what is worth reading |
-| `apply ingest [--imap\|--file F]` | file the postings out of Handshake and LinkedIn alert mail |
-| `apply describe <slug> --clipboard` | attach the full posting to a title-only one, and re-score it |
-| `apply resolve <careers-url> --name N` | work out a firm's job board and print its registry entry |
-| `apply targets` | the employer registry |
-| `apply run [--llm api] [--notify]` | one unattended pass: discover, ingest, write, report |
-| `apply schedule [--show\|--install\|--remove] [--at HH:MM]` | run the pass every morning via launchd |
-| `apply runs` | what the scheduled passes have done |
-| `apply spend [--ledger]` | model spending against the monthly cap |
-| `apply doctor` | unresolved profile values, toolchain, credential |
-| `apply add --clipboard\|--file\|--stdin\|--url` | add a posting |
-| `apply gen <slug> [--track T] [--llm api] [--from-body] [--anchor "…"]` | build the documents |
-| `apply check <slug>` | audit the current letter again, without rewriting it |
+| **Daily** | |
+| `apply digest` | deadlines, follow-ups due, stale drafts |
+| `apply status [--all] [--track T]` | the pipeline, deadline first, with the slugs listed under it in the same order |
+| `apply serve [--port N] [--host H] [--no-open]` | the dashboard, at localhost:8787; `/?track=quant` filters it |
+| **Finding** | |
+| `apply discover [--dry-run] [--show-rejects]` | poll every registered firm |
+| `apply ingest [--imap \| --file F] [--days N]` | read Handshake and LinkedIn alert mail |
+| `apply add --clipboard \| --stdin \| --file F \| --url U` | add one posting by hand; `--stdin` is the route on a machine with no clipboard |
+| `apply describe <slug> --clipboard \| --stdin \| --file F` | attach the full posting to a title-only one |
+| `apply rescore [--dry-run]` | run the gate again over filed drafts after it changes |
+| `apply resolve <careers-url> --name N` | find a firm's job board and print its registry entry |
+| `apply targets` | the registry |
+| `apply search` | the gate's vocabulary, and which blocks `data/search.yaml` overrides |
+| **Writing** | |
+| `apply gen <slug> [--from-body] [--llm manual] [--effort E] [--to NAME]` | write and audit the letter and answers; `--llm manual` writes PROMPT.md instead |
+| `apply check <slug>` | audit the current letter again |
 | `apply context [pull owner/repo]` | the source material Claude reads |
-| `apply show <slug> [--jd]` | everything known about one posting |
-| `apply review <slug>` | opens the PDF, asks, promotes `generated → ready` |
-| `apply submit <slug>` | asks, promotes `ready → submitted`, queues a follow-up |
-| `apply mark <slug> <status>` | ack, assessment, interviewing, offer, rejected, withdrawn |
-| `apply status [--all]` | the pipeline |
-| `apply digest [--days N]` | deadlines, follow-ups, stale drafts |
-| `apply fields <slug> [--plain]` | the field pack, for copying |
-| `apply followup <slug> "<action>" [--in N]` | queue a follow-up |
-| `apply open <slug>` | open `out/<slug>/` |
-| `apply serve` | the dashboard |
-| `apply rm <slug>` | delete the record (files are kept) |
+| `apply spend [--ledger]` | model spending against the ceilings |
+| **Applying** | |
+| `apply show <slug> [--jd]` | everything about one posting |
+| `apply review <slug>` | you've read it: `generated → ready` |
+| `apply fields <slug> [--plain]` | portal answers, for copying |
+| `apply open <slug>` | the folder with the PDFs |
+| `apply submit <slug>` | you submitted it: `ready → submitted` |
+| `apply mark <slug> <outcome>` | `ack`, `oa`, `interview`, `offer`, `reject`, `withdrawn` |
+| `apply followup <slug> "note" [--in N]` | queue a reminder; `--done` clears them |
+| `apply stats` | the funnel by channel: submitted, answered, interviewed, offered |
+| `apply gaps [--top N] [--pursue-only]` | skills your live postings ask for that your profile never mentions |
+| **Unattended** | |
+| `apply run [--dry-run] [--limit N] [--notify]` | one full pass |
+| `apply schedule [--show \| --install \| --remove] [--at HH:MM]` | the morning job: launchd, a systemd user timer, cron, or Task Scheduler on Windows |
+| `apply runs` | what past runs did |
+| **Upkeep** | |
+| `apply setup [--quick \| --persona] [--step S]` | guided setup from your resume and goals; `--quick` without an API key, `--persona` the example person, `--force` only with those |
+| `apply doctor` | what's missing |
+| `apply init` · `apply seed` · `apply rm <slug>` | create the database, load examples, delete |
 
 ---
 
 ## Layout
 
 ```
-data/profile.yaml            every fact and every letter sentence. Tracked.
-data/profile.private.yaml    phone, address, GPA, targets, budget. Gitignored.
-data/employers.yaml          which firms to poll, and how. Gitignored.
-data/employers.example.yaml  the schema, and where to find each slug.
-data/apply.db                SQLite. Gitignored.
-templates/letters/*.tex.j2   one per track, extending base.tex.j2
-templates/resumes/*.tex.j2   quant and traditional
-templates/web/               the dashboard
-src/apply/                   models, db, profile, parse, classify, generate,
-                             fieldpack, digest, llm, cli, web
-src/apply/sources/           greenhouse, lever, ashby, workday adapters
-src/apply/sources/alerts.py  job-alert email parsing
-src/apply/resolve.py         find a firm's board from its careers page
-src/apply/score.py           the free relevance gate
-src/apply/discover.py        one unattended pass
-src/apply/budget.py          the spend ledger and its ceilings
-src/apply/run.py             one unattended pass
-src/apply/notify.py          summary file, macOS banner, optional phone push
-src/apply/schedule.py        the launchd agent
-src/apply/outbound.py        every host this system may reach, and why
-docs/handshake-alerts.md     Handshake setup
-docs/linkedin-alerts.md      LinkedIn setup: the nine searches and one setting
-out/<slug>/                  generated artifacts. Gitignored.
-tools/autofill.user.js       optional Tampermonkey script. Fills; never clicks.
+data/profile.example.yaml     the persona a fresh clone starts from
+data/*.example.yaml           the shape of the files you write for yourself
+data/examples/                two invented postings for `apply seed`
+src/apply/search.defaults.yaml  the gate's shipped vocabulary
+src/apply/search.py           that vocabulary, plus data/search.yaml over it
+src/apply/score.py            the free relevance gate — the algorithm
+src/apply/sources/            job-board adapters and alert-mail parsing
+src/apply/discover.py         polling, alert ingestion, deduplication
+src/apply/writer.py           the write, audit and revise loop
+src/apply/generate.py         lint, typesetting, PDFs
+src/apply/secrets.py          where a secret comes from, in one order
+src/apply/schedule.py         launchd, systemd user timer, cron, Task Scheduler
+src/apply/run.py              the unattended pass
+src/apply/outbound.py         every host the system may reach, and why
+templates/letters|resumes/    LaTeX, one letter template per track
+templates/web/                the dashboard
+scripts/install.ps1, .sh      first-run installers: toolchain, uv sync, apply setup
+AGENTS.md                     the rules, for Cursor and other agents
+tools/numbers.py              every figure this README quotes
+tools/synthesize_corpus.py    writes the frozen scoring corpus the tests assert
+tools/freeze_scores.py        writes the owner's own corpus, which stays local
+tools/autofill.user.js        optional userscript: fills a portal, never clicks
+docs/                         finding postings, and the two alert-mail guides
+tests/fixtures/gate_corpus.json   every configured pattern, scored and frozen
+data/profile*.yaml, data/employers.yaml, data/search.yaml, data/apply.db, out/
+                              yours, and gitignored
 ```
 
 ---
 
-## Deliberate deviations from the spec
+## Design decisions
 
-1. **Claude writes the letters; there is no template prose.** The original spec
-   composed letters from sentences stored in the profile. They read as
-   templates, so they are gone: the profile now holds a writing brief of
-   instructions, and an independent audit plus the deterministic lint are what
-   make a model-written letter safe to send.
-
-2. **Resume templates are `.tex.j2`, not `.tex`.** A static `.tex` would have to
-   embed phone, address, and GPA, which live in the gitignored overlay.
-   Rendering them keeps private facts out of version control.
-
-3. **The hallucination guard allows numbers from the posting, not only the
-   profile.** A figure quoted from the job description is sourced, not invented,
-   and paragraph 4 often needs one. The guard is still absolute: a number from
-   neither source fails the build.
-
-4. **No HTMX.** A CDN script tag would break the offline-forever premise, and
-   vendoring an unverifiable blob is worse. State changes are form POSTs with a
-   redirect; the only scripted interaction is the copy button. At this scale a
-   client framework buys nothing.
-
-Plus one addition: `apply digest` lists deadlines past the 14-day horizon under
-*Further out*, quietly. Not urgent should not mean invisible.
+1. **The letters are written by Claude, not composed.** An earlier version
+   assembled letters from sentences stored in the profile, and they read as
+   templates. The profile now holds a brief of instructions; the audit and the
+   lint are what make a model-written letter safe to send.
+2. **The gate's vocabulary is data, its algorithm is code.** Which places score
+   and which titles match were literals in `score.py`, which made retuning a
+   patch. They are YAML now, and the move is pinned by a frozen corpus,
+   `tests/fixtures/gate_corpus.json`, asserted verdict by verdict and reason by
+   reason, so it is provable that no verdict changed on the way. The corpus is
+   synthesised from the vocabulary itself: for each of the 228 configured
+   patterns, a title or a location built out of that pattern; near-misses for
+   the boundaries and lookarounds a transcription would quietly drop ("Rising
+   Senior Summer Analyst" is not a senior role, "Basic Materials" is not an ASIC
+   job); and the rules `score.py` keeps that no YAML configures. 279 cases, and
+   a test that fails when the YAML grows an entry nobody has rerun the generator
+   against. It used to be 826 real postings with the firms' names cut out, which
+   was both less complete and less safe. Less complete: read as the gate reads
+   them, those 826 exercised 90 of the 228 entries — the whole seniority block
+   was among the 138 they never touched, so a lookbehind dropped from it moved
+   nothing. Less safe: cutting names out is a denylist, sub-brands and addresses
+   survive one, and because the employer column groups rows, a single survivor
+   names every other row of that firm. Who is on the list is strategy, not code.
+   The real corpus is still written — `tools/freeze_scores.py` — and it stays on
+   the owner's machine, because it is the only place the rules that read a
+   description can be checked against real descriptions; the test that uses it
+   skips itself on a clone.
+3. **Resume templates are rendered, not static.** A static `.tex` would have to
+   embed phone, address and GPA, which live in the gitignored overlay.
+4. **A figure from the posting counts as sourced.** Quoting the job description
+   is not inventing, and paragraph four often needs to. A figure from nowhere
+   still fails.
+5. **No front-end framework.** A CDN script tag would break the local-first
+   premise. State changes are form posts, and the only scripted interaction is
+   the copy button.
+6. **Deadlines beyond the digest's horizon still appear,** quietly, under
+   *Further out*. Not urgent shouldn't mean invisible.
 
 ---
 
-## Tests
+## Development
 
 ```bash
 uv run pytest -q
 ```
 
-`tests/test_acceptance.py` is the definition of done — the twelve checks from the
-handoff spec, named after the behaviour each protects. The PDF tests skip
-themselves when `pdflatex` is absent.
+Without TeX, the tests that compile a PDF skip themselves; without
+the owner's local scoring corpus, one more does. They never touch the Anthropic
+API — the key is stripped, the secret lookup is blocked and the one function
+that makes calls is tripwired — and every one of them runs against a temporary
+data directory and a temporary `out/`, so what is in `data/` changes nothing.
+That last part is the reason `apply setup` can write you a `data/search.yaml`
+for your own city without turning the suite red. The profile the tests read is a
+frozen copy in `tests/fixtures/`: the shipped persona, Rae Mercer, and a test
+refuses any file here that describes a real person instead.
+`tests/test_acceptance.py` holds the original specification's acceptance
+checks. `tests/test_fresh_clone.py` is the quick start above, run as a test on
+an empty directory.
 
-The seed fixtures in `tests/fixtures/` are **representative text, not the live
-postings.** Verify against the real listing before you apply to anything.
+`.github/workflows/tests.yml` runs the suite on Ubuntu and macOS, on Python
+3.11 and 3.13, plus `uvx ruff check --select F` and the quick start as a shell
+script on both platforms — and then, on one of them, the suite a second time on
+the checkout the quick start just wrote to, which is the state you are in after
+following it. It triggers on pull requests and on pushes to the default branch —
+so it has not run on this branch, which has not been pushed.
+
+The two postings in `data/examples/` are invented — Quillon Asset Management and
+Ashcombe Trust do not exist, and neither do the roles, the deadlines or the pay.
+They are written in the register of a real listing so that the parser, the gate
+and the lint have something of the right shape to work on, and so that nothing
+in this repository is a job description somebody else wrote.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

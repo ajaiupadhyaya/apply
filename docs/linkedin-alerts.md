@@ -8,13 +8,14 @@ Setup takes about fifteen minutes, once.
 
 ---
 
-## 0. Where the mail goes — already sorted
+## 0. Where the mail goes
 
-Your LinkedIn account emails **upadhyayaak2@vcu.edu**, the same inbox APPLY
-reads and the one Handshake alerts already land in. Nothing to forward.
+LinkedIn sends alerts to your account's primary email address. APPLY reads one
+inbox, so make sure that's the same inbox your Handshake alerts land in — if it
+isn't, either change LinkedIn's primary address or forward its job mail there.
 
-One thing to check: no LinkedIn email has reached that inbox since October
-2025, so LinkedIn's email notifications are probably switched off or throttled.
+If LinkedIn hasn't emailed you in a while, its email notifications are
+probably switched off or throttled — step 1 fixes that.
 
 ## 1. Turn job-alert email on
 
@@ -38,6 +39,10 @@ For each search below:
 4. Flip the **Set alert** switch at the top of the results.
 5. In the alert's settings, choose **Daily** and **Email and notification**.
 
+These are the searches this was built with — a finance job hunt centred on New
+York for 2027 roles. Swap in your own city, year and field; the shape is what
+matters.
+
 | # | Keywords | Location | Experience level |
 |---|---|---|---|
 | 1 | `("summer analyst" OR "summer associate" OR "summer intern") AND 2027` | New York City Metropolitan Area | Internship |
@@ -47,12 +52,14 @@ For each search below:
 | 5 | `"research analyst" OR "research assistant" OR economist OR econometrics` | New York City Metropolitan Area | Entry level |
 | 6 | `"risk analyst" OR "credit analyst" OR "investment analyst" OR "portfolio analyst"` | New York City Metropolitan Area | Entry level |
 | 7 | `(predoctoral OR "pre-doctoral" OR "research assistant") AND (economics OR finance)` | United States | Internship, Entry level |
-| 8 | `(finance OR investment OR research) AND (intern OR "part-time")` | Richmond, Virginia | Internship, Part-time |
+| 8 | `(finance OR investment OR research) AND (intern OR "part-time")` | Springfield, Illinois | Internship, Part-time |
 | 9 | `("business analyst" OR "strategy analyst" OR "data analyst") NOT engineer` | New York City Metropolitan Area | Entry level |
 
-These mirror what the scorer rewards: New York first, finance and research
-roles, 2027 timing, pre-docs anywhere, term-time work near Richmond, and
-technology roles only on the analysis side of the line.
+These mirror what the scorer rewarded for the search it was written for: New
+York first, finance and research roles, 2027 timing, pre-docs anywhere,
+term-time work near Springfield, and technology roles only on the analysis side of
+the line. `apply search` prints what your own gate is looking for; matching the
+two is the point.
 
 Better to keep nine precise alerts than one broad one. Every alert email costs
 nothing to read, but a broad search floods the inbox with roles the gate will
@@ -100,23 +107,36 @@ When one is worth pursuing:
 That attaches the text, reads the deadline and pay out of it, and re-scores the
 posting against the full description. Then `apply gen <slug>` as usual.
 
+`--clipboard` reads through `pbpaste` on macOS and `wl-paste`, `xclip` or
+`xsel` on Linux, whichever is on `PATH`. A machine with none of them — a
+server, a container, an SSH session — takes the same text on standard input,
+or from a file:
+
+```bash
+apply describe <slug> --stdin < posting.txt
+apply describe <slug> --file posting.txt
+```
+
 ## 5. Unattended
 
 The overnight run reads mail over IMAP, which needs a Gmail **app password** —
 not your account password:
 
-1. On your VCU Google account: **myaccount.google.com → Security → 2-Step
-   Verification → App passwords**. Create one called `apply`.
-2. Store it in the Keychain (it prompts, so it never enters your shell history):
+1. On the Google account the mail arrives at: **myaccount.google.com →
+   Security → 2-Step Verification → App passwords**. Create one called `apply`.
+2. Store it where an unattended run can find it (both prompt, so the password
+   never enters your shell history):
 
    ```bash
-   security add-generic-password -U -a "$USER" -s APPLY_IMAP_PASSWORD -w
+   security add-generic-password -U -a "$USER" -s APPLY_IMAP_PASSWORD -w   # macOS
+   keyring set apply APPLY_IMAP_PASSWORD                                   # Linux, if you have python-keyring
    ```
 
-APPLY reads it from the Keychain directly, so the scheduled job finds it even
+APPLY reads it from the store directly, so the scheduled job finds it even
 though launchd never reads `~/.zshrc`.
 
-If VCU's Google Workspace doesn't offer app passwords, the option won't appear.
+A university-provisioned Google Workspace may forbid app passwords, in which
+case the option simply won't appear.
 Then the overnight run still polls every firm in your registry on its own, and
 alert mail gets picked up whenever Claude exports it for you.
 

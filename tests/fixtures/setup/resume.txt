@@ -1,0 +1,9 @@
+Jordan Reyes
+jreyes@example.edu · (555) 201-4477
+Blue Ridge University — B.S. Computer Science, expected May 2027
+Acme Robotics — Software Intern, Jun 2025 – Aug 2025
+- Cut test time 40% by parallelising the CI suite
+- Wrote the fleet telemetry ingest service in Python
+Projects
+Kestrel — an order-book simulator in OCaml (github.com/jreyes-example/kestrel)
+Skills: Python, OCaml, SQL, Git
