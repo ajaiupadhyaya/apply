@@ -59,7 +59,7 @@
       <td class="track">{{ row.posting.track }}</td>
       <td class="deadline {% if left is none %}none{% elif left < 0 %}past{% elif left <= 7 %}soon{% endif %}">
         {% if row.posting.deadline %}
-          {{ row.posting.deadline.strftime('%-d %b %Y') }}
+          {{ row.posting.deadline.day }} {{ row.posting.deadline.strftime('%b %Y') }}
           <span class="left">{% if left < 0 %}{{ -left }}d ago{% else %}{{ left }}d{% endif %}</span>
         {% else %}
           no deadline — verify

@@ -269,7 +269,7 @@ def summarise(conn, report: RunReport) -> str:
     counts = digest_mod.headline(conn)
     d = digest_mod.build(conn)
     lines = [
-        f"# apply — {report.started_at.strftime('%A %-d %B, %H:%M')}",
+        f"# apply — {report.started_at:%A} {report.started_at.day} {report.started_at:%B, %H:%M}",
         "",
         f"{report.discovered} new from the registry · {report.ingested} from alerts · "
         f"{len(report.generated)} written · ${report.usd:.2f} spent · "

@@ -111,7 +111,7 @@
         <dt>Status</dt><dd><span class="status {{ row.application.status }}">{{ row.application.status }}</span></dd>
         <dt>Track</dt><dd>{{ row.posting.track }}</dd>
         <dt>Deadline</dt>
-        <dd>{% if row.posting.deadline %}{{ row.posting.deadline.strftime('%-d %B %Y') }}
+        <dd>{% if row.posting.deadline %}{{ row.posting.deadline.day }} {{ row.posting.deadline.strftime('%B %Y') }}
               <span style="color:var(--ink-3)">({{ row.days_left }}d)</span>
             {% else %}<span style="color:var(--signal)">not stated — verify</span>{% endif %}</dd>
         <dt>Location</dt><dd>{{ row.posting.location or '—' }}</dd>

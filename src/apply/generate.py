@@ -845,9 +845,13 @@ def compile_pdf(tex_path: Path, *, max_pages: int | None = 1) -> Path:
                 capture_output=True, text=True, encoding="utf-8", errors="replace",
             )
             if proc.returncode != 0:
+                log = tmpdir / (tex_path.stem + ".log")
+                # No log means pdflatex stopped before reading the file (a MiKTeX
+                # setup problem, say); what it printed is then the only clue.
+                said = "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-15:])
                 raise CompileError(
                     f"pdflatex failed on {tex_path.name}:\n"
-                    + _log_tail(tmpdir / (tex_path.stem + ".log"))
+                    + (_log_tail(log) if log.exists() else f"(no log written)\n{said}")
                 )
         built = tmpdir / (tex_path.stem + ".pdf")
         if not built.exists():

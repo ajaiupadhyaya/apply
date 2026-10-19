@@ -33,6 +33,16 @@ def test_every_text_subprocess_names_its_encoding():
     assert _offenders((ROOT / "src").rglob("*.py"), SUBPROCESS_TEXT, "encoding=") == []
 
 
+def test_no_date_format_drops_its_padding_the_posix_way():
+    """`%-d` is glibc and BSD only; Windows' strftime raises "Invalid format string"."""
+    files = [*(ROOT / "src").rglob("*.py"), *(ROOT / "templates").rglob("*.html"),
+             *(ROOT / "templates").rglob("*.j2")]
+    hits = [f"{p.relative_to(ROOT)}:{n}" for p in files
+            for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+            if "strftime" in line and re.search(r"%-[a-zA-Z]", line)]
+    assert hits == []
+
+
 def test_yaml_with_typography_round_trips(tmp_path):
     from apply.setup import write_profile
 
