@@ -227,7 +227,7 @@ tbody tr:first-child:has(+ tr.undated) .axis { background-image: none; }
   border-bottom: 1.5px solid var(--signal);
   padding-bottom: 1px;
 }
-.status.draft, .status.rejected, .status.withdrawn { color: var(--ink-3); }
+.status.draft, .status.rejected, .status.withdrawn, .status.no_response { color: var(--ink-3); }
 
 .actions { text-align: right; white-space: nowrap; font-size: var(--t-s); }
 .actions a, .actions button {

@@ -651,6 +651,7 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply add --clipboard \| --stdin \| --file F \| --url U` | add one posting by hand; `--stdin` is the route on a machine with no clipboard |
 | `apply describe <slug> --clipboard \| --stdin \| --file F` | attach the full posting to a title-only one |
 | `apply rescore [--dry-run]` | run the gate again over filed drafts after it changes |
+| `apply sweep [--dry-run] [--limit N]` | re-check each posting you have not sent: closed at the source (404, a redirect back to the board, "no longer accepting") shows in the digest; no status changes |
 | `apply resolve <careers-url> --name N` | find a firm's job board and print its registry entry |
 | `apply targets` | the registry |
 | `apply search` | the gate's vocabulary, and which blocks `data/search.yaml` overrides |
@@ -665,8 +666,9 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply fields <slug> [--plain]` | portal answers, for copying |
 | `apply open <slug>` | the folder with the PDFs |
 | `apply submit <slug>` | you submitted it: `ready → submitted` |
-| `apply mark <slug> <outcome>` | `ack`, `oa`, `interview`, `offer`, `reject`, `withdrawn` |
-| `apply followup <slug> "note" [--in N]` | queue a reminder; `--done` clears them |
+| `apply mark <slug> <outcome>` | `ack`, `oa`, `interview`, `offer`, `reject`, `withdrawn`, `no_response` (the digest suggests it after 60 quiet days; a late reply still lands) |
+| `apply followup <slug> "note" [--in N]` | queue a reminder; `--done` clears them; `--draft [--to NAME]` has Claude draft the email, which you send yourself |
+| `apply interview <slug> [--stage S] [--with "Name, Title"]` | a prep pack for one interview: likely questions, STAR stories, what your paper claims, what to ask; audited like a letter |
 | `apply stats` | the funnel by channel: submitted, answered, interviewed, offered |
 | `apply gaps [--top N] [--pursue-only]` | skills your live postings ask for that your profile never mentions |
 | **Unattended** | |

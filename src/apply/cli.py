@@ -28,7 +28,7 @@ from . import (budget as budget_mod, db, digest as digest_mod,
                discover as discover_mod, generate, host, notify as notify_mod,
                resolve as resolve_mod, run as run_mod, schedule as schedule_mod,
                stats as stats_mod)
-from .models import Posting, Status, Track, TransitionError
+from .models import CLOSED, Posting, Status, Track, TransitionError
 from .parse import parse as parse_jd
 from .profile import Profile, ProfileError, data_dir
 
@@ -200,7 +200,7 @@ STATUS_STYLE = {
     "draft": "dim", "generated": "yellow", "ready": "bold green",
     "submitted": "cyan", "acknowledged": "cyan", "assessment": "magenta",
     "interviewing": "bold magenta", "offer": "bold green",
-    "rejected": "dim red", "withdrawn": "dim",
+    "rejected": "dim red", "withdrawn": "dim", "no_response": "dim",
 }
 
 
@@ -806,6 +806,12 @@ def show(slug: str, jd: bool = typer.Option(False, "--jd", help="Print the full 
                          ("fieldpack", application.fieldpack_path)):
         console.print(f"  {label:10} {value or '—'}")
 
+    from .sweep import closed_at_source
+
+    gone = closed_at_source(conn, application.id)
+    if gone:
+        console.print(f"  [bold red]closed at the source[/] [dim]({gone}; last `apply sweep`)[/]")
+
     ats_json = generate.out_dir() / posting.slug / "ats.json"
     if ats_json.exists():
         record = json.loads(ats_json.read_text(encoding="utf-8"))
@@ -935,11 +941,12 @@ def submit(
 
 @app.command()
 def mark(slug: str, status: str, note: Optional[str] = typer.Option(None, "--note")) -> None:
-    """Record what happened after you submitted: ack, assessment, interviewing, offer, rejected, withdrawn."""
+    """Record what happened after you submitted: ack, assessment, interviewing, offer, rejected, withdrawn, no_response."""
     conn = _conn()
     row = _row(conn, slug)
     aliases = {"ack": Status.ACKNOWLEDGED, "oa": Status.ASSESSMENT,
-               "interview": Status.INTERVIEWING, "reject": Status.REJECTED}
+               "interview": Status.INTERVIEWING, "reject": Status.REJECTED,
+               "ghosted": Status.NO_RESPONSE, "no-response": Status.NO_RESPONSE}
     target = aliases.get(status.lower())
     if target is None:
         try:
@@ -968,7 +975,7 @@ def status(
     conn = _conn()
     rows = db.rows(conn)
     if not all_rows:
-        rows = [r for r in rows if r.application.status not in ("rejected", "withdrawn")
+        rows = [r for r in rows if r.application.status not in CLOSED
                 and not digest_mod.screened_out(r)]
     if track:
         try:
@@ -1121,15 +1128,22 @@ def followup(
     action: Optional[str] = typer.Argument(None, help="What to do, e.g. 'email the recruiter'."),
     days: int = typer.Option(7, "--in", help="Days from today."),
     done: bool = typer.Option(False, "--done", help="Mark this posting's open follow-ups done."),
+    draft: bool = typer.Option(False, "--draft",
+                               help="Have Claude draft a short follow-up email. Never sent."),
+    to: Optional[str] = typer.Option(None, "--to", help="Who the draft is addressed to."),
 ) -> None:
-    """Queue a follow-up, or mark one done.
+    """Queue a follow-up, mark one done, or draft the note itself.
 
     `apply submit` queues one automatically for 14 days out. Without --done a
     reminder stays in the digest until it is dealt with, which is the point —
-    but it has to be possible to deal with it.
+    but it has to be possible to deal with it. --draft writes the email for
+    you to read and send yourself; APPLY never sends it.
     """
     conn = _conn()
     row = _row(conn, slug)
+    if draft:
+        _draft_followup(conn, row, to)
+        return
     if done:
         pending = db.followups(conn, row.application.id)
         if not pending:
@@ -1147,6 +1161,146 @@ def followup(
     due = _dt.date.today() + _dt.timedelta(days=days)
     db.add_followup(conn, row.application.id, due, action)
     console.print(f"[green]✓[/] {due}: {action}")
+
+
+#: Statuses where something was sent and a reply is owed.
+_CHASEABLE = {Status.SUBMITTED.value, Status.ACKNOWLEDGED.value,
+              Status.ASSESSMENT.value, Status.INTERVIEWING.value}
+
+
+def _draft_followup(conn, row, to: str | None) -> None:
+    from rich.markup import escape as esc
+
+    from . import followup as followup_mod
+
+    application, posting = row.application, row.posting
+    if application.status not in _CHASEABLE:
+        _fail(f"`{posting.slug}` is {application.status} and has not been submitted, or is "
+              "closed — there is no reply to chase.")
+    submitted = (application.submitted_at or "")[:10] or "an earlier date"
+    try:
+        quiet = (_dt.date.today() - _dt.date.fromisoformat(submitted)).days
+    except ValueError:
+        quiet = 0
+    earlier = sum(1 for e in db.events(conn, application.id)
+                  if "follow-up drafted" in (e.detail or ""))
+    profile = _profile()
+    budget = budget_mod.Budget(conn, caps=(profile.raw.get("budget") or {}))
+    try:
+        with console.status("Claude is drafting, then auditing…"):
+            result = followup_mod.draft(profile, posting, submitted_on=submitted,
+                                        days_quiet=quiet, earlier=earlier, to=to,
+                                        budget=budget)
+    except budget_mod.BudgetExceeded as exc:
+        _fail(str(exc))
+    if not result.ok:
+        for problem in result.problems:
+            console.print(f"  [bold red]✗[/] {esc(problem)}")
+        _fail(f"no follow-up drafted ({result.status}): {result.reason}")
+
+    text = followup_mod.text_of(result.note)
+    directory = generate.out_dir() / posting.slug
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"followup-{_dt.date.today().isoformat()}.md"
+    path.write_text(text + "\n", encoding="utf-8")
+    db.add_event(conn, application.id, "note", "follow-up drafted (not sent)")
+    console.print(Panel(esc(text), title="draft — read it, then send it yourself",
+                        border_style="cyan"))
+    if result.note.notes:
+        console.print(f"  [yellow]check[/] {esc(result.note.notes)}")
+    console.print(f"[green]✓[/] {path}")
+
+
+@app.command()
+def sweep(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Check and report; record nothing."),
+    limit: Optional[int] = typer.Option(None, "--limit", help="Check at most N postings."),
+) -> None:
+    """Re-check each posting you have not sent yet: is it still open at the source?
+
+    Closed means positive evidence — 404/410, a redirect back to the board, or
+    the page saying so. It is recorded and shown in the digest; no status
+    changes. A blocked or slow page is unreachable, which tells you nothing.
+    """
+    from rich.markup import escape as esc
+
+    from . import sweep as sweep_mod
+
+    conn = _conn()
+    total = len(sweep_mod.candidates(conn))
+    with console.status(f"checking {min(total, limit or total)} posting(s) at the source…"):
+        report = sweep_mod.run(conn, dry_run=dry_run, limit=limit)
+    for row, result in report.closed:
+        console.print(f"[red]closed[/]       {esc(row.posting.company)} — {esc(row.posting.role)}"
+                      f"  [dim]{esc(result.reason)}[/]\n             [dim]{row.posting.slug}[/]")
+    for row, result in report.unreachable:
+        console.print(f"[yellow]unreachable[/]  {esc(row.posting.company)} — "
+                      f"{esc(row.posting.role)}  [dim]{esc(result.reason)}[/]")
+    for row in report.reopened:
+        console.print(f"[green]open again[/]   {esc(row.posting.company)} — {esc(row.posting.role)}")
+    console.print(f"\n{report.checked} checked · [red]{len(report.closed)} closed[/] · "
+                  f"[yellow]{len(report.unreachable)} unreachable[/]"
+                  + ("  [dim](dry run: nothing recorded)[/]" if dry_run else ""))
+    if report.closed and not dry_run:
+        console.print("Nothing was withdrawn. Withdraw a closed one with "
+                      "[bold]apply mark <slug> withdrawn[/].")
+
+
+@app.command()
+def interview(
+    slug: str,
+    stage: str = typer.Option("screen", "--stage",
+                              help="screen | technical | superday | final"),
+    with_: Optional[str] = typer.Option(None, "--with",
+                                        help="Who is interviewing, e.g. \"Jane Doe, PM\"."),
+    model: Optional[str] = typer.Option(None, "--model"),
+    effort: str = typer.Option("high", "--effort"),
+) -> None:
+    """A prep pack for one interview: likely questions, STAR stories, what the
+    paper you sent claims, and what to ask — all from your own sources.
+
+    Claude drafts it from your profile, your context documents, the posting and
+    what you submitted; an independent request audits it. A pack that still
+    has an unsupported claim is not written. Nothing is sent anywhere.
+    """
+    from rich.markup import escape as esc
+
+    from . import interview as interview_mod
+    from . import llm as llm_mod
+
+    if stage not in interview_mod.STAGES:
+        _fail(f"unknown stage `{stage}`; one of: {', '.join(interview_mod.STAGES)}")
+    conn = _conn()
+    row = _row(conn, slug)
+    profile = _profile()
+    posting = row.posting
+    directory = generate.out_dir() / posting.slug
+    submitted = interview_mod.submitted_documents(directory)
+    if not submitted:
+        console.print("[yellow]•[/] nothing submitted on file for this posting; "
+                      "preparing from the profile and the posting alone.")
+    budget = budget_mod.Budget(conn, caps=(profile.raw.get("budget") or {}))
+    try:
+        with console.status("Claude is preparing, then auditing…"):
+            result = interview_mod.prepare(
+                profile, posting, stage=stage, submitted=submitted, interviewers=with_,
+                budget=budget, model=model or llm_mod.DEFAULT_MODEL, effort=effort)
+    except budget_mod.BudgetExceeded as exc:
+        _fail(str(exc))
+    if not result.ok:
+        for problem in result.problems:
+            console.print(f"  [bold red]✗[/] {esc(problem)}")
+        _fail(f"no prep pack written ({result.status}): {result.reason}")
+
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"interview-{stage}.md"
+    pack = interview_mod.render(result.prep, posting, stage=stage, interviewers=with_)
+    path.write_text(pack, encoding="utf-8")
+    db.add_event(conn, row.application.id, "note",
+                 f"interview prep ({stage}) written"
+                 + (f", ${result.usage.cost:.2f}" if result.usage else ""))
+    console.print(f"[green]✓[/] {path}"
+                  + (f"  [dim]{result.usage}[/]" if result.usage else ""))
 
 
 @app.command()

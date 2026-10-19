@@ -58,6 +58,12 @@ ALLOWED: dict[str, tuple[tuple[str, ...], str]] = {
         "Reads the owner's own public READMEs through their gh session, by GET, "
         "to use as source material.",
     ),
+    "apply.sweep": (
+        ("*",),
+        "Re-reads the public URL of a posting the owner has not yet applied to, by "
+        "GET, to see whether it is still open. Sends nothing and follows no link "
+        "but the server's own redirect.",
+    ),
     "apply.cli": (
         ("*",),
         "`apply add --url` fetches one careers page the owner named. Refuses "

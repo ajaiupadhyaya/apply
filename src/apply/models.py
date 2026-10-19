@@ -60,6 +60,8 @@ class Status(str, Enum):
     OFFER = "offer"
     REJECTED = "rejected"
     WITHDRAWN = "withdrawn"
+    #: Submitted, and nothing came back. Closed, but a late reply still lands.
+    NO_RESPONSE = "no_response"
 
 
 #: status -> statuses reachable from it.
@@ -75,22 +77,32 @@ TRANSITIONS: dict[Status, set[Status]] = {
         Status.INTERVIEWING,
         Status.OFFER,
         Status.REJECTED,
+        Status.NO_RESPONSE,
     },
     Status.ACKNOWLEDGED: {
         Status.ASSESSMENT,
         Status.INTERVIEWING,
         Status.OFFER,
         Status.REJECTED,
+        Status.NO_RESPONSE,
     },
-    Status.ASSESSMENT: {Status.INTERVIEWING, Status.OFFER, Status.REJECTED},
-    Status.INTERVIEWING: {Status.OFFER, Status.REJECTED},
+    Status.ASSESSMENT: {Status.INTERVIEWING, Status.OFFER, Status.REJECTED,
+                        Status.NO_RESPONSE},
+    Status.INTERVIEWING: {Status.OFFER, Status.REJECTED, Status.NO_RESPONSE},
     Status.OFFER: {Status.REJECTED},
     Status.REJECTED: set(),
     Status.WITHDRAWN: set(),
+    # Firms answer after months. A reply to a ghosted application is recorded
+    # as what it is, not refused because the owner had given up on it.
+    Status.NO_RESPONSE: {Status.ACKNOWLEDGED, Status.ASSESSMENT, Status.INTERVIEWING,
+                         Status.OFFER, Status.REJECTED},
 }
 
-#: Reachable from anywhere except the terminal states.
-TERMINAL = {Status.REJECTED, Status.WITHDRAWN}
+#: Withdrawal is reachable from anywhere except these. They are also the
+#: statuses every listing treats as closed.
+TERMINAL = {Status.REJECTED, Status.WITHDRAWN, Status.NO_RESPONSE}
+#: The same, as the strings the database holds.
+CLOSED = frozenset(s.value for s in TERMINAL)
 
 #: Statuses a machine may never write on its own. The value is the name of the
 #: one CLI/dashboard action permitted to perform the transition.
@@ -143,6 +155,9 @@ class EventKind(str, Enum):
     OFFER = "offer"
     REJECT = "reject"
     WITHDRAWN = "withdrawn"
+    NO_RESPONSE = "no_response"
+    SOURCE_CLOSED = "source_closed"
+    SOURCE_OPEN = "source_open"
     NOTE = "note"
 
 

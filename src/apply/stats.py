@@ -23,6 +23,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from . import ats
+from .models import CLOSED
 
 #: Event kinds that mean the employer did something after you submitted.
 RESPONSE = {"ack", "oa_received", "interview", "offer", "reject"}
@@ -99,7 +100,7 @@ def gaps(conn: sqlite3.Connection, sources: str, *, include_maybe: bool = True) 
     ).fetchall()
     tally: dict[str, Gap] = {}
     for r in rows:
-        if r["status"] in ("rejected", "withdrawn"):
+        if r["status"] in CLOSED:
             continue
         # A hand-added posting has no verdict; it was added because it matters.
         if r["score_verdict"] is not None and r["score_verdict"] not in verdicts:
