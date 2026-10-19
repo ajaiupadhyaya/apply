@@ -1150,6 +1150,63 @@ def followup(
 
 
 @app.command()
+def interview(
+    slug: str,
+    stage: str = typer.Option("screen", "--stage",
+                              help="screen | technical | superday | final"),
+    with_: Optional[str] = typer.Option(None, "--with",
+                                        help="Who is interviewing, e.g. \"Jane Doe, PM\"."),
+    model: Optional[str] = typer.Option(None, "--model"),
+    effort: str = typer.Option("high", "--effort"),
+) -> None:
+    """A prep pack for one interview: likely questions, STAR stories, what the
+    paper you sent claims, and what to ask — all from your own sources.
+
+    Claude drafts it from your profile, your context documents, the posting and
+    what you submitted; an independent request audits it. A pack that still
+    has an unsupported claim is not written. Nothing is sent anywhere.
+    """
+    from rich.markup import escape as esc
+
+    from . import interview as interview_mod
+    from . import llm as llm_mod
+
+    if stage not in interview_mod.STAGES:
+        _fail(f"unknown stage `{stage}`; one of: {', '.join(interview_mod.STAGES)}")
+    conn = _conn()
+    row = _row(conn, slug)
+    profile = _profile()
+    posting = row.posting
+    directory = generate.out_dir() / posting.slug
+    submitted = interview_mod.submitted_documents(directory)
+    if not submitted:
+        console.print("[yellow]•[/] nothing submitted on file for this posting; "
+                      "preparing from the profile and the posting alone.")
+    budget = budget_mod.Budget(conn, caps=(profile.raw.get("budget") or {}))
+    try:
+        with console.status("Claude is preparing, then auditing…"):
+            result = interview_mod.prepare(
+                profile, posting, stage=stage, submitted=submitted, interviewers=with_,
+                budget=budget, model=model or llm_mod.DEFAULT_MODEL, effort=effort)
+    except budget_mod.BudgetExceeded as exc:
+        _fail(str(exc))
+    if not result.ok:
+        for problem in result.problems:
+            console.print(f"  [bold red]✗[/] {esc(problem)}")
+        _fail(f"no prep pack written ({result.status}): {result.reason}")
+
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"interview-{stage}.md"
+    pack = interview_mod.render(result.prep, posting, stage=stage, interviewers=with_)
+    path.write_text(pack, encoding="utf-8")
+    db.add_event(conn, row.application.id, "note",
+                 f"interview prep ({stage}) written"
+                 + (f", ${result.usage.cost:.2f}" if result.usage else ""))
+    console.print(f"[green]✓[/] {path}"
+                  + (f"  [dim]{result.usage}[/]" if result.usage else ""))
+
+
+@app.command()
 def discover(
     dry_run: bool = typer.Option(False, "--dry-run", help="Score everything; write nothing."),
     hydrate: int = typer.Option(60, "--hydrate", help="Max full descriptions to fetch."),

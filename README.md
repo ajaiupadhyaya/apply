@@ -667,6 +667,7 @@ The person is the invented Rae Mercer and the two firms do not exist.
 | `apply submit <slug>` | you submitted it: `ready → submitted` |
 | `apply mark <slug> <outcome>` | `ack`, `oa`, `interview`, `offer`, `reject`, `withdrawn` |
 | `apply followup <slug> "note" [--in N]` | queue a reminder; `--done` clears them |
+| `apply interview <slug> [--stage S] [--with "Name, Title"]` | a prep pack for one interview: likely questions, STAR stories, what your paper claims, what to ask; audited like a letter |
 | `apply stats` | the funnel by channel: submitted, answered, interviewed, offered |
 | `apply gaps [--top N] [--pursue-only]` | skills your live postings ask for that your profile never mentions |
 | **Unattended** | |
