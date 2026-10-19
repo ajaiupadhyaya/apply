@@ -102,3 +102,29 @@ def test_docs_point_new_users_at_setup_on_every_os():
     assert "scripts\\install.ps1" in readme and "scripts/install.sh" in readme
     assert "Windows" in readme and "Task Scheduler" in readme
     assert "apply setup" in agents and "uv run" in agents and "Never" in agents
+
+
+def test_pdflatex_gets_a_bare_file_name_and_runs_in_its_directory(monkeypatch, tmp_path):
+    """TeX reads "~" as a tie, so an 8.3 Windows temp path (RUNNER~1) is unreadable."""
+    import subprocess
+
+    from apply import generate
+
+    seen = []
+
+    def fake_run(args, **kwargs):
+        seen.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(generate.shutil, "which", lambda name: "pdflatex")
+    monkeypatch.setattr(generate.subprocess, "run", fake_run)
+    tex = tmp_path / "fit.tex"
+    tex.write_text("x", encoding="utf-8")
+    try:
+        generate.compile_pdf(tex)
+    except generate.CompileError:
+        pass
+    args, kwargs = seen[0]
+    assert args[-1] == "fit.tex"
+    assert all("/" not in a and "\\" not in a for a in args)
+    assert kwargs["cwd"] != tmp_path and (Path(kwargs["cwd"]) / "fit.tex").name == "fit.tex"

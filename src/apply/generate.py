@@ -839,10 +839,12 @@ def compile_pdf(tex_path: Path, *, max_pages: int | None = 1) -> Path:
         tmpdir = Path(tmp)
         shutil.copy(tex_path, tmpdir / tex_path.name)
         for _ in range(2):
+            # Run inside the scratch directory and pass the bare file name. A
+            # Windows temp path is often 8.3-shortened (C:\Users\RUNNER~1\...),
+            # and TeX reads "~" as a tie, so a full path is a file it cannot find.
             proc = subprocess.run(
-                ["pdflatex", "-interaction=nonstopmode", "-halt-on-error",
-                 "-output-directory", str(tmpdir), str(tmpdir / tex_path.name)],
-                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", tex_path.name],
+                cwd=tmpdir, capture_output=True, text=True, encoding="utf-8", errors="replace",
             )
             if proc.returncode != 0:
                 log = tmpdir / (tex_path.stem + ".log")
