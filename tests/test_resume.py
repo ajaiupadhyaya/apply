@@ -157,3 +157,56 @@ def test_an_informal_draft_is_revised_and_never_printed_as_written(profile, ashc
     assert artifacts.ok
     assert fake.count("Package") == 2
     assert "I'd" not in artifacts.letter_tex.read_text(encoding="utf-8")
+
+
+# ------------------------------------------------------------- convention
+#
+# Formal grammar is not enough. A New York finance letter states what the
+# candidate brings, paraphrases the posting rather than quoting it, and never
+# names what the candidate lacks.
+
+def test_quoting_the_posting_fails_the_lint(profile, ashcombe_jd):
+    body = ('The posting asks the analyst to "track and prepare weekly reporting '
+            'metrics," which matches my work.')
+    assert any("quotes" in e for e in lint(body, profile, posting_from(ashcombe_jd)).errors)
+
+
+def test_a_short_quoted_name_is_not_a_quotation(profile, ashcombe_jd):
+    body = "I wrote the options library \"Vanilla\" in my second year."
+    assert not any("quotes" in e for e in lint(body, profile, posting_from(ashcombe_jd)).errors)
+
+
+@pytest.mark.parametrize("sentence", [
+    "I would use the role to develop financial statement analysis.",
+    "In the program I would develop the macroeconomic analysis the posting lists.",
+    "I would use this position to gain modeling experience.",
+    "Although I have not built a three-statement model, I learn quickly.",
+])
+def test_volunteering_a_gap_fails_the_lint(profile, ashcombe_jd, sentence):
+    assert any("lacks" in e for e in lint(sentence, profile, posting_from(ashcombe_jd)).errors)
+
+
+def test_a_letter_where_most_sentences_open_with_i_fails_the_lint(profile, ashcombe_jd):
+    body = ("I am applying for the Analyst role. I study finance. I graduate in May. "
+            "My work at the university involves research data. I advise faculty.")
+    assert any("begin with" in e for e in lint(body, profile, posting_from(ashcombe_jd)).errors)
+
+
+def test_the_writer_is_given_the_industry_standard(profile, ashcombe_jd):
+    system, _ = writer.prompts(profile, posting_from(ashcombe_jd), [])
+    rules = system[1]["text"]
+    assert "INDUSTRY STANDARD" in rules
+    assert "Do not quote the posting" in rules
+    assert "develop" not in rules.split("REGISTER")[1].split("RESUME")[0].replace(
+        '"develop"', "")
+    assert "INDUSTRY STANDARD" in writer.VERIFIER_RULES
+
+
+def test_a_letter_that_talks_about_itself_fails_the_lint(profile, ashcombe_jd):
+    body = "This letter demonstrates two qualifications: accuracy and communication."
+    assert any("refers to itself" in e for e in lint(body, profile, posting_from(ashcombe_jd)).errors)
+
+
+def test_numbering_the_qualifications_fails_the_lint(profile, ashcombe_jd):
+    body = "My second qualification is clear written analysis."
+    assert any("numbers its" in e for e in lint(body, profile, posting_from(ashcombe_jd)).errors)

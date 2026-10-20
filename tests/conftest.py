@@ -148,23 +148,27 @@ def _no_real_api(monkeypatch, tmp_path):
 # profile.yaml, which is what makes it a *clean* draft rather than merely a
 # well-behaved one.
 CLEAN = dict(
-    paragraph_1=("I am applying for the Investment Intern role at Ashcombe Trust. I "
-                 "study Economics at Example University and graduate in June 2027, "
-                 "and the Investment Committee is why this one."),
-    paragraph_2=("In the Department of Economics I assemble and document panel "
-                 "datasets for two faculty housing studies. Most of the work is "
-                 "reconciliation: a statistics agency, a listings aggregator and a "
-                 "local authority disagree about the same quarter, and someone has "
-                 "to work out which definition each is using before the number goes "
-                 "into a paper."),
-    paragraph_3=("I also wrote Rents and Transit, a study of advertised rents along "
-                 "a new rail corridor, and Vanilla, an options-pricing library that "
-                 "returns the assumptions alongside the price."),
-    paragraph_4=("The draw is the Investment Committee. An office that holds a view "
-                 "across managers and asset classes needs someone careful with the "
-                 "data underneath it, and that is the work I already do."),
+    paragraph_1=("I am applying for the Investment Intern role at Ashcombe Trust. "
+                 "As an Economics student at Example University graduating in June "
+                 "2027, I bring experience in research data and quantitative "
+                 "analysis that suits the work of the Investment Committee."),
+    paragraph_2=("My research experience comes from the Department of Economics, "
+                 "where I assemble and document panel datasets for two faculty "
+                 "housing studies. Reconciling sources that define the same "
+                 "quarter differently is a central part of the work, and it is the "
+                 "same care the Investment Committee requires of its data."),
+    paragraph_3=("Two independent projects add quantitative depth. Rents and "
+                 "Transit studies advertised rents along a new rail corridor, and "
+                 "Vanilla is an options-pricing library that reports its "
+                 "assumptions alongside each price."),
+    paragraph_4=("Ashcombe Trust's Investment Committee holds a view across "
+                 "managers and asset classes, and that breadth is what draws me to "
+                 "the role. Careful, documented analysis is the contribution I "
+                 "would make to it."),
     closing=("I am authorized to work in the United States and will not require "
-             "sponsorship, now or in the future. I would welcome the chance to talk."),
+             "sponsorship, now or in the future. Thank you for your time and "
+             "consideration; I would welcome the opportunity to discuss my "
+             "application."),
     proof_asset="The research assistant role",
     anchor_used="the Investment Committee",
     why_role_short=("The posting asks for careful work on the data the investment "

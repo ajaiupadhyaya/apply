@@ -337,6 +337,48 @@ def register_errors(text: str) -> list[str]:
     return errors
 
 
+#: A sentence that tells the reader what the candidate does not yet have. A
+#: New York finance letter states what the candidate brings; the reader infers
+#: the rest, and should not be handed it.
+_GAP = re.compile(
+    r"\buse\s+(?:the|this)\s+(?:role|program|programme|position)\s+to\s+"
+    r"(?:develop|learn|gain|acquire|build)\b"
+    r"|\b(?:would|will)\s+develop\b"
+    r"|\b(?:although|while|though)\s+I\s+(?:have\s+not|do\s+not\s+have|lack)\b"
+    r"|\bI\s+(?:lack|have\s+limited|have\s+no)\b", re.I)
+
+#: A quotation of four or more words: lifting the posting's sentences reads as
+#: mechanical. A quoted name ("Vanilla") is not a quotation.
+_LONG_QUOTE = re.compile(r"\"(?:[^\"\s]+\s+){3,}[^\"]*\"|“(?:[^”\s]+\s+){3,}[^”]*”")
+
+
+def convention_errors(text: str) -> list[str]:
+    """What a New York finance reader would mark down even in perfect grammar."""
+    errors = []
+    if _LONG_QUOTE.search(text):
+        errors.append("the letter quotes the posting — paraphrase what the role "
+                      "involves in your own words")
+    unquoted = _QUOTED.sub(" ", text)
+    if re.search(r"\b(?:this|the following) letter\b", unquoted, re.I):
+        errors.append('the letter refers to itself ("this letter") — state the '
+                      "qualifications as the candidate's own")
+    if re.search(r"\bmy (?:first|second|third|strongest|main) qualification\b", unquoted, re.I):
+        errors.append('numbers its qualifications ("my second qualification") — '
+                      "open the paragraph with the qualification itself")
+    for match in _GAP.finditer(unquoted):
+        start = unquoted.rfind(".", 0, match.start()) + 1
+        errors.append("names something the candidate lacks or would have to learn — "
+                      "state what they bring, or say nothing: "
+                      f'"{unquoted[start:match.end()].strip()[:90]}…"')
+    sentences = [s for s in re.split(r"(?<=[.!?])\s+", unquoted.strip()) if s]
+    if len(sentences) >= 4:
+        mine = sum(1 for s in sentences if re.match(r"I\b", s))
+        if mine * 2 > len(sentences):
+            errors.append(f"{mine} of {len(sentences)} sentences begin with \"I\" — "
+                          "open more of them with the work, the firm or the result")
+    return errors
+
+
 def _digit_tokens(text: str) -> set[str]:
     return {
         t.strip(".,").lower()
@@ -365,6 +407,7 @@ def lint(body: str, profile: Profile, posting: Posting) -> LintResult:
             result.errors.append(f'prohibited phrase: "{phrase}"')
 
     result.errors += register_errors(body)
+    result.errors += convention_errors(body)
 
     jd_lower = posting.jd_raw.lower()
     for phrase, pattern in _SUPERLATIVE_RE:
