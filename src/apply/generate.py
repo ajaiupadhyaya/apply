@@ -348,7 +348,7 @@ _GAP = re.compile(
     r"|\bI\s+(?:lack|have\s+limited|have\s+no)\b", re.I)
 
 #: A quotation of four or more words: lifting the posting's sentences reads as
-#: mechanical. A quoted name ("BASIS") is not a quotation.
+#: mechanical. A quoted name ("Vanilla") is not a quotation.
 _LONG_QUOTE = re.compile(r"\"(?:[^\"\s]+\s+){3,}[^\"]*\"|“(?:[^”\s]+\s+){3,}[^”]*”")
 
 

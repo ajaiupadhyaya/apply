@@ -172,7 +172,7 @@ def test_quoting_the_posting_fails_the_lint(profile, ashcombe_jd):
 
 
 def test_a_short_quoted_name_is_not_a_quotation(profile, ashcombe_jd):
-    body = "I edit the research report \"BASIS\" each fortnight."
+    body = "I wrote the options library \"Vanilla\" in my second year."
     assert not any("quotes" in e for e in lint(body, profile, posting_from(ashcombe_jd)).errors)
 
 
