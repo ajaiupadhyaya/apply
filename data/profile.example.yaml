@@ -171,37 +171,39 @@ essays:
 # ---------------------------------------------------------------------------
 writing:
   voice: >-
-    Formal, precise and professional, in the register a finance or technology
-    firm expects of an application: measured rather than enthusiastic, and
-    specific rather than general. Prefer the concrete noun to the abstract one
-    and the verb to the adjective. Every sentence should be written for this one
-    employer; none should survive being moved into a letter to a different firm.
+    Formal, confident and concise, to the standard of a cover letter read by a
+    recruiter or banker at a New York financial firm: measured rather than
+    enthusiastic, specific rather than general. Describe work by what it
+    produced and why it matters to the reader, never by how it was built.
+    Every sentence is written for this one employer.
 
   letter:
-    length: 280 to 380 words across the body and closing. One page, always.
+    length: 250 to 350 words across the body and closing. One page, always.
     structure: >-
-      Four body paragraphs and a short closing. First: the role, when I
-      graduate, and in a single clause why this firm. Second: one piece of work
-      in operational detail — what it does and what building it forced me to
-      decide. This is the paragraph that gets the letter read, so it carries the
-      specifics. Third: two other pieces of work, a sentence or so each. Fourth:
-      why this firm, anchored to something concrete the posting names. The
-      closing states work authorization, gives availability only if the profile
-      states it, and ends plainly.
+      Four body paragraphs and a short closing. First: the role and the firm,
+      my degree, school and graduation date, and one sentence stating the two
+      or three qualifications the letter will prove. Second: the strongest
+      qualification, proved by the most relevant experience — what I did, its
+      scope and its result — and how it applies to this role. Third: a second
+      qualification, proved by one or two other pieces of work and tied to the
+      role in its final sentence. Fourth: why this firm and this team, anchored
+      to something concrete the posting names. The closing states work
+      authorization, thanks the reader, and asks for the opportunity to discuss
+      the application.
     proof_asset:
       # The default subject of paragraph 2 on each track. Claude may choose a
       # different piece of work if the posting makes it clearly stronger, and
       # has to say why in its notes.
-      quant: Vanilla — lead with what the library does and the design problems it forced.
-      allocator: Rents and Transit, framed as the choice of comparison area and what it costs.
+      quant: Vanilla, framed by what the library gives a user — prices with their assumptions stated — not by how it is built.
+      allocator: Rents and Transit, framed as careful comparative analysis behind a conclusion.
       banking: The research assistant role and Rents and Transit, framed as analysis and written work.
       corporate: The research assistant role, framed as reporting that others can rerun and trust.
 
   answers:
     why_role: >-
-      The reasoning of paragraph 4, said directly: what in this posting matches
-      what I have actually done, and what I want to learn there. Specific to this
-      employer and useless anywhere else.
+      The reasoning of paragraph 4, said directly and formally: what in this
+      role and firm matches what I have done, and what draws me to the work.
+      Specific to this employer.
 
   avoid:
     - restating the resume line by line
@@ -209,3 +211,7 @@ writing:
     - praising the firm in terms the posting does not use
     - claiming a skill, outcome or responsibility the sources do not show
     - hedging — "I believe", "I feel that", "I think I could"
+    - quoting the posting instead of paraphrasing it
+    - naming a skill I lack or would have to develop in the role
+    - describing how a project was built instead of what it does and why it matters
+    - literary, clever or figurative phrasing
