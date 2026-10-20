@@ -262,3 +262,27 @@ def test_run_with_no_mailbox_at_all_says_so(monkeypatch):
 
     monkeypatch.setattr(secrets, "lookup", lambda name: None)
     assert run._mail(SimpleNamespace(imap_user="someone@example.com")) is None
+
+
+def test_imap_asks_for_every_linkedin_sender_the_parser_reads(monkeypatch):
+    """jobs-noreply@ sends 'apply now to …' mail the parser handles; an IMAP
+    search that leaves it out means that mail never reaches the parser."""
+    import imaplib
+
+    from apply.sources.alerts import LINKEDIN_JOB_SENDERS
+
+    searched = []
+
+    class FakeIMAP:
+        def __init__(self, host): pass
+        def login(self, user, password): pass
+        def select(self, box, readonly=False): pass
+        def search(self, charset, query):
+            searched.append(query)
+            return "OK", [b""]
+        def logout(self): pass
+
+    monkeypatch.setattr(imaplib, "IMAP4_SSL", FakeIMAP)
+    discover.fetch_imap(user="someone@example.com", password="x")
+    for sender in ("joinhandshake.com", *LINKEDIN_JOB_SENDERS):
+        assert f'FROM "{sender}"' in searched[0]

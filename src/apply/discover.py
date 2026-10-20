@@ -28,6 +28,7 @@ from . import db
 from .models import Posting, slugify
 from .score import Score, Verdict, score as score_posting
 from .sources import ADAPTERS
+from .sources.alerts import LINKEDIN_JOB_SENDERS
 from .sources.base import RawPosting, SourceError
 
 
@@ -482,8 +483,9 @@ def fetch_imap(
     user: str,
     password: str,
     host: str = "imap.gmail.com",
-    senders: tuple[str, ...] = ("joinhandshake.com", "jobalerts-noreply@linkedin.com",
-                                "jobs-listings@linkedin.com"),
+    # The parser's own list, so a sender it reads is never one IMAP skips.
+    # IMAP's FROM matches a substring: joinhandshake.com covers its subdomains.
+    senders: tuple[str, ...] = ("joinhandshake.com", *LINKEDIN_JOB_SENDERS),
     days: int = 30,
     limit: int = 60,
 ) -> list[Message]:
