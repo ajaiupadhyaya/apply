@@ -7,6 +7,8 @@ reaches a document — not whether Greenhouse is up.
 
 from __future__ import annotations
 
+import datetime as _dt
+
 import pytest
 
 from apply import db, discover
@@ -206,3 +208,81 @@ def test_spend_is_attributed_by_purpose(conn):
 def test_a_fresh_ledger_starts_at_zero(conn):
     state = Budget(conn).state()
     assert state.month_to_date == 0 and state.remaining == state.monthly_cap
+
+
+# --- the run's mailboxes ----------------------------------------------------
+
+def _drop(path, subject):
+    import json
+    rows = [{"subject": subject, "body": "", "date": "2026-10-20",
+             "sender": "handshake@g.joinhandshake.com"}]
+    path.write_text(json.dumps(rows), encoding="utf-8")
+
+
+def test_run_reads_the_imap_inbox_and_the_export_drop_together(monkeypatch):
+    """LinkedIn mail can live in one inbox over IMAP while Handshake mail is
+    exported from another by the connector; a run that has both reads both."""
+    from types import SimpleNamespace
+
+    from apply import run, secrets
+    from apply.profile import data_dir
+
+    _drop(data_dir() / "alerts.json", "from the export")
+    imap_mail = [discover.Message(subject="from imap", body="", received=_dt.date(2026, 10, 20))]
+    asked = {}
+
+    def fake_fetch(user, password):
+        asked["user"] = user
+        return imap_mail
+
+    monkeypatch.setattr(secrets, "lookup", lambda name: "app-password")
+    monkeypatch.setattr(discover, "fetch_imap", fake_fetch)
+
+    got = run._mail(SimpleNamespace(imap_user="someone@example.com"))
+    assert [m.subject for m in got] == ["from imap", "from the export"]
+    assert asked["user"] == "someone@example.com"
+
+
+def test_run_reads_the_export_drop_alone_without_an_imap_password(monkeypatch):
+    from types import SimpleNamespace
+
+    from apply import run, secrets
+    from apply.profile import data_dir
+
+    _drop(data_dir() / "alerts.json", "from the export")
+    monkeypatch.setattr(secrets, "lookup", lambda name: None)
+    got = run._mail(SimpleNamespace(imap_user="someone@example.com"))
+    assert [m.subject for m in got] == ["from the export"]
+
+
+def test_run_with_no_mailbox_at_all_says_so(monkeypatch):
+    from types import SimpleNamespace
+
+    from apply import run, secrets
+
+    monkeypatch.setattr(secrets, "lookup", lambda name: None)
+    assert run._mail(SimpleNamespace(imap_user="someone@example.com")) is None
+
+
+def test_imap_asks_for_every_linkedin_sender_the_parser_reads(monkeypatch):
+    """jobs-noreply@ sends 'apply now to …' mail the parser handles; an IMAP
+    search that leaves it out means that mail never reaches the parser."""
+    import imaplib
+
+    from apply.sources.alerts import LINKEDIN_JOB_SENDERS
+
+    searched = []
+
+    class FakeIMAP:
+        def __init__(self, host): pass
+        def login(self, user, password): pass
+        def select(self, box, readonly=False): pass
+        def search(self, charset, query):
+            searched.append(query)
+            return "OK", [b""]
+        def logout(self): pass
+
+    monkeypatch.setattr(imaplib, "IMAP4_SSL", FakeIMAP)
+    discover.fetch_imap(user="someone@example.com", password="x")
+    for sender in ("joinhandshake.com", *LINKEDIN_JOB_SENDERS):
+        assert f'FROM "{sender}"' in searched[0]

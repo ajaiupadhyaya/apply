@@ -150,19 +150,25 @@ def run(
 
 
 def _mail(profile: Profile) -> list[discover.Message] | None:
-    """Alert mail, if a transport is configured. None means 'not set up'."""
+    """Alert mail, if a transport is configured. None means 'not set up'.
+
+    Both transports are read when both exist: LinkedIn may mail a personal
+    inbox APPLY reads over IMAP while Handshake mails a school one whose
+    Workspace forbids app passwords, and whose alerts the connector exports.
+    A posting in both is collapsed by the ingest's dedupe."""
     # Same reason as the API key: a scheduled run's shell never reads a login
     # profile, so the exported variable is absent at 06:30. The platform's
     # secret store is not.
     from . import secrets
 
+    messages: list[discover.Message] | None = None
     password = secrets.lookup("APPLY_IMAP_PASSWORD")
     if password:
-        return discover.fetch_imap(user=profile.imap_user, password=password)
+        messages = discover.fetch_imap(user=profile.imap_user, password=password)
     drop = data_dir() / "alerts.json"
     if drop.exists():
-        return discover.load_messages(drop)
-    return None
+        messages = (messages or []) + discover.load_messages(drop)
+    return messages
 
 
 def _needs_documents(row) -> bool:
